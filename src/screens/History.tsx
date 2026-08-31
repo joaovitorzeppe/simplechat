@@ -8,11 +8,13 @@ import {
   listHistoryMessages,
   setHistoryOptIn,
 } from '../lib/db'
+import { loadIdentity } from '../lib/identity'
 import type { HistoryCall, HistoryMessage } from '../lib/types'
 import { useSession } from '../lib/use-session'
 
 export function History() {
   const { session } = useSession()
+  const remembered = loadIdentity() !== null
   const [optIn, setOptIn] = useState(isHistoryOptIn())
   const [calls, setCalls] = useState<HistoryCall[]>([])
   const [openId, setOpenId] = useState<string | null>(null)
@@ -27,6 +29,7 @@ export function History() {
   }, [])
 
   async function toggleOptIn(enabled: boolean) {
+    if (enabled && !loadIdentity()) return
     setHistoryOptIn(enabled)
     setOptIn(enabled)
   }
@@ -44,19 +47,22 @@ export function History() {
         </Button>
         <h1 className="text-3xl font-semibold">Histórico</h1>
         <div className="rounded-3xl border border-line bg-panel p-6 space-y-4">
-          <label className="flex items-start gap-3 text-sm">
+          <label className={`flex items-start gap-3 text-sm ${remembered ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
             <input
               type="checkbox"
-              className="mt-1"
+              className="mt-1 size-4 accent-accent disabled:opacity-40"
               checked={optIn}
+              disabled={!remembered}
               onChange={(e) => void toggleOptIn(e.target.checked)}
             />
-            <span>
+            <span className={remembered ? '' : 'opacity-50'}>
               <strong className="text-zinc-100">Salvar histórico neste navegador</strong>
               <p className="mt-1 text-zinc-400">
                 O histórico fica só neste navegador. Não sincroniza com a nuvem, some se você limpar
                 os dados do site e não aparece em outro dispositivo. Sem este opt-in, o SimpleChat não
                 grava mensagens nem chamadas.
+                {!remembered &&
+                  ' Para ligar, volte e entre com “Lembrar quem eu sou” marcado.'}
               </p>
             </span>
           </label>

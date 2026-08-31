@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie'
+import { loadIdentity } from './identity'
 import type { HistoryCall, HistoryMessage, PeerInfo } from './types'
 
 const OPT_IN_KEY = 'simplechat.historyOptIn'
@@ -19,7 +20,7 @@ class SimpleChatDB extends Dexie {
 export const db = new SimpleChatDB()
 
 export function isHistoryOptIn() {
-  return localStorage.getItem(OPT_IN_KEY) === '1'
+  return localStorage.getItem(OPT_IN_KEY) === '1' && loadIdentity() !== null
 }
 
 export function setHistoryOptIn(enabled: boolean) {

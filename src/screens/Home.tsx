@@ -3,6 +3,7 @@ import { Button } from '../components/Button'
 import { CheckIcon, CopyIcon, HistoryIcon } from '../components/Icons'
 import { QualityBadge } from '../components/QualityBadge'
 import { clearIdentity } from '../lib/identity'
+import { setHistoryOptIn } from '../lib/db'
 import { currentTier, setDemoTier } from '../lib/quality'
 import { useSession } from '../lib/use-session'
 
@@ -58,6 +59,7 @@ export function Home() {
               variant="ghost"
               onClick={() => {
                 clearIdentity()
+                setHistoryOptIn(false)
                 window.location.reload()
               }}
             >

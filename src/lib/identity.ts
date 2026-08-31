@@ -14,10 +14,12 @@ export function loadIdentity(): Identity | null {
   }
 }
 
-export function saveIdentity(displayName: string, peerId = crypto.randomUUID()): Identity {
-  const identity: Identity = { displayName: displayName.trim(), peerId }
+export function createIdentity(displayName: string, peerId = crypto.randomUUID()): Identity {
+  return { displayName: displayName.trim(), peerId }
+}
+
+export function persistIdentity(identity: Identity) {
   localStorage.setItem(KEY, JSON.stringify(identity))
-  return identity
 }
 
 export function clearIdentity() {

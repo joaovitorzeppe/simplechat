@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { IncomingCall } from './components/IncomingCall'
-import { loadIdentity, saveIdentity } from './lib/identity'
+import { loadIdentity } from './lib/identity'
 import { session } from './lib/session'
 import { useSession } from './lib/use-session'
 import { Call } from './screens/Call'
@@ -19,8 +19,7 @@ export default function App() {
   if (!state.identity && !loadIdentity()) {
     return (
       <Onboarding
-        onDone={(name) => {
-          const identity = loadIdentity() ?? saveIdentity(name)
+        onDone={(identity) => {
           void session.start(identity)
         }}
       />
