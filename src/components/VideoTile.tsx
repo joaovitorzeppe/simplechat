@@ -37,7 +37,7 @@ export function VideoTile({ stream, name, local, mutedAudio, cameraOff, sharingS
           </div>
         </div>
       )}
-      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/70 to-transparent px-3 py-2 text-xs">
+      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-linear-to-t from-black/70 to-transparent px-3 py-2 text-xs">
         <span className="font-medium truncate">
           {name}
           {local ? ' (você)' : ''}
