@@ -10,6 +10,7 @@ export const pt = {
   "common.someone": "Alguém",
   "common.youSuffix": " (você)",
   "common.screen": "tela",
+  "common.loading": "Carregando…",
 
   "onboarding.title": "Como você quer aparecer?",
   "onboarding.subtitle":
@@ -27,6 +28,7 @@ export const pt = {
   "home.switchIdentity": "Trocar identidade",
   "home.yourKey": "Sua chave",
   "home.inviteLink": "Link da sua chamada",
+  "home.copy": "Copiar",
   "home.inviteBody":
     "Inicie uma chamada e compartilhe o link. Você é o host: aprova quem entra, pode remover alguém e, ao sair, escolhe entre passar o host adiante ou encerrar para todos.",
   "home.startCall": "Iniciar chamada",
@@ -160,6 +162,7 @@ export const en: Messages = {
   "common.someone": "Someone",
   "common.youSuffix": " (you)",
   "common.screen": "screen",
+  "common.loading": "Loading…",
 
   "onboarding.title": "How do you want to appear?",
   "onboarding.subtitle":
@@ -177,6 +180,7 @@ export const en: Messages = {
   "home.switchIdentity": "Switch identity",
   "home.yourKey": "Your key",
   "home.inviteLink": "Your call link",
+  "home.copy": "Copy",
   "home.inviteBody":
     "Start a call and share the link. You are the host: you approve who joins, you can remove someone, and when you leave you choose between handing the host over or ending it for everyone.",
   "home.startCall": "Start call",
@@ -307,6 +311,7 @@ export const es: Messages = {
   "common.someone": "Alguien",
   "common.youSuffix": " (tú)",
   "common.screen": "pantalla",
+  "common.loading": "Cargando…",
 
   "onboarding.title": "¿Cómo quieres aparecer?",
   "onboarding.subtitle":
@@ -324,6 +329,7 @@ export const es: Messages = {
   "home.switchIdentity": "Cambiar identidad",
   "home.yourKey": "Tu clave",
   "home.inviteLink": "Enlace de tu llamada",
+  "home.copy": "Copiar",
   "home.inviteBody":
     "Inicia una llamada y comparte el enlace. Eres el anfitrión: apruebas quién entra, puedes quitar a alguien y, al salir, eliges entre pasar el anfitrión o terminar para todos.",
   "home.startCall": "Iniciar llamada",

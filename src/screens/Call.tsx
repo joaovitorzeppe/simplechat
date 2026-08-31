@@ -23,6 +23,8 @@ import { inviteLink } from "../lib/invite";
 import { maxParticipants } from "../lib/quality";
 import { electHost } from "../lib/session";
 import { useSession } from "../lib/use-session";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
 
 type ScreenItem = {
   id: string;
@@ -131,7 +133,7 @@ export const Call = () => {
   );
 
   return (
-    <div className="flex min-h-dvh">
+    <main className="flex min-h-dvh">
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-line">
           <div>
@@ -321,6 +323,6 @@ export const Call = () => {
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
-}
+};

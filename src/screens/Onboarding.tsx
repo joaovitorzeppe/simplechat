@@ -45,10 +45,12 @@ export const Onboarding = ({ onDone }: Props) => {
           {t("onboarding.title")}
         </h1>
         <p className="mt-2 text-sm text-zinc-400">{t("onboarding.subtitle")}</p>
-        <label className="mt-8 block text-sm text-zinc-400">
+        <label htmlFor="onboarding-name" className="mt-8 block text-sm text-zinc-400">
           {t("onboarding.name")}
           <input
+            id="onboarding-name"
             autoFocus
+            autoComplete="nickname"
             value={name}
             maxLength={MAX_DISPLAY_NAME}
             onChange={(e) => setName(e.target.value)}
@@ -68,7 +70,9 @@ export const Onboarding = ({ onDone }: Props) => {
             <strong className="text-zinc-100">
               {t("onboarding.rememberTitle")}
             </strong>
-            <p className="mt-1 text-zinc-400">{t("onboarding.rememberBody")}</p>
+            <span className="mt-1 block text-zinc-400">
+              {t("onboarding.rememberBody")}
+            </span>
           </span>
         </label>
 

@@ -1,4 +1,4 @@
-import { Peer, type DataConnection, type MediaConnection } from "peerjs";
+import type { DataConnection, MediaConnection, Peer } from "peerjs";
 import { loadRoomSecret, rotateRoomSecret } from "./identity";
 import { invitePeerId, parseInvite } from "./invite";
 import {
@@ -203,6 +203,7 @@ export class PeerSession {
       roomSecret: this.hostSecret,
     });
 
+    const { Peer } = await import("peerjs");
     const peer = new Peer(identity.peerId, {
       config: { iceServers: iceServers() },
       debug: 0,

@@ -1,9 +1,53 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 
+const escapeRegExp = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Inlinar o CSS no HTML e preload da Outfit 600 (LCP do onboarding). */
+const inlineCssAndPreloadFont = (): Plugin => ({
+  name: "inline-css-preload-font",
+  apply: "build",
+  transformIndexHtml: {
+    order: "post",
+    handler(html, ctx) {
+      const bundle = ctx.bundle;
+      if (!bundle) return html;
+      let next = html;
+      for (const item of Object.values(bundle)) {
+        if (item.type !== "asset" || !item.fileName.endsWith(".css")) continue;
+        const source =
+          typeof item.source === "string"
+            ? item.source
+            : new TextDecoder().decode(item.source);
+        next = next.replace(
+          new RegExp(
+            `<link[^>]*href="[^"]*${escapeRegExp(item.fileName)}"[^>]*>`,
+          ),
+          `<style>${source}</style>`,
+        );
+      }
+      const font = Object.values(bundle).find(
+        (item) =>
+          item.type === "asset" &&
+          item.fileName.includes("outfit-latin-600-normal") &&
+          item.fileName.endsWith(".woff2"),
+      );
+      if (font && font.type === "asset") {
+        next = next.replace(
+          "</head>",
+          `    <link rel="preload" href="/${font.fileName}" as="font" type="font/woff2" crossorigin>\n  </head>`,
+        );
+      }
+      return next;
+    },
+  },
+});
+
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), inlineCssAndPreloadFont()],
   server: {
     host: true,
   },

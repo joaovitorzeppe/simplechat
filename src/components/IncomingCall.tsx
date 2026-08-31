@@ -26,6 +26,7 @@ export const IncomingCall = ({ name, onAccept, onReject }: Props) => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="incoming-call-title"
+        aria-describedby="incoming-call-body"
         className="w-full max-w-sm rounded-3xl border border-line bg-panel p-6 shadow-2xl"
       >
         <p className="text-xs uppercase tracking-widest text-zinc-500">
@@ -37,7 +38,9 @@ export const IncomingCall = ({ name, onAccept, onReject }: Props) => {
         >
           {name}
         </h2>
-        <p className="mt-1 text-sm text-zinc-400">{t("incoming.body")}</p>
+        <p id="incoming-call-body" className="mt-1 text-sm text-zinc-400">
+          {t("incoming.body")}
+        </p>
         <div className="mt-6 flex gap-3">
           <Button variant="danger" className="flex-1" onClick={onReject}>
             {t("incoming.reject")}

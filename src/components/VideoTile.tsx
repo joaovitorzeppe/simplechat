@@ -83,6 +83,7 @@ export const VideoTile = memo(function VideoTile({
           <button
             type="button"
             title={t("call.pinScreen")}
+            aria-label={`${t("call.pinScreen")}: ${name}`}
             onClick={onPin}
             className="grid size-8 place-items-center rounded-full border border-line bg-black/60 text-zinc-100 hover:bg-zinc-800 cursor-pointer"
           >

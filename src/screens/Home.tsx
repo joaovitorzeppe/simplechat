@@ -12,8 +12,18 @@ import { forgetPeer, loadRecents, type Recent } from "../lib/recents";
 import { firstGrapheme } from "../lib/text";
 import { showToast } from "../lib/toast";
 import { useSession } from "../lib/use-session";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
 
-const CopyField = ({ label, value }: { label: string; value: string }) => {
+const CopyField = ({
+  label,
+  value,
+  copyLabel,
+}: {
+  label: string;
+  value: string;
+  copyLabel: string;
+}) => {
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
@@ -34,6 +44,8 @@ const CopyField = ({ label, value }: { label: string; value: string }) => {
         <Button
           variant="ghost"
           className="px-2 py-1"
+          aria-label={copyLabel}
+          title={copyLabel}
           onClick={() => void copy()}
         >
           {copied ? <CheckIcon /> : <CopyIcon />}
@@ -128,8 +140,16 @@ export const Home = () => {
         </header>
 
         <section className="rounded-3xl border border-line bg-panel p-6 space-y-4">
-          <CopyField label={t("home.yourKey")} value={myId} />
-          <CopyField label={t("home.inviteLink")} value={myLink} />
+          <CopyField
+            label={t("home.yourKey")}
+            value={myId}
+            copyLabel={t("home.copy")}
+          />
+          <CopyField
+            label={t("home.inviteLink")}
+            value={myLink}
+            copyLabel={t("home.copy")}
+          />
           <p className="text-sm text-zinc-400">{t("home.inviteBody")}</p>
           <Button
             className="w-full"
@@ -148,6 +168,7 @@ export const Home = () => {
             value={inviteKey}
             onChange={(e) => applyInvite(e.target.value)}
             placeholder={t("home.invitePlaceholder")}
+            aria-label={t("home.joinTitle")}
             className="w-full rounded-xl border border-line bg-zinc-900 px-3 py-2.5 font-mono text-sm outline-none focus:border-accent"
           />
           <div className="grid gap-2 sm:grid-cols-2">

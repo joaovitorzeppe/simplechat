@@ -101,6 +101,7 @@ export const ChatPanel = ({
           maxLength={MAX_CHAT_TEXT}
           onChange={(e) => setText(e.target.value)}
           placeholder={t("chat.placeholder")}
+          aria-label={t("chat.placeholder")}
           className="flex-1 rounded-xl bg-zinc-900 border border-line px-3 py-2 text-sm outline-none focus:border-accent"
         />
         <Button type="submit" disabled={!text.trim()}>
