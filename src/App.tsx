@@ -3,6 +3,7 @@ import { IncomingCall } from "./components/IncomingCall";
 import { useI18n } from "./i18n/use-i18n";
 import { loadIdentity } from "./lib/identity";
 import { session } from "./lib/session";
+import { unlockAudio } from "./lib/sounds";
 import { useSession } from "./lib/use-session";
 import { Call } from "./screens/Call";
 import { History } from "./screens/History";
@@ -16,6 +17,16 @@ export default function App() {
   useEffect(() => {
     const identity = loadIdentity();
     if (identity) void session.start(identity);
+  }, []);
+
+  useEffect(() => {
+    const unlock = () => unlockAudio();
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
   }, []);
 
   if (!state.identity && !loadIdentity()) {
@@ -47,7 +58,7 @@ export default function App() {
         />
       )}
       {state.toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-line bg-panel px-4 py-2 text-sm shadow-xl">
+        <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-2xl border border-line bg-panel px-5 py-3 text-sm font-medium shadow-2xl">
           {t(state.toast)}
         </div>
       )}

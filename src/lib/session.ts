@@ -14,6 +14,7 @@ import {
 } from "./quality";
 import type { MessageKey } from "../i18n/locales";
 import { t } from "../i18n/i18n";
+import { playCallEnded } from "./sounds";
 import type {
   CallMode,
   ChatMessage,
@@ -89,6 +90,7 @@ export class PeerSession {
   private screenTrack: MediaStreamTrack | null = null;
   private toastTimer = 0;
   private starting = false;
+  private ending = false;
 
   subscribe = (listener: Listener) => {
     this.listeners.add(listener);
@@ -260,10 +262,11 @@ export class PeerSession {
   }
 
   hangUp() {
-    if (this.state.isHost && this.state.callMode === "room") {
-      this.broadcast({ type: "room-ended" });
+    if (this.state.callStatus === 'idle' && this.state.view !== 'call') return
+    if (this.state.isHost && this.state.callMode === 'room') {
+      this.broadcast({ type: 'room-ended' })
     }
-    this.resetCall(true);
+    this.resetCall(true, 'toast.callEnded')
   }
 
   sendChat(text: string) {
@@ -647,8 +650,7 @@ export class PeerSession {
     }
 
     if (msg.type === "room-ended") {
-      this.toast("toast.roomEndedByHost");
-      this.resetCall(true);
+      this.resetCall(true, "toast.roomEndedByHost");
       return;
     }
 
@@ -729,6 +731,7 @@ export class PeerSession {
   }
 
   private onPeerLeft(peerId: string) {
+    if (this.ending) return
     this.data.get(peerId)?.close();
     this.media.get(peerId)?.close();
     this.screenOut.get(peerId)?.close();
@@ -738,7 +741,11 @@ export class PeerSession {
     this.screenOut.delete(peerId);
     this.screenIn.delete(peerId);
     const remotes = this.state.remotes.filter((r) => r.peerId !== peerId);
-    this.patch({ remotes, screenShareOrder: this.removeShare(peerId) });
+    this.patch({
+      remotes,
+      screenShareOrder: this.removeShare(peerId),
+      incoming: this.state.incoming?.peerId === peerId ? null : this.state.incoming,
+    });
     if (this.state.isHost && this.state.callMode === "room") {
       this.roomMembers = this.roomMembers.filter((p) => p.peerId !== peerId);
       this.broadcast({ type: "room-peers", peers: this.roomMembers });
@@ -746,19 +753,17 @@ export class PeerSession {
     if (
       this.state.callMode === "direct" &&
       remotes.length === 0 &&
-      this.state.callStatus === "in-call"
+      (this.state.callStatus === "in-call" || this.state.callStatus === "connecting")
     ) {
-      this.toast("toast.peerLeft");
-      this.resetCall(true);
+      this.resetCall(true, "toast.peerLeft");
     }
     if (
       this.state.callMode === "room" &&
       !this.state.isHost &&
       remotes.length === 0 &&
-      this.state.callStatus === "in-call"
+      (this.state.callStatus === "in-call" || this.state.callStatus === "connecting")
     ) {
-      this.toast("toast.roomEnded");
-      this.resetCall(true);
+      this.resetCall(true, "toast.roomEnded");
     }
   }
 
@@ -800,25 +805,32 @@ export class PeerSession {
     void touchHistoryParticipants(callId, participants);
   }
 
-  private resetCall(endHistory: boolean) {
+  private resetCall(endHistory: boolean, endedReason?: MessageKey) {
+    if (this.ending) return
+    this.ending = true
     if (endHistory && this.state.activeCallId) {
-      void endHistoryCall(this.state.activeCallId);
+      void endHistoryCall(this.state.activeCallId)
     }
-    for (const conn of this.data.values()) conn.close();
-    for (const call of this.media.values()) call.close();
-    for (const call of this.screenOut.values()) call.close();
-    for (const call of this.screenIn.values()) call.close();
-    this.data.clear();
-    this.media.clear();
-    this.screenOut.clear();
-    this.screenIn.clear();
-    this.roomMembers = [];
-    this.screenTrack?.stop();
-    this.screenTrack = null;
-    this.state.localStream?.getTracks().forEach((track) => track.stop());
-    this.names.clear();
+    for (const conn of this.data.values()) conn.close()
+    for (const call of this.media.values()) call.close()
+    for (const call of this.screenOut.values()) call.close()
+    for (const call of this.screenIn.values()) call.close()
+    this.data.clear()
+    this.media.clear()
+    this.screenOut.clear()
+    this.screenIn.clear()
+    this.roomMembers = []
+    this.screenTrack?.stop()
+    this.screenTrack = null
+    this.state.localStream?.getTracks().forEach((track) => track.stop())
+    this.names.clear()
+    if (endedReason) {
+      window.clearTimeout(this.toastTimer)
+      this.toastTimer = window.setTimeout(() => this.patch({ toast: null }), 4200)
+      playCallEnded()
+    }
     this.patch({
-      view: "home",
+      view: 'home',
       localStream: null,
       localScreenStream: null,
       remotes: [],
@@ -829,10 +841,12 @@ export class PeerSession {
       cameraOff: false,
       callMode: null,
       isHost: false,
-      callStatus: "idle",
+      callStatus: 'idle',
       incoming: null,
       activeCallId: null,
-    });
+      toast: endedReason ?? this.state.toast,
+    })
+    this.ending = false
   }
 
   private destroyPeer() {

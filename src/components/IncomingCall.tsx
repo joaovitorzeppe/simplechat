@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useI18n } from "../i18n/use-i18n";
+import { playRingtone } from "../lib/sounds";
 import { Button } from "./Button";
 
 type Props = {
@@ -9,6 +11,12 @@ type Props = {
 
 export function IncomingCall({ name, onAccept, onReject }: Props) {
   const { t } = useI18n();
+
+  useEffect(() => {
+    const stop = playRingtone();
+    return stop;
+  }, []);
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4">
       <div className="w-full max-w-sm rounded-3xl border border-line bg-panel p-6 shadow-2xl">

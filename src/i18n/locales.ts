@@ -101,6 +101,7 @@ export const pt = {
   "toast.roomEndedByHost": "A sala foi encerrada pelo host.",
   "toast.peerLeft": "A outra pessoa encerrou a chamada.",
   "toast.roomEnded": "A sala acabou.",
+  "toast.callEnded": "Chamada encerrada.",
 } as const;
 
 export type MessageKey = keyof typeof pt;
@@ -207,6 +208,7 @@ export const en: Messages = {
   "toast.roomEndedByHost": "The host ended the room.",
   "toast.peerLeft": "The other person ended the call.",
   "toast.roomEnded": "The room ended.",
+  "toast.callEnded": "Call ended.",
 };
 
 export const es: Messages = {
@@ -312,6 +314,7 @@ export const es: Messages = {
   "toast.roomEndedByHost": "El anfitrión cerró la sala.",
   "toast.peerLeft": "La otra persona terminó la llamada.",
   "toast.roomEnded": "La sala terminó.",
+  "toast.callEnded": "Llamada finalizada.",
 };
 
 export const dictionaries: Record<"pt" | "en" | "es", Messages> = {
