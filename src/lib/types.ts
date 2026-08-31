@@ -14,6 +14,7 @@ export type PeerInfo = {
 
 export type RemotePeer = PeerInfo & {
   stream: MediaStream | null
+  screenStream: MediaStream | null
   sharingScreen: boolean
 }
 

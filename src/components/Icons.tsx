@@ -113,6 +113,17 @@ export function HistoryIcon(props: IconProps) {
   )
 }
 
+export function ExpandIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M9 3H4v5" />
+      <path d="M15 3h5v5" />
+      <path d="M21 15v5h-5" />
+      <path d="M3 15v5h5" />
+    </svg>
+  )
+}
+
 export function ArrowLeftIcon(props: IconProps) {
   return (
     <svg {...base(props)}>

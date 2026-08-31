@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Button } from '../components/Button'
 import { ChatPanel } from '../components/ChatPanel'
 import {
@@ -17,10 +17,19 @@ import { VideoTile } from '../components/VideoTile'
 import { useSession } from '../lib/use-session'
 import { cn } from '../lib/cn'
 
+type ScreenItem = {
+  id: string
+  stream: MediaStream
+  name: string
+  local: boolean
+}
+
 export function Call() {
   const { state, session } = useSession()
   const [chatOpen, setChatOpen] = useState(() => window.matchMedia('(min-width: 768px)').matches)
   const [copied, setCopied] = useState(false)
+  const [pinnedId, setPinnedId] = useState<string | null>(null)
+  const [showCameras, setShowCameras] = useState(false)
   const me = state.identity
   const invite =
     state.callMode === 'room' && me
@@ -28,9 +37,60 @@ export function Call() {
       : me
         ? `${window.location.origin}/?call=${me.peerId}`
         : ''
+
+  const screens = useMemo(() => {
+    const items: ScreenItem[] = []
+    for (const remote of state.remotes) {
+      if (!remote.screenStream) continue
+      items.push({
+        id: remote.peerId,
+        stream: remote.screenStream,
+        name: remote.displayName,
+        local: false,
+      })
+    }
+    if (state.localScreenStream && me) {
+      items.push({
+        id: me.peerId,
+        stream: state.localScreenStream,
+        name: me.displayName,
+        local: true,
+      })
+    }
+    return items
+  }, [state.remotes, state.localScreenStream, me])
+
+  const focusedId =
+    (pinnedId && screens.some((item) => item.id === pinnedId) ? pinnedId : null) ??
+    state.screenShareOrder.find((id) => screens.some((item) => item.id === id)) ??
+    screens[0]?.id ??
+    null
+  const focused = screens.find((item) => item.id === focusedId)
+  const others = screens.filter((item) => item.id !== focused?.id)
+  const hideCameras = screens.length >= 2 && !showCameras
   const count = state.remotes.length + 1
   const grid =
     count === 1 ? 'grid-cols-1' : count === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2'
+
+  const cameraTiles = (compact: boolean) => (
+    <>
+      <VideoTile
+        stream={state.localStream}
+        name={me?.displayName ?? 'Você'}
+        local
+        cameraOff={state.cameraOff}
+        className={compact ? 'h-28 w-40 shrink-0 min-h-24' : undefined}
+      />
+      {state.remotes.map((remote) => (
+        <VideoTile
+          key={remote.peerId}
+          stream={remote.stream}
+          name={remote.displayName}
+          className={compact ? 'h-28 w-40 shrink-0 min-h-24' : undefined}
+        />
+      ))}
+    </>
+  )
 
   return (
     <div className="flex min-h-dvh">
@@ -59,27 +119,52 @@ export function Call() {
                 {state.callMode === 'room' ? 'Copiar convite da sala' : 'Copiar convite'}
               </Button>
             )}
+            {screens.length >= 2 && (
+              <Button
+                variant="secondary"
+                className="text-xs py-1.5"
+                onClick={() => setShowCameras((v) => !v)}
+                title={showCameras ? 'Ocultar câmeras' : 'Mostrar câmeras'}
+              >
+                <CameraIcon width={16} height={16} />
+                {showCameras ? 'Ocultar câmeras' : 'Câmeras'}
+              </Button>
+            )}
             <QualityBadge compact />
           </div>
         </header>
 
-        <div className={cn('flex-1 grid gap-3 p-3', grid)}>
-          <VideoTile
-            stream={state.localStream}
-            name={me?.displayName ?? 'Você'}
-            local
-            cameraOff={state.cameraOff && !state.sharingScreen}
-            sharingScreen={state.sharingScreen}
-          />
-          {state.remotes.map((remote) => (
-            <VideoTile
-              key={remote.peerId}
-              stream={remote.stream}
-              name={remote.displayName}
-              sharingScreen={remote.sharingScreen}
-            />
-          ))}
-        </div>
+        {focused ? (
+          <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
+            <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
+              <VideoTile
+                stream={focused.stream}
+                name={focused.name}
+                local={focused.local}
+                sharingScreen
+                className="min-h-52 flex-1"
+              />
+              {others.length > 0 && (
+                <div className="flex shrink-0 gap-2 overflow-x-auto lg:w-52 lg:flex-col lg:overflow-y-auto">
+                  {others.map((item) => (
+                    <VideoTile
+                      key={item.id}
+                      stream={item.stream}
+                      name={item.name}
+                      local={item.local}
+                      sharingScreen
+                      onPin={() => setPinnedId(item.id)}
+                      className="h-28 w-44 shrink-0 min-h-24 lg:h-32 lg:w-full"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            {!hideCameras && <div className="flex shrink-0 gap-2 overflow-x-auto">{cameraTiles(true)}</div>}
+          </div>
+        ) : (
+          <div className={cn('flex-1 grid gap-3 p-3', grid)}>{cameraTiles(false)}</div>
+        )}
 
         <div className="flex flex-wrap items-center justify-center gap-2 px-4 py-4">
           <Button variant="icon" onClick={() => session.toggleMute()} title={state.muted ? 'Ativar microfone' : 'Silenciar'}>

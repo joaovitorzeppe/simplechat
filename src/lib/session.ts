@@ -11,7 +11,6 @@ import {
   currentTier,
   getCameraConstraints,
   getDisplayConstraints,
-  type MediaKind,
 } from './quality'
 import type {
   CallMode,
@@ -31,11 +30,13 @@ export type SessionState = {
   peerError: string | null
   toast: string | null
   localStream: MediaStream | null
+  localScreenStream: MediaStream | null
   remotes: RemotePeer[]
   messages: ChatMessage[]
   muted: boolean
   cameraOff: boolean
   sharingScreen: boolean
+  screenShareOrder: string[]
   callMode: CallMode | null
   isHost: boolean
   callStatus: 'idle' | 'connecting' | 'in-call'
@@ -57,11 +58,13 @@ const initialState: SessionState = {
   peerError: null,
   toast: null,
   localStream: null,
+  localScreenStream: null,
   remotes: [],
   messages: [],
   muted: false,
   cameraOff: false,
   sharingScreen: false,
+  screenShareOrder: [],
   callMode: null,
   isHost: false,
   callStatus: 'idle',
@@ -77,6 +80,8 @@ export class PeerSession {
   private peer: Peer | null = null
   private data = new Map<string, DataConnection>()
   private media = new Map<string, MediaConnection>()
+  private screenOut = new Map<string, MediaConnection>()
+  private screenIn = new Map<string, MediaConnection>()
   private names = new Map<string, string>()
   private roomMembers: PeerInfo[] = []
   private screenTrack: MediaStreamTrack | null = null
@@ -264,11 +269,9 @@ export class PeerSession {
 
   toggleCamera() {
     const next = !this.state.cameraOff
-    if (!this.state.sharingScreen) {
-      this.state.localStream?.getVideoTracks().forEach((track) => {
-        track.enabled = !next
-      })
-    }
+    this.state.localStream?.getVideoTracks().forEach((track) => {
+      track.enabled = !next
+    })
     this.patch({ cameraOff: next })
   }
 
@@ -287,32 +290,40 @@ export class PeerSession {
     const track = display.getVideoTracks()[0]
     if (!track) return
     this.screenTrack = track
-    await applyTrackConstraints(display, 'screen', tier)
-    await this.replaceOutgoingVideo(track, 'screen')
+    const screenStream = new MediaStream([track])
+    await applyTrackConstraints(screenStream, 'screen', tier)
     track.addEventListener('ended', () => {
       void this.stopScreenShare()
     })
-    this.patch({ sharingScreen: true })
+    this.patch({
+      sharingScreen: true,
+      localScreenStream: screenStream,
+      screenShareOrder: this.appendShare(this.state.identity?.peerId),
+    })
     this.broadcast({ type: 'media-meta', sharingScreen: true })
+    this.openScreenToAll()
   }
 
   async stopScreenShare() {
-    const camera = this.state.localStream?.getVideoTracks()[0]
+    for (const call of this.screenOut.values()) call.close()
+    this.screenOut.clear()
     this.screenTrack?.stop()
     this.screenTrack = null
-    if (camera) {
-      camera.enabled = !this.state.cameraOff
-      await this.replaceOutgoingVideo(camera, 'camera')
-    }
-    this.patch({ sharingScreen: false })
+    this.patch({
+      sharingScreen: false,
+      localScreenStream: null,
+      screenShareOrder: this.removeShare(this.state.identity?.peerId),
+    })
     this.broadcast({ type: 'media-meta', sharingScreen: false })
   }
 
   async reapplyQuality() {
     const stream = this.state.localStream
-    if (!stream) return
-    const kind: MediaKind = this.state.sharingScreen ? 'screen' : 'camera'
-    await applyTrackConstraints(this.screenTrack ? new MediaStream([this.screenTrack]) : stream, kind, currentTier())
+    const tier = currentTier()
+    if (stream) await applyTrackConstraints(stream, 'camera', tier)
+    if (this.screenTrack) {
+      await applyTrackConstraints(new MediaStream([this.screenTrack]), 'screen', tier)
+    }
     this.applyLimitsToAll()
   }
 
@@ -373,7 +384,7 @@ export class PeerSession {
     const local = this.state.localStream
     const mixed = new MediaStream()
     local?.getAudioTracks().forEach((track) => mixed.addTrack(track))
-    const video = this.screenTrack ?? local?.getVideoTracks()[0]
+    const video = local?.getVideoTracks()[0]
     if (video) mixed.addTrack(video)
     return mixed
   }
@@ -386,8 +397,34 @@ export class PeerSession {
 
   private openMedia(peerId: string) {
     if (!this.peer || this.media.has(peerId) || !this.state.localStream) return
-    const call = this.peer.call(peerId, this.outboundStream(), { metadata: this.helloPayload() })
+    const call = this.peer.call(peerId, this.outboundStream(), {
+      metadata: { ...this.helloPayload(), kind: 'camera' },
+    })
     this.attachMedia(call)
+    if (this.state.sharingScreen) this.openScreen(peerId)
+  }
+
+  private openScreen(peerId: string) {
+    const stream = this.state.localScreenStream
+    if (!this.peer || this.screenOut.has(peerId) || !stream) return
+    const call = this.peer.call(peerId, stream, {
+      metadata: { ...this.helloPayload(), kind: 'screen' },
+    })
+    this.screenOut.set(peerId, call)
+    call.on('close', () => this.screenOut.delete(peerId))
+    call.on('error', () => this.screenOut.delete(peerId))
+    window.setTimeout(() => this.applyLimitsToAll(), 400)
+  }
+
+  private openScreenToAll() {
+    const ids = new Set<string>([
+      ...this.data.keys(),
+      ...this.media.keys(),
+      ...this.state.remotes.map((r) => r.peerId),
+    ])
+    for (const peerId of ids) {
+      if (peerId !== this.state.identity?.peerId) this.openScreen(peerId)
+    }
   }
 
   private attachData(conn: DataConnection, outgoing: boolean, first?: WireMessage) {
@@ -401,6 +438,7 @@ export class PeerSession {
           kind: this.state.callMode === 'room' ? 'room-join' : 'direct',
         })
       }
+      if (this.state.sharingScreen) conn.send({ type: 'media-meta', sharingScreen: true })
     })
     conn.on('data', (raw) => {
       this.onWire(conn, raw)
@@ -421,14 +459,29 @@ export class PeerSession {
   }
 
   private async onIncomingCall(call: MediaConnection) {
+    const meta = call.metadata as { displayName?: string; kind?: string } | undefined
+    if (meta?.kind === 'screen') {
+      if (this.state.callStatus === 'idle') {
+        call.close()
+        return
+      }
+      call.answer()
+      this.attachIncomingScreen(call)
+      const displayName = meta.displayName || this.names.get(call.peer) || 'Alguém'
+      this.names.set(call.peer, displayName)
+      this.upsertRemote(call.peer, { displayName, sharingScreen: true })
+      this.rememberShare(call.peer)
+      return
+    }
+
     this.media.set(call.peer, call)
     if (this.state.callStatus !== 'idle') {
       if (this.state.localStream) call.answer(this.outboundStream())
       this.attachMedia(call)
+      if (this.state.sharingScreen) this.openScreen(call.peer)
       return
     }
     this.attachMedia(call)
-    const meta = call.metadata as { displayName?: string } | undefined
     this.patch({
       incoming: {
         peerId: call.peer,
@@ -436,6 +489,35 @@ export class PeerSession {
         kind: 'direct',
       },
     })
+  }
+
+  private attachIncomingScreen(call: MediaConnection) {
+    const previous = this.screenIn.get(call.peer)
+    this.screenIn.set(call.peer, call)
+    previous?.close()
+    call.on('stream', (stream) => {
+      this.upsertRemote(call.peer, { screenStream: stream, sharingScreen: true })
+      this.rememberShare(call.peer)
+    })
+    call.on('close', () => this.dropIncomingScreen(call))
+    call.on('error', () => this.dropIncomingScreen(call))
+  }
+
+  private dropIncomingScreen(call: MediaConnection) {
+    if (this.screenIn.get(call.peer) !== call) return
+    this.screenIn.delete(call.peer)
+    if (!this.state.remotes.some((r) => r.peerId === call.peer)) return
+    this.upsertRemote(call.peer, { screenStream: null, sharingScreen: false })
+    this.forgetShare(call.peer)
+  }
+
+  private clearRemoteScreen(peerId: string) {
+    const call = this.screenIn.get(peerId)
+    this.screenIn.delete(peerId)
+    if (call) call.close()
+    if (!this.state.remotes.some((r) => r.peerId === peerId)) return
+    this.upsertRemote(peerId, { screenStream: null, sharingScreen: false })
+    this.forgetShare(peerId)
   }
 
   private onWire(conn: DataConnection, raw: unknown) {
@@ -501,7 +583,12 @@ export class PeerSession {
     }
 
     if (msg.type === 'media-meta') {
-      this.upsertRemote(conn.peer, { sharingScreen: msg.sharingScreen })
+      if (msg.sharingScreen) {
+        this.upsertRemote(conn.peer, { sharingScreen: true })
+        this.rememberShare(conn.peer)
+      } else {
+        this.clearRemoteScreen(conn.peer)
+      }
     }
   }
 
@@ -519,8 +606,9 @@ export class PeerSession {
 
   private maybeCall(peerId: string) {
     const me = this.state.identity?.peerId
-    if (!me || peerId === me || this.media.has(peerId) || !this.state.localStream) return
-    if (me < peerId) this.openMedia(peerId)
+    if (!me || peerId === me || !this.state.localStream) return
+    if (!this.media.has(peerId) && me < peerId) this.openMedia(peerId)
+    else if (this.state.sharingScreen) this.openScreen(peerId)
   }
 
   private upsertRemote(peerId: string, patch: Partial<RemotePeer>) {
@@ -529,6 +617,7 @@ export class PeerSession {
       peerId,
       displayName: patch.displayName ?? current?.displayName ?? this.names.get(peerId) ?? 'Alguém',
       stream: patch.stream === undefined ? (current?.stream ?? null) : patch.stream,
+      screenStream: patch.screenStream === undefined ? (current?.screenStream ?? null) : patch.screenStream,
       sharingScreen: patch.sharingScreen ?? current?.sharingScreen ?? false,
     }
     const remotes = current
@@ -537,13 +626,40 @@ export class PeerSession {
     this.patch({ remotes })
   }
 
+  private appendShare(peerId: string | undefined) {
+    if (!peerId) return this.state.screenShareOrder
+    if (this.state.screenShareOrder.includes(peerId)) return this.state.screenShareOrder
+    return [...this.state.screenShareOrder, peerId]
+  }
+
+  private removeShare(peerId: string | undefined) {
+    if (!peerId) return this.state.screenShareOrder
+    return this.state.screenShareOrder.filter((id) => id !== peerId)
+  }
+
+  private rememberShare(peerId: string) {
+    const screenShareOrder = this.appendShare(peerId)
+    if (screenShareOrder === this.state.screenShareOrder) return
+    this.patch({ screenShareOrder })
+  }
+
+  private forgetShare(peerId: string) {
+    const screenShareOrder = this.removeShare(peerId)
+    if (screenShareOrder.length === this.state.screenShareOrder.length) return
+    this.patch({ screenShareOrder })
+  }
+
   private onPeerLeft(peerId: string) {
     this.data.get(peerId)?.close()
     this.media.get(peerId)?.close()
+    this.screenOut.get(peerId)?.close()
+    this.screenIn.get(peerId)?.close()
     this.data.delete(peerId)
     this.media.delete(peerId)
+    this.screenOut.delete(peerId)
+    this.screenIn.delete(peerId)
     const remotes = this.state.remotes.filter((r) => r.peerId !== peerId)
-    this.patch({ remotes })
+    this.patch({ remotes, screenShareOrder: this.removeShare(peerId) })
     if (this.state.isHost && this.state.callMode === 'room') {
       this.roomMembers = this.roomMembers.filter((p) => p.peerId !== peerId)
       this.broadcast({ type: 'room-peers', peers: this.roomMembers })
@@ -574,27 +690,19 @@ export class PeerSession {
   }
 
   private applyLimitsToAll() {
-    const kind: MediaKind = this.state.sharingScreen ? 'screen' : 'camera'
     const tier = currentTier()
     for (const call of this.media.values()) {
       const pc = call.peerConnection
       if (!pc) continue
       for (const sender of pc.getSenders()) {
-        void applySenderLimits(sender, kind, tier)
+        void applySenderLimits(sender, 'camera', tier)
       }
     }
-  }
-
-  private async replaceOutgoingVideo(track: MediaStreamTrack, kind: MediaKind) {
-    const tier = currentTier()
-    for (const call of this.media.values()) {
-      const sender = call.peerConnection?.getSenders().find((s) => s.track?.kind === 'video')
-      if (!sender) continue
-      try {
-        await sender.replaceTrack(track)
-        await applySenderLimits(sender, kind, tier)
-      } catch {
-        // ignore
+    for (const call of this.screenOut.values()) {
+      const pc = call.peerConnection
+      if (!pc) continue
+      for (const sender of pc.getSenders()) {
+        void applySenderLimits(sender, 'screen', tier)
       }
     }
   }
@@ -613,8 +721,12 @@ export class PeerSession {
     }
     for (const conn of this.data.values()) conn.close()
     for (const call of this.media.values()) call.close()
+    for (const call of this.screenOut.values()) call.close()
+    for (const call of this.screenIn.values()) call.close()
     this.data.clear()
     this.media.clear()
+    this.screenOut.clear()
+    this.screenIn.clear()
     this.roomMembers = []
     this.screenTrack?.stop()
     this.screenTrack = null
@@ -623,9 +735,11 @@ export class PeerSession {
     this.patch({
       view: 'home',
       localStream: null,
+      localScreenStream: null,
       remotes: [],
       messages: [],
       sharingScreen: false,
+      screenShareOrder: [],
       muted: false,
       cameraOff: false,
       callMode: null,

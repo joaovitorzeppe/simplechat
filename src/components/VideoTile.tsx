@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { cn } from '../lib/cn'
+import { ExpandIcon } from './Icons'
 
 type Props = {
   stream: MediaStream | null
@@ -8,9 +9,20 @@ type Props = {
   mutedAudio?: boolean
   cameraOff?: boolean
   sharingScreen?: boolean
+  className?: string
+  onPin?: () => void
 }
 
-export function VideoTile({ stream, name, local, mutedAudio, cameraOff, sharingScreen }: Props) {
+export function VideoTile({
+  stream,
+  name,
+  local,
+  mutedAudio,
+  cameraOff,
+  sharingScreen,
+  className,
+  onPin,
+}: Props) {
   const ref = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
@@ -22,13 +34,17 @@ export function VideoTile({ stream, name, local, mutedAudio, cameraOff, sharingS
   const blank = !stream || cameraOff
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-zinc-900 border border-line min-h-40">
+    <div className={cn('relative overflow-hidden rounded-2xl bg-zinc-900 border border-line min-h-40', className)}>
       <video
         ref={ref}
         autoPlay
         playsInline
         muted={local || mutedAudio}
-        className={cn('h-full w-full object-cover', blank && 'opacity-0')}
+        className={cn(
+          'h-full w-full',
+          sharingScreen ? 'object-contain bg-black' : 'object-cover',
+          blank && 'opacity-0',
+        )}
       />
       {blank && (
         <div className="absolute inset-0 grid place-items-center">
@@ -36,6 +52,16 @@ export function VideoTile({ stream, name, local, mutedAudio, cameraOff, sharingS
             {name.slice(0, 1).toUpperCase()}
           </div>
         </div>
+      )}
+      {onPin && (
+        <button
+          type="button"
+          title="Centralizar esta tela"
+          onClick={onPin}
+          className="absolute top-2 right-2 grid size-8 place-items-center rounded-full border border-line bg-black/60 text-zinc-100 hover:bg-zinc-800 cursor-pointer"
+        >
+          <ExpandIcon width={16} height={16} />
+        </button>
       )}
       <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-linear-to-t from-black/70 to-transparent px-3 py-2 text-xs">
         <span className="font-medium truncate">
