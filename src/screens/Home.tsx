@@ -11,6 +11,7 @@ import { QualityBadge } from "../components/QualityBadge";
 import { useI18n } from "../i18n/use-i18n";
 import { setHistoryOptIn } from "../lib/db";
 import { clearIdentity } from "../lib/identity";
+import { parseInvite, type InviteKind } from "../lib/invite";
 import { useInstallPrompt } from "../lib/pwa";
 import { currentTier, setDemoTier } from "../lib/quality";
 import { showToast } from "../lib/toast";
@@ -53,11 +54,42 @@ export const Home = () => {
   const params = new URLSearchParams(window.location.search);
   const [peerKey, setPeerKey] = useState(params.get("call") ?? "");
   const [roomKey, setRoomKey] = useState(params.get("room") ?? "");
+  const [peerKind, setPeerKind] = useState<InviteKind | null>(
+    params.get("call") ? "call" : null,
+  );
+  const [roomKind, setRoomKind] = useState<InviteKind | null>(
+    params.get("room") ? "room" : null,
+  );
   const [tier, setTier] = useState(currentTier());
 
   const myId = state.identity?.peerId ?? "";
   const callLink = `${window.location.origin}/?call=${myId}`;
   const roomLink = `${window.location.origin}/?room=${myId}`;
+
+  const applyInvite = (
+    raw: string,
+    setValue: (value: string) => void,
+    setKind: (kind: InviteKind | null) => void,
+  ) => {
+    const invite = parseInvite(raw);
+    if (invite) {
+      setValue(invite.peerId);
+      setKind(invite.kind);
+      return;
+    }
+    setValue(raw);
+    setKind(null);
+  };
+
+  const startFromCallField = () => {
+    if (peerKind === "room") void session.joinRoom(peerKey);
+    else void session.startDirect(peerKey);
+  };
+
+  const startFromRoomField = () => {
+    if (roomKind === "call") void session.startDirect(roomKey);
+    else void session.joinRoom(roomKey);
+  };
 
   return (
     <main className="min-h-dvh px-4 py-8">
@@ -123,16 +155,16 @@ export const Home = () => {
             <p className="text-sm text-zinc-400">{t("home.directBody")}</p>
             <input
               value={peerKey}
-              onChange={(e) => setPeerKey(e.target.value)}
+              onChange={(e) => applyInvite(e.target.value, setPeerKey, setPeerKind)}
               placeholder={t("home.peerPlaceholder")}
               className="w-full rounded-xl border border-line bg-zinc-900 px-3 py-2.5 font-mono text-sm outline-none focus:border-accent"
             />
             <Button
               className="w-full"
               disabled={!state.peerReady || !peerKey.trim()}
-              onClick={() => void session.startDirect(peerKey)}
+              onClick={startFromCallField}
             >
-              {t("home.call")}
+              {peerKind === "room" ? t("home.joinRoom") : t("home.call")}
             </Button>
           </section>
 
@@ -149,17 +181,17 @@ export const Home = () => {
             <CopyField label={t("home.roomLink")} value={roomLink} />
             <input
               value={roomKey}
-              onChange={(e) => setRoomKey(e.target.value)}
+              onChange={(e) => applyInvite(e.target.value, setRoomKey, setRoomKind)}
               placeholder={t("home.hostPlaceholder")}
               className="w-full rounded-xl border border-line bg-zinc-900 px-3 py-2.5 font-mono text-sm outline-none focus:border-accent"
             />
             <Button
-              variant="secondary"
+              variant={roomKind === "call" ? "primary" : "secondary"}
               className="w-full"
               disabled={!state.peerReady || !roomKey.trim()}
-              onClick={() => void session.joinRoom(roomKey)}
+              onClick={startFromRoomField}
             >
-              {t("home.joinRoom")}
+              {roomKind === "call" ? t("home.call") : t("home.joinRoom")}
             </Button>
           </section>
         </div>

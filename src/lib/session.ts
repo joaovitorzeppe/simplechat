@@ -5,6 +5,7 @@ import {
   startHistoryCall,
   touchHistoryParticipants,
 } from "./db";
+import { invitePeerId } from "./invite";
 import {
   applySenderLimits,
   applyTrackConstraints,
@@ -169,7 +170,7 @@ export class PeerSession {
   }
 
   async startDirect(remoteId: string) {
-    const id = remoteId.trim();
+    const id = invitePeerId(remoteId);
     if (!id || !this.peer || id === this.state.identity?.peerId) return;
     try {
       await this.ensureLocalStream();
@@ -200,7 +201,7 @@ export class PeerSession {
   }
 
   async joinRoom(hostId: string) {
-    const id = hostId.trim();
+    const id = invitePeerId(hostId);
     if (!id || !this.peer || id === this.state.identity?.peerId) return;
     try {
       await this.ensureLocalStream();
