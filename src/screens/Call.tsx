@@ -88,6 +88,7 @@ export const Call = () => {
   const cameraTiles = (compact: boolean) => (
     <>
       <VideoTile
+        key="local"
         stream={state.localStream}
         name={me?.displayName ?? t("common.you")}
         local

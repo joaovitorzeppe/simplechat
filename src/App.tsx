@@ -28,32 +28,26 @@ const App = () => {
     };
   }, []);
 
+  let screen = null;
   if (!state.identity && !loadIdentity()) {
-    return (
-      <>
-        <Onboarding
-          onDone={(identity) => {
-            void session.start(identity);
-          }}
-        />
-        <Toast />
-      </>
+    screen = (
+      <Onboarding
+        onDone={(identity) => {
+          void session.start(identity);
+        }}
+      />
     );
-  }
-
-  if (!state.identity) {
-    return <Toast />;
+  } else if (state.identity && state.view === "history") {
+    screen = <History />;
+  } else if (state.identity && state.view === "call") {
+    screen = <Call />;
+  } else if (state.identity) {
+    screen = <Home />;
   }
 
   return (
     <>
-      {state.view === "history" ? (
-        <History />
-      ) : state.view === "call" ? (
-        <Call />
-      ) : (
-        <Home />
-      )}
+      {screen}
       {state.incoming && state.callStatus === "idle" && (
         <IncomingCall
           name={state.incoming.displayName}

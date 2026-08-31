@@ -621,7 +621,7 @@ export class PeerSession {
         this.broadcast({ type: "room-peers", peers: this.roomMembers });
         this.maybeCall(msg.peerId);
       }
-      if (this.state.callMode === "direct") this.maybeCall(msg.peerId);
+      this.maybeCall(msg.peerId);
       this.syncHistoryPeers();
       return;
     }
@@ -719,7 +719,7 @@ export class PeerSession {
     };
     const remotes = current
       ? this.state.remotes.map((r) => (r.peerId === peerId ? next : r))
-      : [...this.state.remotes, next];
+      : [...this.state.remotes.filter((r) => r.peerId !== peerId), next];
     this.patch({ remotes });
   }
 

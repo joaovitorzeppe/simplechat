@@ -20,6 +20,22 @@ const isIos = () => {
   );
 };
 
+export const registerPwa = () => {
+  if (!("serviceWorker" in navigator)) return;
+  if (import.meta.env.DEV) {
+    void navigator.serviceWorker.getRegistrations().then((regs) => {
+      for (const reg of regs) void reg.unregister();
+    });
+    void caches.keys().then((keys) => {
+      for (const key of keys) void caches.delete(key);
+    });
+    return;
+  }
+  window.addEventListener("load", () => {
+    void navigator.serviceWorker.register("/sw.js");
+  });
+};
+
 export const useInstallPrompt = () => {
   const [event, setEvent] = useState<InstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(isStandalone);

@@ -31,6 +31,9 @@ export const VideoTile = ({
     const el = ref.current;
     if (!el) return;
     el.srcObject = stream;
+    return () => {
+      el.srcObject = null;
+    };
   }, [stream]);
 
   const blank = !stream || cameraOff;
