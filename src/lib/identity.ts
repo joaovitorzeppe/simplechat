@@ -14,7 +14,21 @@ export function loadIdentity(): Identity | null {
   }
 }
 
-export function createIdentity(displayName: string, peerId = crypto.randomUUID()): Identity {
+function slugFirstName(displayName: string): string {
+  const first = displayName.trim().split(/\s+/)[0] ?? ''
+  const cleaned = first
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+  return cleaned || 'user'
+}
+
+export function createPeerId(displayName: string): string {
+  return `${slugFirstName(displayName)}-${crypto.randomUUID()}-${Date.now()}`
+}
+
+export function createIdentity(displayName: string, peerId = createPeerId(displayName)): Identity {
   return { displayName: displayName.trim(), peerId }
 }
 
