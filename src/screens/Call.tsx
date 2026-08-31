@@ -12,8 +12,10 @@ import {
   PhoneOffIcon,
   ScreenIcon,
 } from '../components/Icons'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { QualityBadge } from '../components/QualityBadge'
 import { VideoTile } from '../components/VideoTile'
+import { useI18n } from '../i18n/use-i18n'
 import { useSession } from '../lib/use-session'
 import { cn } from '../lib/cn'
 
@@ -25,6 +27,7 @@ type ScreenItem = {
 }
 
 export function Call() {
+  const { t } = useI18n()
   const { state, session } = useSession()
   const [chatOpen, setChatOpen] = useState(() => window.matchMedia('(min-width: 768px)').matches)
   const [copied, setCopied] = useState(false)
@@ -76,7 +79,7 @@ export function Call() {
     <>
       <VideoTile
         stream={state.localStream}
-        name={me?.displayName ?? 'Você'}
+        name={me?.displayName ?? t('common.you')}
         local
         cameraOff={state.cameraOff}
         className={compact ? 'h-28 w-40 shrink-0 min-h-24' : undefined}
@@ -98,13 +101,20 @@ export function Call() {
         <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-line">
           <div>
             <p className="text-xs text-zinc-500">
-              {state.callMode === 'room' ? (state.isHost ? 'Sala · você é o host' : 'Sala') : 'Chamada 1:1'}
+              {state.callMode === 'room'
+                ? state.isHost
+                  ? t('call.roomHost')
+                  : t('call.room')
+                : t('call.direct')}
             </p>
             <p className="text-sm text-zinc-300">
-              {state.callStatus === 'connecting' ? 'Conectando…' : `${state.remotes.length + 1} na chamada`}
+              {state.callStatus === 'connecting'
+                ? t('call.connecting')
+                : t('call.inCall', { count: state.remotes.length + 1 })}
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <LanguageSwitcher className="hidden sm:inline-flex" />
             {invite && (
               <Button
                 variant="secondary"
@@ -116,7 +126,7 @@ export function Call() {
                 }}
               >
                 {copied ? <CheckIcon /> : <CopyIcon />}
-                {state.callMode === 'room' ? 'Copiar convite da sala' : 'Copiar convite'}
+                {state.callMode === 'room' ? t('call.copyRoomInvite') : t('call.copyInvite')}
               </Button>
             )}
             {screens.length >= 2 && (
@@ -124,10 +134,10 @@ export function Call() {
                 variant="secondary"
                 className="text-xs py-1.5"
                 onClick={() => setShowCameras((v) => !v)}
-                title={showCameras ? 'Ocultar câmeras' : 'Mostrar câmeras'}
+                title={showCameras ? t('call.hideCameras') : t('call.showCameras')}
               >
                 <CameraIcon width={16} height={16} />
-                {showCameras ? 'Ocultar câmeras' : 'Câmeras'}
+                {showCameras ? t('call.hideCameras') : t('call.cameras')}
               </Button>
             )}
             <QualityBadge compact />
@@ -167,13 +177,17 @@ export function Call() {
         )}
 
         <div className="flex flex-wrap items-center justify-center gap-2 px-4 py-4">
-          <Button variant="icon" onClick={() => session.toggleMute()} title={state.muted ? 'Ativar microfone' : 'Silenciar'}>
+          <Button
+            variant="icon"
+            onClick={() => session.toggleMute()}
+            title={state.muted ? t('call.unmute') : t('call.mute')}
+          >
             {state.muted ? <MicOffIcon /> : <MicIcon />}
           </Button>
           <Button
             variant="icon"
             onClick={() => session.toggleCamera()}
-            title={state.cameraOff ? 'Ligar câmera' : 'Desligar câmera'}
+            title={state.cameraOff ? t('call.cameraOn') : t('call.cameraOff')}
           >
             {state.cameraOff ? <CameraOffIcon /> : <CameraIcon />}
           </Button>
@@ -181,11 +195,11 @@ export function Call() {
             variant="icon"
             className={state.sharingScreen ? 'border-accent text-accent' : ''}
             onClick={() => void session.shareScreen()}
-            title="Compartilhar tela"
+            title={t('call.shareScreen')}
           >
             <ScreenIcon />
           </Button>
-          <Button variant="icon" onClick={() => setChatOpen((v) => !v)} title="Chat">
+          <Button variant="icon" onClick={() => setChatOpen((v) => !v)} title={t('call.chat')}>
             <ChatIcon />
           </Button>
           <Button variant="icon" className="bg-red-500 hover:bg-red-400 border-red-400" onClick={() => session.hangUp()}>

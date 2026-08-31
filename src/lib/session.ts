@@ -12,6 +12,8 @@ import {
   getCameraConstraints,
   getDisplayConstraints,
 } from './quality'
+import type { MessageKey } from '../i18n/locales'
+import { t } from '../i18n/i18n'
 import type {
   CallMode,
   ChatMessage,
@@ -27,8 +29,8 @@ export type SessionState = {
   view: View
   identity: Identity | null
   peerReady: boolean
-  peerError: string | null
-  toast: string | null
+  peerError: MessageKey | null
+  toast: MessageKey | null
   localStream: MediaStream | null
   localScreenStream: MediaStream | null
   remotes: RemotePeer[]
@@ -102,9 +104,9 @@ export class PeerSession {
     for (const listener of this.listeners) listener()
   }
 
-  private toast(message: string) {
+  private toast(key: MessageKey) {
     window.clearTimeout(this.toastTimer)
-    this.patch({ toast: message })
+    this.patch({ toast: key })
     this.toastTimer = window.setTimeout(() => this.patch({ toast: null }), 3200)
   }
 
@@ -132,16 +134,16 @@ export class PeerSession {
       if (type === 'unavailable-id') {
         this.patch({
           peerReady: false,
-          peerError: 'Esta chave ainda está ocupada no broker. Recarregue em alguns segundos.',
+          peerError: 'error.unavailableId',
         })
         return
       }
       if (type === 'peer-unavailable') {
-        this.toast('Pessoa não encontrada. Confira a chave.')
+        this.toast('toast.peerUnavailable')
         if (this.state.callStatus === 'connecting') this.resetCall(false)
         return
       }
-      this.patch({ peerError: err.message || 'Falha no PeerJS' })
+      this.patch({ peerError: 'error.peerjs' })
     })
 
     peer.on('disconnected', () => {
@@ -169,7 +171,7 @@ export class PeerSession {
     try {
       await this.ensureLocalStream()
     } catch {
-      this.toast('Permita câmera e microfone para ligar.')
+      this.toast('toast.mediaCall')
       return
     }
     this.beginCall('direct', false)
@@ -182,7 +184,7 @@ export class PeerSession {
     try {
       await this.ensureLocalStream()
     } catch {
-      this.toast('Permita câmera e microfone para criar a sala.')
+      this.toast('toast.mediaRoom')
       return
     }
     this.roomMembers = this.selfInfo() ? [this.selfInfo()!] : []
@@ -196,7 +198,7 @@ export class PeerSession {
     try {
       await this.ensureLocalStream()
     } catch {
-      this.toast('Permita câmera e microfone para entrar na sala.')
+      this.toast('toast.mediaJoin')
       return
     }
     this.beginCall('room', false)
@@ -210,7 +212,7 @@ export class PeerSession {
     try {
       await this.ensureLocalStream()
     } catch {
-      this.toast('Permita câmera e microfone para atender.')
+      this.toast('toast.mediaAccept')
       return
     }
     this.beginCall(incoming.kind === 'room' ? 'room' : 'direct', incoming.kind === 'room')
@@ -329,7 +331,7 @@ export class PeerSession {
 
   private helloPayload() {
     const me = this.state.identity
-    return { displayName: me?.displayName ?? 'Alguém', peerId: me?.peerId ?? '' }
+    return { displayName: me?.displayName ?? t('common.someone'), peerId: me?.peerId ?? '' }
   }
 
   private selfInfo(): PeerInfo | null {
@@ -467,7 +469,7 @@ export class PeerSession {
       }
       call.answer()
       this.attachIncomingScreen(call)
-      const displayName = meta.displayName || this.names.get(call.peer) || 'Alguém'
+      const displayName = meta.displayName || this.names.get(call.peer) || t('common.someone')
       this.names.set(call.peer, displayName)
       this.upsertRemote(call.peer, { displayName, sharingScreen: true })
       this.rememberShare(call.peer)
@@ -485,7 +487,7 @@ export class PeerSession {
     this.patch({
       incoming: {
         peerId: call.peer,
-        displayName: meta?.displayName || this.names.get(call.peer) || 'Alguém',
+        displayName: meta?.displayName || this.names.get(call.peer) || t('common.someone'),
         kind: 'direct',
       },
     })
@@ -577,7 +579,7 @@ export class PeerSession {
     }
 
     if (msg.type === 'room-ended') {
-      this.toast('A sala foi encerrada pelo host.')
+      this.toast('toast.roomEndedByHost')
       this.resetCall(true)
       return
     }
@@ -615,7 +617,7 @@ export class PeerSession {
     const current = this.state.remotes.find((r) => r.peerId === peerId)
     const next: RemotePeer = {
       peerId,
-      displayName: patch.displayName ?? current?.displayName ?? this.names.get(peerId) ?? 'Alguém',
+      displayName: patch.displayName ?? current?.displayName ?? this.names.get(peerId) ?? t('common.someone'),
       stream: patch.stream === undefined ? (current?.stream ?? null) : patch.stream,
       screenStream: patch.screenStream === undefined ? (current?.screenStream ?? null) : patch.screenStream,
       sharingScreen: patch.sharingScreen ?? current?.sharingScreen ?? false,
@@ -669,7 +671,7 @@ export class PeerSession {
       remotes.length === 0 &&
       this.state.callStatus === 'in-call'
     ) {
-      this.toast('A outra pessoa encerrou a chamada.')
+      this.toast('toast.peerLeft')
       this.resetCall(true)
     }
     if (
@@ -678,7 +680,7 @@ export class PeerSession {
       remotes.length === 0 &&
       this.state.callStatus === 'in-call'
     ) {
-      this.toast('A sala acabou.')
+      this.toast('toast.roomEnded')
       this.resetCall(true)
     }
   }

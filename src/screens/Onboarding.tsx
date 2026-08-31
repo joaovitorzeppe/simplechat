@@ -1,15 +1,18 @@
 import { useState, type FormEvent } from 'react'
 import { Button } from '../components/Button'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { setHistoryOptIn } from '../lib/db'
 import { clearIdentity, createIdentity, persistIdentity } from '../lib/identity'
 import type { Identity } from '../lib/types'
 import { cn } from '../lib/cn'
+import { useI18n } from '../i18n/use-i18n'
 
 type Props = {
   onDone: (identity: Identity) => void
 }
 
 export function Onboarding({ onDone }: Props) {
+  const { t } = useI18n()
   const [name, setName] = useState('')
   const [remember, setRemember] = useState(false)
   const [saveHistory, setSaveHistory] = useState(false)
@@ -31,20 +34,20 @@ export function Onboarding({ onDone }: Props) {
         onSubmit={submit}
         className="w-full max-w-md rounded-3xl border border-line bg-panel p-8"
       >
-        <p className="text-xs uppercase tracking-[0.25em] text-accent">SimpleChat</p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight">Como você quer aparecer?</h1>
-        <p className="mt-2 text-sm text-zinc-400">
-          Sem conta e sem servidor nosso. Se você não pedir para lembrar, geramos uma chave nova a
-          cada visita.
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-xs uppercase tracking-[0.25em] text-accent">SimpleChat</p>
+          <LanguageSwitcher />
+        </div>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight">{t('onboarding.title')}</h1>
+        <p className="mt-2 text-sm text-zinc-400">{t('onboarding.subtitle')}</p>
         <label className="mt-8 block text-sm text-zinc-400">
-          Nome
+          {t('onboarding.name')}
           <input
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="mt-2 w-full rounded-xl border border-line bg-zinc-900 px-4 py-3 text-base text-zinc-100 outline-none focus:border-accent"
-            placeholder="ex.: Ana"
+            placeholder={t('onboarding.namePlaceholder')}
           />
         </label>
 
@@ -61,11 +64,8 @@ export function Onboarding({ onDone }: Props) {
               }}
             />
             <span>
-              <strong className="text-zinc-100">Lembrar quem eu sou</strong>
-              <p className="mt-1 text-zinc-400">
-                Guardamos seu nome e a chave neste navegador para a próxima visita. Sem isso, uma
-                nova chave é gerada ao entrar.
-              </p>
+              <strong className="text-zinc-100">{t('onboarding.rememberTitle')}</strong>
+              <p className="mt-1 text-zinc-400">{t('onboarding.rememberBody')}</p>
             </span>
           </label>
 
@@ -83,17 +83,14 @@ export function Onboarding({ onDone }: Props) {
               onChange={(e) => setSaveHistory(e.target.checked)}
             />
             <span className={remember ? '' : 'opacity-50'}>
-              <strong className="text-zinc-100">Salvar histórico neste navegador</strong>
-              <p className="mt-1 text-zinc-400">
-                O histórico fica só aqui, não sincroniza e some se limpar os dados do site. Só pode
-                ser ligado se você lembrar quem é, porque ele fica atrelado a esta identidade.
-              </p>
+              <strong className="text-zinc-100">{t('onboarding.historyTitle')}</strong>
+              <p className="mt-1 text-zinc-400">{t('onboarding.historyBody')}</p>
             </span>
           </label>
         </div>
 
         <Button type="submit" className="mt-6 w-full" disabled={!name.trim()}>
-          Entrar
+          {t('onboarding.enter')}
         </Button>
       </form>
     </main>

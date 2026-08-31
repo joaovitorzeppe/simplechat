@@ -131,3 +131,13 @@ export function ArrowLeftIcon(props: IconProps) {
     </svg>
   )
 }
+
+export function GlobeIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M3 12h16" />
+      <path d="M12 4a14 14 0 0 1 4 8 14 14 0 0 1-4 8 14 14 0 0 1-4-8 14 14 0 0 1 4-8Z" />
+    </svg>
+  )
+}

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useI18n } from '../i18n/use-i18n'
 import { cn } from '../lib/cn'
 import { ExpandIcon } from './Icons'
 
@@ -24,6 +25,7 @@ export function VideoTile({
   onPin,
 }: Props) {
   const ref = useRef<HTMLVideoElement>(null)
+  const { t } = useI18n()
 
   useEffect(() => {
     const el = ref.current
@@ -56,7 +58,7 @@ export function VideoTile({
       {onPin && (
         <button
           type="button"
-          title="Centralizar esta tela"
+          title={t('call.pinScreen')}
           onClick={onPin}
           className="absolute top-2 right-2 grid size-8 place-items-center rounded-full border border-line bg-black/60 text-zinc-100 hover:bg-zinc-800 cursor-pointer"
         >
@@ -66,9 +68,9 @@ export function VideoTile({
       <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-linear-to-t from-black/70 to-transparent px-3 py-2 text-xs">
         <span className="font-medium truncate">
           {name}
-          {local ? ' (você)' : ''}
+          {local ? t('common.youSuffix') : ''}
         </span>
-        {sharingScreen && <span className="text-accent">tela</span>}
+        {sharingScreen && <span className="text-accent">{t('common.screen')}</span>}
       </div>
     </div>
   )

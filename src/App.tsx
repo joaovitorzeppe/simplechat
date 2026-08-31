@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { IncomingCall } from './components/IncomingCall'
+import { useI18n } from './i18n/use-i18n'
 import { loadIdentity } from './lib/identity'
 import { session } from './lib/session'
 import { useSession } from './lib/use-session'
@@ -10,6 +11,7 @@ import { Onboarding } from './screens/Onboarding'
 
 export default function App() {
   const { state } = useSession()
+  const { t } = useI18n()
 
   useEffect(() => {
     const identity = loadIdentity()
@@ -40,7 +42,7 @@ export default function App() {
       )}
       {state.toast && (
         <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-line bg-panel px-4 py-2 text-sm shadow-xl">
-          {state.toast}
+          {t(state.toast)}
         </div>
       )}
     </>

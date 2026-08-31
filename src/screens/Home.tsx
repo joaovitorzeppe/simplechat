@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Button } from '../components/Button'
 import { CheckIcon, CopyIcon, HistoryIcon } from '../components/Icons'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { QualityBadge } from '../components/QualityBadge'
-import { clearIdentity } from '../lib/identity'
+import { useI18n } from '../i18n/use-i18n'
 import { setHistoryOptIn } from '../lib/db'
+import { clearIdentity } from '../lib/identity'
 import { currentTier, setDemoTier } from '../lib/quality'
 import { useSession } from '../lib/use-session'
 
@@ -30,6 +32,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
 }
 
 export function Home() {
+  const { t } = useI18n()
   const { state, session } = useSession()
   const params = new URLSearchParams(window.location.search)
   const [peerKey, setPeerKey] = useState(params.get('call') ?? '')
@@ -46,14 +49,21 @@ export function Home() {
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-accent">SimpleChat</p>
-            <h1 className="mt-1 text-3xl font-semibold">Olá, {state.identity?.displayName}</h1>
+            <h1 className="mt-1 text-3xl font-semibold">
+              {t('home.hello', { name: state.identity?.displayName ?? '' })}
+            </h1>
             <p className="mt-1 text-sm text-zinc-400">
-              {state.peerReady ? 'Pronto para ligar.' : state.peerError || 'Conectando ao broker PeerJS…'}
+              {state.peerReady
+                ? t('home.ready')
+                : state.peerError
+                  ? t(state.peerError)
+                  : t('home.connecting')}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <LanguageSwitcher />
             <Button variant="secondary" onClick={() => session.setView('history')}>
-              <HistoryIcon /> Histórico
+              <HistoryIcon /> {t('home.history')}
             </Button>
             <Button
               variant="ghost"
@@ -63,24 +73,24 @@ export function Home() {
                 window.location.reload()
               }}
             >
-              Trocar identidade
+              {t('home.switchIdentity')}
             </Button>
           </div>
         </header>
 
         <section className="rounded-3xl border border-line bg-panel p-6 space-y-4">
-          <CopyField label="Sua chave" value={myId} />
-          <CopyField label="Link para te ligarem" value={callLink} />
+          <CopyField label={t('home.yourKey')} value={myId} />
+          <CopyField label={t('home.callLink')} value={callLink} />
         </section>
 
         <div className="grid gap-4 md:grid-cols-2">
           <section className="rounded-3xl border border-line bg-panel p-6 space-y-4">
-            <h2 className="text-lg font-medium">Chamada 1:1</h2>
-            <p className="text-sm text-zinc-400">Cole a chave de alguém e ligue. Vale o link ?call= também.</p>
+            <h2 className="text-lg font-medium">{t('home.directTitle')}</h2>
+            <p className="text-sm text-zinc-400">{t('home.directBody')}</p>
             <input
               value={peerKey}
               onChange={(e) => setPeerKey(e.target.value)}
-              placeholder="uuid da outra pessoa"
+              placeholder={t('home.peerPlaceholder')}
               className="w-full rounded-xl border border-line bg-zinc-900 px-3 py-2.5 font-mono text-sm outline-none focus:border-accent"
             />
             <Button
@@ -88,27 +98,25 @@ export function Home() {
               disabled={!state.peerReady || !peerKey.trim()}
               onClick={() => void session.startDirect(peerKey)}
             >
-              Ligar
+              {t('home.call')}
             </Button>
           </section>
 
           <section className="rounded-3xl border border-line bg-panel p-6 space-y-4">
-            <h2 className="text-lg font-medium">Sala (mesh)</h2>
-            <p className="text-sm text-zinc-400">
-              Você vira o host. Quem entra cola a sua chave. Se o host sair, a sala acaba.
-            </p>
+            <h2 className="text-lg font-medium">{t('home.roomTitle')}</h2>
+            <p className="text-sm text-zinc-400">{t('home.roomBody')}</p>
             <Button
               className="w-full"
               disabled={!state.peerReady}
               onClick={() => void session.createRoom()}
             >
-              Criar sala
+              {t('home.createRoom')}
             </Button>
-            <CopyField label="Link da sua sala" value={roomLink} />
+            <CopyField label={t('home.roomLink')} value={roomLink} />
             <input
               value={roomKey}
               onChange={(e) => setRoomKey(e.target.value)}
-              placeholder="chave do host"
+              placeholder={t('home.hostPlaceholder')}
               className="w-full rounded-xl border border-line bg-zinc-900 px-3 py-2.5 font-mono text-sm outline-none focus:border-accent"
             />
             <Button
@@ -117,7 +125,7 @@ export function Home() {
               disabled={!state.peerReady || !roomKey.trim()}
               onClick={() => void session.joinRoom(roomKey)}
             >
-              Entrar em sala
+              {t('home.joinRoom')}
             </Button>
           </section>
         </div>
@@ -135,7 +143,7 @@ export function Home() {
                 void session.reapplyQuality()
               }}
             />
-            Simular Pro (só neste navegador)
+            {t('home.simulatePro')}
           </label>
         </section>
       </div>
