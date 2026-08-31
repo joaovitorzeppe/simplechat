@@ -16,12 +16,12 @@ const styles: Record<Variant, string> = {
   icon: "bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-line size-11 p-0 rounded-full",
 };
 
-export function Button({
+export const Button = ({
   variant = "primary",
   className,
   type = "button",
   ...props
-}: Props) {
+}: Props) => {
   return (
     <button
       type={type}

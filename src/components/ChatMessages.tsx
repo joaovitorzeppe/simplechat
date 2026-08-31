@@ -8,7 +8,7 @@ type Props = {
   selfId: string
 }
 
-export function ChatMessages({ messages, selfId }: Props) {
+export const ChatMessages = ({ messages, selfId }: Props) => {
   const { locale } = useI18n()
   const groups = groupChatMessages(messages)
 

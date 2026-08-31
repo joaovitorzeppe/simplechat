@@ -5,7 +5,7 @@ import { cn } from "../lib/cn";
 
 const OPTIONS: Locale[] = ["pt", "en", "es"];
 
-export function LanguageSwitcher({ className }: { className?: string }) {
+export const LanguageSwitcher = ({ className }: { className?: string }) => {
   const { locale, setLocale, t } = useI18n();
 
   return (

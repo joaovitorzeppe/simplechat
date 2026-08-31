@@ -26,7 +26,7 @@ type ScreenItem = {
   local: boolean;
 };
 
-export function Call() {
+export const Call = () => {
   const { t } = useI18n();
   const { state, session } = useSession();
   const [chatOpen, setChatOpen] = useState(

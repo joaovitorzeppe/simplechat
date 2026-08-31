@@ -9,10 +9,10 @@ import { clearIdentity } from "../lib/identity";
 import { currentTier, setDemoTier } from "../lib/quality";
 import { useSession } from "../lib/use-session";
 
-function CopyField({ label, value }: { label: string; value: string }) {
+const CopyField = ({ label, value }: { label: string; value: string }) => {
   const [copied, setCopied] = useState(false);
 
-  async function copy() {
+  const copy = async () => {
     await navigator.clipboard.writeText(value);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
@@ -39,7 +39,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function Home() {
+export const Home = () => {
   const { t } = useI18n();
   const { state, session } = useSession();
   const params = new URLSearchParams(window.location.search);

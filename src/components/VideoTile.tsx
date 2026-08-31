@@ -14,7 +14,7 @@ type Props = {
   onPin?: () => void;
 };
 
-export function VideoTile({
+export const VideoTile = ({
   stream,
   name,
   local,
@@ -23,7 +23,7 @@ export function VideoTile({
   sharingScreen,
   className,
   onPin,
-}: Props) {
+}: Props) => {
   const ref = useRef<HTMLVideoElement>(null);
   const { t } = useI18n();
 

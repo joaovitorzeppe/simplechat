@@ -2,7 +2,7 @@ import { useI18n } from "../i18n/use-i18n";
 import { currentTier } from "../lib/quality";
 import { cn } from "../lib/cn";
 
-export function QualityBadge({ compact }: { compact?: boolean }) {
+export const QualityBadge = ({ compact }: { compact?: boolean }) => {
   const { t } = useI18n();
   const pro = currentTier() === "pro";
   return (

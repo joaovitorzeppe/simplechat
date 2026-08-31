@@ -9,7 +9,7 @@ type Props = {
   onReject: () => void;
 };
 
-export function IncomingCall({ name, onAccept, onReject }: Props) {
+export const IncomingCall = ({ name, onAccept, onReject }: Props) => {
   const { t } = useI18n();
 
   useEffect(() => {

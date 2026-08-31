@@ -16,7 +16,7 @@ import { loadIdentity } from "../lib/identity";
 import type { HistoryCall, HistoryMessage } from "../lib/types";
 import { useSession } from "../lib/use-session";
 
-export function History() {
+export const History = () => {
   const { session } = useSession();
   const { locale, t } = useI18n();
   const remembered = loadIdentity() !== null;
@@ -25,7 +25,7 @@ export function History() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [messages, setMessages] = useState<HistoryMessage[]>([]);
 
-  async function refresh() {
+  const refresh = async () => {
     setCalls(await listHistoryCalls());
   }
 
@@ -33,13 +33,13 @@ export function History() {
     void refresh();
   }, []);
 
-  async function toggleOptIn(enabled: boolean) {
+  const toggleOptIn = async (enabled: boolean) => {
     if (enabled && !loadIdentity()) return;
     setHistoryOptIn(enabled);
     setOptIn(enabled);
   }
 
-  async function open(callId: string) {
+  const open = async (callId: string) => {
     setOpenId(callId);
     setMessages(await listHistoryMessages(callId));
   }

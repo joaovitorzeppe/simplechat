@@ -10,11 +10,11 @@ type Props = {
   onSend: (text: string) => void;
 };
 
-export function ChatPanel({ messages, selfId, onSend }: Props) {
+export const ChatPanel = ({ messages, selfId, onSend }: Props) => {
   const { t } = useI18n();
   const [text, setText] = useState("");
 
-  function submit(event: FormEvent) {
+  const submit = (event: FormEvent) => {
     event.preventDefault();
     onSend(text);
     setText("");

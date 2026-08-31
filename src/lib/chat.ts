@@ -10,7 +10,10 @@ export type ChatGroup = {
   messages: ChatMessage[]
 }
 
-export function groupChatMessages(messages: ChatMessage[], windowMs = CHAT_GROUP_MS): ChatGroup[] {
+export const groupChatMessages = (
+  messages: ChatMessage[],
+  windowMs = CHAT_GROUP_MS,
+): ChatGroup[] => {
   const groups: ChatGroup[] = []
   for (const msg of messages) {
     const last = groups[groups.length - 1]
@@ -29,11 +32,11 @@ export function groupChatMessages(messages: ChatMessage[], windowMs = CHAT_GROUP
   return groups
 }
 
-function sameCalendarDay(a: Date, b: Date) {
+const sameCalendarDay = (a: Date, b: Date) => {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
 }
 
-export function formatMessageTime(at: number, locale: Locale, now = Date.now()) {
+export const formatMessageTime = (at: number, locale: Locale, now = Date.now()) => {
   const date = new Date(at)
   const today = new Date(now)
   const tag = localeTags[locale]

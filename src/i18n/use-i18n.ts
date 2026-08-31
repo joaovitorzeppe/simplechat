@@ -8,7 +8,7 @@ import {
 } from "./i18n";
 import type { MessageKey } from "./locales";
 
-export function useI18n() {
+export const useI18n = () => {
   const locale = useSyncExternalStore(subscribe, getLocale, getLocale);
   return {
     locale,
@@ -16,6 +16,6 @@ export function useI18n() {
     t: (key: MessageKey, vars?: Record<string, string | number>) =>
       translate(locale, key, vars),
   };
-}
+};
 
 export type { Locale, MessageKey };

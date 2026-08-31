@@ -15,13 +15,13 @@ type Props = {
   onDone: (identity: Identity) => void;
 };
 
-export function Onboarding({ onDone }: Props) {
+export const Onboarding = ({ onDone }: Props) => {
   const { t } = useI18n();
   const [name, setName] = useState("");
   const [remember, setRemember] = useState(false);
   const [saveHistory, setSaveHistory] = useState(false);
 
-  function submit(event: FormEvent) {
+  const submit = (event: FormEvent) => {
     event.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;

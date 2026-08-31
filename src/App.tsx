@@ -10,7 +10,7 @@ import { History } from "./screens/History";
 import { Home } from "./screens/Home";
 import { Onboarding } from "./screens/Onboarding";
 
-export default function App() {
+const App = () => {
   const { state } = useSession();
   const { t } = useI18n();
 
@@ -64,4 +64,6 @@ export default function App() {
       )}
     </>
   );
-}
+};
+
+export default App;

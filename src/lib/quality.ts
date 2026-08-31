@@ -22,17 +22,17 @@ export const TIERS: Record<QualityTier, Record<MediaKind, TierLimits>> = {
   },
 };
 
-export function currentTier(): QualityTier {
+export const currentTier = (): QualityTier => {
   return localStorage.getItem(DEMO_KEY) === "pro" ? "pro" : "free";
-}
+};
 
-export function setDemoTier(tier: QualityTier) {
+export const setDemoTier = (tier: QualityTier) => {
   localStorage.setItem(DEMO_KEY, tier);
-}
+};
 
-export function getCameraConstraints(
+export const getCameraConstraints = (
   tier: QualityTier,
-): MediaStreamConstraints {
+): MediaStreamConstraints => {
   const t = TIERS[tier].camera;
   return {
     audio: {
@@ -45,11 +45,11 @@ export function getCameraConstraints(
       frameRate: { ideal: t.frameRate, max: t.frameRate },
     },
   };
-}
+};
 
-export function getDisplayConstraints(
+export const getDisplayConstraints = (
   tier: QualityTier,
-): DisplayMediaStreamOptions {
+): DisplayMediaStreamOptions => {
   const t = TIERS[tier].screen;
   return {
     audio: false,
@@ -59,13 +59,13 @@ export function getDisplayConstraints(
       frameRate: { ideal: t.frameRate, max: t.frameRate },
     },
   };
-}
+};
 
-export async function applyTrackConstraints(
+export const applyTrackConstraints = async (
   stream: MediaStream,
   kind: MediaKind,
   tier: QualityTier,
-) {
+) => {
   const t = TIERS[tier][kind];
   const video = stream.getVideoTracks()[0];
   if (!video) return;
@@ -78,13 +78,13 @@ export async function applyTrackConstraints(
   } catch {
     // o dispositivo pode ignorar o teto; o bitrate ainda limita o envio
   }
-}
+};
 
-export async function applySenderLimits(
+export const applySenderLimits = async (
   sender: RTCRtpSender,
   kind: MediaKind,
   tier: QualityTier,
-) {
+) => {
   if (sender.track?.kind !== "video") return;
   const bitrate = TIERS[tier][kind].maxBitrate;
   try {
@@ -97,4 +97,4 @@ export async function applySenderLimits(
   } catch {
     // alguns browsers só aceitam setParameters depois da negociação
   }
-}
+};

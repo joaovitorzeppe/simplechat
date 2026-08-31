@@ -2,7 +2,7 @@ import type { SVGProps } from "react";
 
 type IconProps = SVGProps<SVGSVGElement>;
 
-function base(props: IconProps) {
+const base = (props: IconProps) => {
   return {
     viewBox: "0 0 24 24",
     fill: "none",
@@ -16,7 +16,7 @@ function base(props: IconProps) {
   };
 }
 
-export function MicIcon(props: IconProps) {
+export const MicIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>
       <path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Z" />
@@ -26,7 +26,7 @@ export function MicIcon(props: IconProps) {
   );
 }
 
-export function MicOffIcon(props: IconProps) {
+export const MicOffIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>
       <path d="M9 9v3a3 3 0 0 0 5.1 2.1" />
@@ -39,7 +39,7 @@ export function MicOffIcon(props: IconProps) {
   );
 }
 
-export function CameraIcon(props: IconProps) {
+export const CameraIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>
       <path d="M16 8H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2Z" />
@@ -48,7 +48,7 @@ export function CameraIcon(props: IconProps) {
   );
 }
 
-export function CameraOffIcon(props: IconProps) {
+export const CameraOffIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>
       <path d="M16 8H8" />
@@ -59,7 +59,7 @@ export function CameraOffIcon(props: IconProps) {
   );
 }
 
-export function ScreenIcon(props: IconProps) {
+export const ScreenIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>
       <rect x="3" y="4" width="18" height="12" rx="2" />
@@ -69,7 +69,7 @@ export function ScreenIcon(props: IconProps) {
   );
 }
 
-export function PhoneOffIcon(props: IconProps) {
+export const PhoneOffIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>
       <path d="M10.7 6.5c.7-.2 1.5-.3 2.3-.3 4.4 0 8 3.6 8 8 0 .8-.1 1.6-.3 2.3" />
@@ -79,7 +79,7 @@ export function PhoneOffIcon(props: IconProps) {
   );
 }
 
-export function ChatIcon(props: IconProps) {
+export const ChatIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>
       <path d="M5 6h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9l-4 3v-3H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" />
@@ -87,7 +87,7 @@ export function ChatIcon(props: IconProps) {
   );
 }
 
-export function CopyIcon(props: IconProps) {
+export const CopyIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>
       <rect x="8" y="8" width="12" height="12" rx="2" />
@@ -96,7 +96,7 @@ export function CopyIcon(props: IconProps) {
   );
 }
 
-export function CheckIcon(props: IconProps) {
+export const CheckIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>
       <path d="M5 12.5 9.5 17 19 7.5" />
@@ -104,7 +104,7 @@ export function CheckIcon(props: IconProps) {
   );
 }
 
-export function HistoryIcon(props: IconProps) {
+export const HistoryIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>
       <circle cx="12" cy="12" r="8" />
@@ -113,7 +113,7 @@ export function HistoryIcon(props: IconProps) {
   );
 }
 
-export function ExpandIcon(props: IconProps) {
+export const ExpandIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>
       <path d="M9 3H4v5" />
@@ -124,7 +124,7 @@ export function ExpandIcon(props: IconProps) {
   );
 }
 
-export function ArrowLeftIcon(props: IconProps) {
+export const ArrowLeftIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>
       <path d="M15 5 8 12l7 7" />
@@ -132,7 +132,7 @@ export function ArrowLeftIcon(props: IconProps) {
   );
 }
 
-export function GlobeIcon(props: IconProps) {
+export const GlobeIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>
       <circle cx="12" cy="12" r="8" />

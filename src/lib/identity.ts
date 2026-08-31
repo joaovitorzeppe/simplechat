@@ -2,7 +2,7 @@ import type { Identity } from "./types";
 
 const KEY = "simplechat.identity";
 
-export function loadIdentity(): Identity | null {
+export const loadIdentity = (): Identity | null => {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
@@ -12,9 +12,9 @@ export function loadIdentity(): Identity | null {
   } catch {
     return null;
   }
-}
+};
 
-function slugFirstName(displayName: string): string {
+const slugFirstName = (displayName: string): string => {
   const first = displayName.trim().split(/\s+/)[0] ?? "";
   const cleaned = first
     .normalize("NFD")
@@ -22,23 +22,23 @@ function slugFirstName(displayName: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
   return cleaned || "user";
-}
+};
 
-export function createPeerId(displayName: string): string {
+export const createPeerId = (displayName: string): string => {
   return `${slugFirstName(displayName)}-${crypto.randomUUID()}-${Date.now()}`;
-}
+};
 
-export function createIdentity(
+export const createIdentity = (
   displayName: string,
   peerId = createPeerId(displayName),
-): Identity {
+): Identity => {
   return { displayName: displayName.trim(), peerId };
-}
+};
 
-export function persistIdentity(identity: Identity) {
+export const persistIdentity = (identity: Identity) => {
   localStorage.setItem(KEY, JSON.stringify(identity));
-}
+};
 
-export function clearIdentity() {
+export const clearIdentity = () => {
   localStorage.removeItem(KEY);
-}
+};

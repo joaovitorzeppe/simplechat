@@ -1,6 +1,6 @@
 let ctx: AudioContext | null = null
 
-function audio(): AudioContext | null {
+const audio = (): AudioContext | null => {
   try {
     ctx ??= new AudioContext()
     if (ctx.state === 'suspended') void ctx.resume()
@@ -10,18 +10,18 @@ function audio(): AudioContext | null {
   }
 }
 
-export function unlockAudio() {
+export const unlockAudio = () => {
   const c = audio()
   if (c?.state === 'suspended') void c.resume()
 }
 
-function tone(
+const tone = (
   context: AudioContext,
   freq: number,
   when: number,
   duration: number,
   gain = 0.08,
-) {
+) => {
   const osc = context.createOscillator()
   const amp = context.createGain()
   osc.type = 'sine'
@@ -36,7 +36,7 @@ function tone(
   osc.stop(start + duration + 0.03)
 }
 
-export function playRingtone() {
+export const playRingtone = () => {
   const context = audio()
   if (!context) return () => {}
   let timer = 0
@@ -58,7 +58,7 @@ export function playRingtone() {
   }
 }
 
-export function playCallEnded() {
+export const playCallEnded = () => {
   const context = audio()
   if (!context) return
   tone(context, 620, 0, 0.14, 0.09)
