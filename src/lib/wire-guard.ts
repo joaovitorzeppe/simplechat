@@ -1,6 +1,7 @@
 import { MAX_FILE_BYTES, MAX_PARTICIPANTS } from "./quality";
 import { ALL_MENTION } from "./mentions";
 import { truncateText } from "./text";
+import type { RoomMuteEntry } from "./mutes";
 import type { PeerInfo, WireMessage } from "./types";
 
 export const MAX_CHAT_TEXT = 4000;
@@ -74,6 +75,31 @@ const peerInfo = (value: unknown): PeerInfo | null => {
   return { peerId, displayName };
 };
 
+const roomMuteEntry = (value: unknown): RoomMuteEntry | null => {
+  if (!isRecord(value)) return null;
+  const peerId = str(value.peerId, MAX_PEER_ID);
+  if (!peerId) return null;
+  if (typeof value.audio !== "boolean" || typeof value.video !== "boolean")
+    return null;
+  return { peerId, audio: value.audio, video: value.video };
+};
+
+/** `null` quando ausente, `false` quando presente e inválido. */
+const parseRoomMutes = (value: unknown): RoomMuteEntry[] | null | false => {
+  if (value === undefined) return null;
+  if (!Array.isArray(value) || value.length > MAX_PEERS) return false;
+  const out: RoomMuteEntry[] = [];
+  const seen = new Set<string>();
+  for (const entry of value) {
+    const mute = roomMuteEntry(entry);
+    if (!mute) return false;
+    if (seen.has(mute.peerId)) continue;
+    seen.add(mute.peerId);
+    out.push(mute);
+  }
+  return out;
+};
+
 /**
  * Tudo que chega pelo data channel é hostil até prova em contrário: o peer
  * remoto controla os bytes por completo. Mensagens que não batem exatamente
@@ -110,12 +136,28 @@ export const parseWire = (raw: unknown): WireMessage | null => {
       }
       const hostPeerId = optionalStr(raw.hostPeerId, MAX_PEER_ID);
       const secret = optionalStr(raw.secret, MAX_ROOM_SECRET);
-      if (hostPeerId === false || secret === false) return null;
+      const mutes = parseRoomMutes(raw.mutes);
+      if (hostPeerId === false || secret === false || mutes === false)
+        return null;
       return {
         type: "room-peers",
         peers,
         ...(hostPeerId ? { hostPeerId } : {}),
         ...(secret ? { secret } : {}),
+        ...(mutes ? { mutes } : {}),
+      };
+    }
+
+    case "room-mute": {
+      const peerId = str(raw.peerId, MAX_PEER_ID);
+      if (!peerId) return null;
+      if (!optionalBool(raw.audio) || !optionalBool(raw.video)) return null;
+      if (raw.audio === undefined && raw.video === undefined) return null;
+      return {
+        type: "room-mute",
+        peerId,
+        ...(raw.audio !== undefined ? { audio: raw.audio as boolean } : {}),
+        ...(raw.video !== undefined ? { video: raw.video as boolean } : {}),
       };
     }
 

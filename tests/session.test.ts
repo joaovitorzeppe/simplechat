@@ -155,10 +155,13 @@ describe("autoridade das mensagens de sala", () => {
 describe("identidade das mensagens", () => {
   it("usa a conexão como remetente, não o que a mensagem afirma", () => {
     asGuest();
-    core.roomMembers = [...core.roomMembers, {
-      peerId: "bruno-1",
-      displayName: "Bruno",
-    }];
+    core.roomMembers = [
+      ...core.roomMembers,
+      {
+        peerId: "bruno-1",
+        displayName: "Bruno",
+      },
+    ];
     core.names.set("bruno-1", "Bruno");
     core.onWire(conn("bruno-1"), {
       type: "chat",
@@ -305,7 +308,10 @@ describe("transferência explícita de host", () => {
 
   it("ignora host-transfer de quem não é o host", () => {
     asGuest();
-    core.onWire(conn(INTRUDER), { type: "host-transfer", hostPeerId: INTRUDER });
+    core.onWire(conn(INTRUDER), {
+      type: "host-transfer",
+      hostPeerId: INTRUDER,
+    });
     expect(core.state.hostPeerId).toBe(HOST);
     expect(core.state.isHost).toBe(false);
   });
@@ -620,5 +626,120 @@ describe("remoção de participante", () => {
     asGuest();
     core.onWire(conn(INTRUDER), { type: "room-kicked" });
     expect(core.state.callStatus).toBe("in-call");
+  });
+});
+
+describe("silenciar áudio e vídeo", () => {
+  const withZeca = () => {
+    core.roomMembers = [
+      ...core.roomMembers,
+      { peerId: ZECA, displayName: "Zeca" },
+    ];
+    core.patch({ remotes: [remote(ZECA, "Zeca")] });
+  };
+
+  it("convidado silencia outra pessoa só para si", () => {
+    asGuest();
+    withZeca();
+    const c = conn(ZECA);
+    core.data.set(ZECA, c);
+    session.toggleLocalMute(ZECA, "audio");
+    expect(core.state.localMutes[ZECA]).toEqual({ audio: true, video: false });
+    expect(c.sent).toEqual([]);
+  });
+
+  it("ninguém silencia o host, nem local nem na sala", () => {
+    asGuest();
+    withZeca();
+    session.toggleLocalMute(HOST, "audio");
+    session.setRoomMute(HOST, "audio", true);
+    expect(core.state.localMutes).toEqual({});
+    expect(core.state.roomMutes).toEqual({});
+    core.onWire(conn(HOST), { type: "room-mute", peerId: HOST, audio: true });
+    expect(core.state.roomMutes).toEqual({});
+  });
+
+  it("convidado não consegue silenciar na sala", () => {
+    asGuest();
+    withZeca();
+    session.setRoomMute(ZECA, "audio", true);
+    expect(core.state.roomMutes).toEqual({});
+    core.onWire(conn(INTRUDER), {
+      type: "room-mute",
+      peerId: ZECA,
+      audio: true,
+    });
+    expect(core.state.roomMutes).toEqual({});
+  });
+
+  it("host silencia na sala e anuncia aos demais", () => {
+    asHost();
+    withZeca();
+    const c = conn(ZECA);
+    core.data.set(ZECA, c);
+    session.setRoomMute(ZECA, "audio", true);
+    expect(core.state.roomMutes[ZECA]).toEqual({ audio: true, video: false });
+    expect(c.sent).toContainEqual({
+      type: "room-mute",
+      peerId: ZECA,
+      audio: true,
+    });
+  });
+
+  it("quem foi silenciado na sala não reativa o microfone", () => {
+    asGuest();
+    const track = { enabled: true };
+    core.patch({
+      muted: false,
+      localStream: {
+        getAudioTracks: () => [track],
+        getVideoTracks: () => [],
+      } as unknown as MediaStream,
+    });
+    core.onWire(conn(HOST), { type: "room-mute", peerId: ME, audio: true });
+    expect(core.state.roomMutes[ME]).toEqual({ audio: true, video: false });
+    expect(core.state.muted).toBe(true);
+    expect(track.enabled).toBe(false);
+    session.toggleMute();
+    expect(core.state.muted).toBe(true);
+    expect(track.enabled).toBe(false);
+  });
+
+  it("quem foi silenciado na sala não religa a câmera", async () => {
+    asGuest();
+    core.patch({ cameraOff: true });
+    core.onWire(conn(HOST), { type: "room-mute", peerId: ME, video: true });
+    await session.toggleCamera();
+    expect(core.state.cameraOff).toBe(true);
+  });
+
+  it("convidado não desliga o mute de sala para si mesmo", () => {
+    asGuest();
+    withZeca();
+    core.onWire(conn(HOST), { type: "room-mute", peerId: ZECA, audio: true });
+    session.toggleLocalMute(ZECA, "audio");
+    expect(core.state.localMutes[ZECA]).toBeUndefined();
+    expect(core.state.roomMutes[ZECA]).toEqual({ audio: true, video: false });
+  });
+
+  it("snapshot do host substitui os mutes da sala", () => {
+    asGuest();
+    withZeca();
+    core.patch({
+      roomMutes: { [ZECA]: { audio: true, video: true } },
+    });
+    core.onWire(conn(HOST), {
+      type: "room-peers",
+      peers: [
+        { peerId: HOST, displayName: "Host" },
+        { peerId: ME, displayName: "Eu" },
+        { peerId: ZECA, displayName: "Zeca" },
+      ],
+      hostPeerId: HOST,
+      mutes: [{ peerId: ZECA, audio: false, video: true }],
+    });
+    expect(core.state.roomMutes).toEqual({
+      [ZECA]: { audio: false, video: true },
+    });
   });
 });

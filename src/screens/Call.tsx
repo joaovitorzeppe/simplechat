@@ -21,6 +21,7 @@ import { useI18n } from "../i18n/use-i18n";
 import { cn } from "../lib/cn";
 import { inviteLink } from "../lib/invite";
 import { maxParticipants } from "../lib/quality";
+import { muteOf, type MuteKind } from "../lib/mutes";
 import { electHost } from "../lib/session";
 import { useSession } from "../lib/use-session";
 import "@fontsource/ibm-plex-mono/400.css";
@@ -107,6 +108,7 @@ export const Call = () => {
   const others = screens.filter((item) => item.id !== focused?.id);
   const hideCameras = screens.length >= 2 && !showCameras;
   const count = state.remotes.length + 1;
+  const selfRoom = me ? muteOf(state.roomMutes, me.peerId) : null;
   const grid =
     count === 1
       ? "grid-cols-1"
@@ -124,18 +126,39 @@ export const Call = () => {
         cameraOff={state.cameraOff}
         className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
       />
-      {state.remotes.map((remote) => (
-        <VideoTile
-          key={remote.peerId}
-          stream={remote.stream}
-          name={remote.displayName}
-          cameraOff={remote.cameraOff}
-          onRemove={
-            state.isHost ? () => session.kickPeer(remote.peerId) : undefined
-          }
-          className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
-        />
-      ))}
+      {state.remotes.map((remote) => {
+        const isHostTile = remote.peerId === state.hostPeerId;
+        const localMute = muteOf(state.localMutes, remote.peerId);
+        const roomMute = muteOf(state.roomMutes, remote.peerId);
+        return (
+          <VideoTile
+            key={remote.peerId}
+            stream={remote.stream}
+            name={remote.displayName}
+            mutedAudio={localMute.audio || roomMute.audio}
+            cameraOff={remote.cameraOff || localMute.video || roomMute.video}
+            onRemove={
+              state.isHost ? () => session.kickPeer(remote.peerId) : undefined
+            }
+            isHostViewer={state.isHost}
+            localMute={localMute}
+            roomMute={roomMute}
+            onToggleLocal={
+              isHostTile
+                ? undefined
+                : (kind: MuteKind) =>
+                    session.toggleLocalMute(remote.peerId, kind)
+            }
+            onSetRoom={
+              state.isHost && !isHostTile
+                ? (kind, muted) =>
+                    session.setRoomMute(remote.peerId, kind, muted)
+                : undefined
+            }
+            className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
+          />
+        );
+      })}
     </>
   );
 
@@ -233,14 +256,28 @@ export const Call = () => {
           <Button
             variant="icon"
             onClick={() => session.toggleMute()}
-            title={state.muted ? t("call.unmute") : t("call.mute")}
+            disabled={!!selfRoom?.audio}
+            title={
+              selfRoom?.audio
+                ? t("call.hostMutedYouAudio")
+                : state.muted
+                  ? t("call.unmute")
+                  : t("call.mute")
+            }
           >
             {state.muted ? <MicOffIcon /> : <MicIcon />}
           </Button>
           <Button
             variant="icon"
             onClick={() => void session.toggleCamera()}
-            title={state.cameraOff ? t("call.cameraOn") : t("call.cameraOff")}
+            disabled={!!selfRoom?.video}
+            title={
+              selfRoom?.video
+                ? t("call.hostMutedYouVideo")
+                : state.cameraOff
+                  ? t("call.cameraOn")
+                  : t("call.cameraOff")
+            }
           >
             {state.cameraOff ? <CameraOffIcon /> : <CameraIcon />}
           </Button>

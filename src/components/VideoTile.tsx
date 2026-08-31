@@ -1,8 +1,10 @@
 import { memo, useEffect, useRef } from "react";
 import { useI18n } from "../i18n/use-i18n";
 import { cn } from "../lib/cn";
+import type { MuteFlags, MuteKind } from "../lib/mutes";
 import { firstGrapheme } from "../lib/text";
 import { ExpandIcon, UserRemoveIcon } from "./Icons";
+import { TileMuteControls } from "./TileMuteControls";
 
 type Props = {
   stream: MediaStream | null;
@@ -14,6 +16,11 @@ type Props = {
   className?: string;
   onPin?: () => void;
   onRemove?: () => void;
+  isHostViewer?: boolean;
+  localMute?: MuteFlags;
+  roomMute?: MuteFlags;
+  onToggleLocal?: (kind: MuteKind) => void;
+  onSetRoom?: (kind: MuteKind, muted: boolean) => void;
 };
 
 export const VideoTile = memo(function VideoTile({
@@ -26,6 +33,11 @@ export const VideoTile = memo(function VideoTile({
   className,
   onPin,
   onRemove,
+  isHostViewer,
+  localMute,
+  roomMute,
+  onToggleLocal,
+  onSetRoom,
 }: Props) {
   const ref = useRef<HTMLVideoElement>(null);
   const { t } = useI18n();
@@ -96,9 +108,21 @@ export const VideoTile = memo(function VideoTile({
           {name}
           {local ? t("common.youSuffix") : ""}
         </span>
-        {sharingScreen && (
-          <span className="text-accent">{t("common.screen")}</span>
-        )}
+        <div className="flex shrink-0 items-center gap-1">
+          {onToggleLocal && (
+            <TileMuteControls
+              name={name}
+              isHostViewer={!!isHostViewer}
+              localMute={localMute}
+              roomMute={roomMute}
+              onToggleLocal={onToggleLocal}
+              onSetRoom={onSetRoom}
+            />
+          )}
+          {sharingScreen && (
+            <span className="text-accent">{t("common.screen")}</span>
+          )}
+        </div>
       </div>
     </div>
   );

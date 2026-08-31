@@ -1,3 +1,5 @@
+import type { RoomMuteEntry } from "./mutes";
+
 export type QualityTier = "free" | "pro";
 export type CallMode = "direct" | "room";
 export type View = "home" | "call";
@@ -60,8 +62,15 @@ export type WireMessage =
       peers: PeerInfo[];
       hostPeerId?: string;
       secret?: string;
+      mutes?: RoomMuteEntry[];
     }
   | { type: "room-host"; hostPeerId: string }
+  | {
+      type: "room-mute";
+      peerId: string;
+      audio?: boolean;
+      video?: boolean;
+    }
   | {
       type: "chat";
       id: string;

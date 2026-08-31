@@ -60,9 +60,9 @@ describe("parseWire", () => {
   });
 
   it("aceita menções válidas e rejeita o resto", () => {
-    expect(
-      parseWire(chat({ mentions: ["all", "peer-1"] })),
-    ).toEqual(chat({ mentions: ["all", "peer-1"] }));
+    expect(parseWire(chat({ mentions: ["all", "peer-1"] }))).toEqual(
+      chat({ mentions: ["all", "peer-1"] }),
+    );
     expect(parseWire(chat({ mentions: [] }))).toEqual(chat());
     expect(parseWire(chat({ mentions: ["all", 1] }))).toBeNull();
     expect(parseWire(chat({ mentions: "all" }))).toBeNull();
@@ -134,6 +134,43 @@ describe("parseWire", () => {
     });
     expect(parseWire({ type: "media-meta" })).toEqual({ type: "media-meta" });
     expect(parseWire({ type: "media-meta", cameraOff: "sim" })).toBeNull();
+  });
+
+  it("aceita room-mute parcial e rejeita o resto", () => {
+    expect(
+      parseWire({ type: "room-mute", peerId: "ana-1", audio: true }),
+    ).toEqual({
+      type: "room-mute",
+      peerId: "ana-1",
+      audio: true,
+    });
+    expect(
+      parseWire({ type: "room-mute", peerId: "ana-1", video: false }),
+    ).toEqual({ type: "room-mute", peerId: "ana-1", video: false });
+    expect(parseWire({ type: "room-mute", peerId: "ana-1" })).toBeNull();
+    expect(
+      parseWire({ type: "room-mute", peerId: "ana-1", audio: "sim" }),
+    ).toBeNull();
+  });
+
+  it("aceita mutes no room-peers e rejeita entrada malformada", () => {
+    const base = { type: "room-peers", peers: peers(1) };
+    expect(
+      parseWire({
+        ...base,
+        mutes: [{ peerId: "ana-1", audio: true, video: false }],
+      }),
+    ).toMatchObject({
+      mutes: [{ peerId: "ana-1", audio: true, video: false }],
+    });
+    expect(parseWire({ ...base, mutes: [] })).toEqual({
+      ...base,
+      mutes: [],
+    });
+    expect(
+      parseWire({ ...base, mutes: [{ peerId: "ana-1", audio: true }] }),
+    ).toBeNull();
+    expect(parseWire({ ...base, mutes: "todos" })).toBeNull();
   });
 
   it("aceita as mensagens de controle sem corpo", () => {

@@ -70,6 +70,20 @@ export const pt = {
   "call.pinScreen": "Centralizar esta tela",
   "call.waiting": "Esperando o host aprovar sua entrada…",
   "call.remove": "Remover da chamada",
+  "call.muteForMe": "Silenciar para mim",
+  "call.unmuteForMe": "Ativar áudio para mim",
+  "call.muteForRoom": "Silenciar para a sala",
+  "call.unmuteForRoom": "Liberar microfone na sala",
+  "call.muteVideoForMe": "Desligar vídeo para mim",
+  "call.unmuteVideoForMe": "Ativar vídeo para mim",
+  "call.muteVideoForRoom": "Desligar vídeo para a sala",
+  "call.unmuteVideoForRoom": "Liberar vídeo na sala",
+  "call.muteAudioOptions": "Áudio deste participante",
+  "call.muteVideoOptions": "Vídeo deste participante",
+  "call.hostMutedAudio": "O host silenciou o microfone na sala",
+  "call.hostMutedVideo": "O host desligou a câmera na sala",
+  "call.hostMutedYouAudio": "O host silenciou seu microfone",
+  "call.hostMutedYouVideo": "O host desligou sua câmera",
 
   "lobby.title": "Querem entrar",
   "lobby.body": "Só entra quem você aprovar.",
@@ -150,6 +164,10 @@ export const pt = {
   "toast.hostDroppedNewHost":
     "A conexão do host caiu. Agora {name} conduz a chamada.",
   "toast.hostDroppedAlone": "A conexão do host caiu e a chamada acabou.",
+  "toast.roomMutedAudio": "O host silenciou seu microfone para a sala.",
+  "toast.roomUnmutedAudio": "O host liberou seu microfone.",
+  "toast.roomMutedVideo": "O host desligou sua câmera para a sala.",
+  "toast.roomUnmutedVideo": "O host liberou sua câmera.",
 } as const;
 
 export type MessageKey = keyof typeof pt;
@@ -225,6 +243,20 @@ export const en: Messages = {
   "call.pinScreen": "Focus this screen",
   "call.waiting": "Waiting for the host to let you in…",
   "call.remove": "Remove from call",
+  "call.muteForMe": "Mute for me",
+  "call.unmuteForMe": "Unmute audio for me",
+  "call.muteForRoom": "Mute for the room",
+  "call.unmuteForRoom": "Allow microphone in the room",
+  "call.muteVideoForMe": "Turn off video for me",
+  "call.unmuteVideoForMe": "Turn on video for me",
+  "call.muteVideoForRoom": "Turn off video for the room",
+  "call.unmuteVideoForRoom": "Allow video in the room",
+  "call.muteAudioOptions": "This participant's audio",
+  "call.muteVideoOptions": "This participant's video",
+  "call.hostMutedAudio": "The host muted the microphone for the room",
+  "call.hostMutedVideo": "The host turned off the camera for the room",
+  "call.hostMutedYouAudio": "The host muted your microphone",
+  "call.hostMutedYouVideo": "The host turned off your camera",
 
   "lobby.title": "Waiting to join",
   "lobby.body": "Only people you approve get in.",
@@ -305,6 +337,10 @@ export const en: Messages = {
   "toast.hostDroppedNewHost":
     "The host lost connection. {name} is running the call now.",
   "toast.hostDroppedAlone": "The host lost connection and the call ended.",
+  "toast.roomMutedAudio": "The host muted your microphone for the room.",
+  "toast.roomUnmutedAudio": "The host released your microphone.",
+  "toast.roomMutedVideo": "The host turned off your camera for the room.",
+  "toast.roomUnmutedVideo": "The host released your camera.",
 };
 
 export const es: Messages = {
@@ -378,6 +414,20 @@ export const es: Messages = {
   "call.pinScreen": "Centrar esta pantalla",
   "call.waiting": "Esperando que el anfitrión te deje entrar…",
   "call.remove": "Quitar de la llamada",
+  "call.muteForMe": "Silenciar para mí",
+  "call.unmuteForMe": "Activar audio para mí",
+  "call.muteForRoom": "Silenciar para la sala",
+  "call.unmuteForRoom": "Liberar micrófono en la sala",
+  "call.muteVideoForMe": "Apagar vídeo para mí",
+  "call.unmuteVideoForMe": "Activar vídeo para mí",
+  "call.muteVideoForRoom": "Apagar vídeo para la sala",
+  "call.unmuteVideoForRoom": "Liberar vídeo en la sala",
+  "call.muteAudioOptions": "Audio de este participante",
+  "call.muteVideoOptions": "Vídeo de este participante",
+  "call.hostMutedAudio": "El anfitrión silenció el micrófono en la sala",
+  "call.hostMutedVideo": "El anfitrión apagó la cámara en la sala",
+  "call.hostMutedYouAudio": "El anfitrión silenció tu micrófono",
+  "call.hostMutedYouVideo": "El anfitrión apagó tu cámara",
 
   "lobby.title": "Quieren entrar",
   "lobby.body": "Solo entra quien tú apruebes.",
@@ -458,6 +508,10 @@ export const es: Messages = {
   "toast.hostDroppedNewHost":
     "El anfitrión perdió la conexión. Ahora {name} dirige la llamada.",
   "toast.hostDroppedAlone": "El anfitrión perdió la conexión y la llamada terminó.",
+  "toast.roomMutedAudio": "El anfitrión silenció tu micrófono para la sala.",
+  "toast.roomUnmutedAudio": "El anfitrión liberó tu micrófono.",
+  "toast.roomMutedVideo": "El anfitrión apagó tu cámara para la sala.",
+  "toast.roomUnmutedVideo": "El anfitrión liberó tu cámara.",
 };
 
 export const dictionaries: Record<"pt" | "en" | "es", Messages> = {

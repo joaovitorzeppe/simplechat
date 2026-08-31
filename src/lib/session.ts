@@ -24,6 +24,15 @@ import {
 } from "./file-progress";
 import { FileBridge } from "./file-transfer";
 import { rememberPeer } from "./recents";
+import {
+  dropMute,
+  muteOf,
+  roomMutesFromWire,
+  roomMutesToWire,
+  setMuteFlag,
+  type MuteKind,
+  type MuteMap,
+} from "./mutes";
 import { clampChatText, clampDisplayName, parseWire } from "./wire-guard";
 import type {
   CallMode,
@@ -48,6 +57,10 @@ export type SessionState = {
   messages: ChatMessage[];
   muted: boolean;
   cameraOff: boolean;
+  /** Silêncio só neste cliente: não vai para o fio. */
+  localMutes: MuteMap;
+  /** Silêncio mandado pelo host: vale para a sala inteira. */
+  roomMutes: MuteMap;
   sharingScreen: boolean;
   screenShareOrder: string[];
   callMode: CallMode | null;
@@ -111,6 +124,8 @@ const initialState: SessionState = {
   messages: [],
   muted: false,
   cameraOff: false,
+  localMutes: {},
+  roomMutes: {},
   sharingScreen: false,
   screenShareOrder: [],
   callMode: null,
@@ -605,6 +620,7 @@ export class PeerSession {
 
   toggleMute() {
     const next = !this.state.muted;
+    if (!next && this.selfLocked("audio")) return;
     this.state.localStream?.getAudioTracks().forEach((track) => {
       track.enabled = !next;
     });
@@ -614,6 +630,25 @@ export class PeerSession {
   async toggleCamera() {
     if (this.state.cameraOff) await this.enableCamera();
     else this.disableCamera();
+  }
+
+  /** Silencia o áudio ou o vídeo de outra pessoa só neste cliente. */
+  toggleLocalMute(peerId: string, kind: MuteKind) {
+    if (!this.inRoom() || !this.canControlMute(peerId)) return;
+    if (muteOf(this.state.roomMutes, peerId)[kind] && !this.state.isHost)
+      return;
+    const next = !muteOf(this.state.localMutes, peerId)[kind];
+    this.patch({
+      localMutes: setMuteFlag(this.state.localMutes, peerId, kind, next),
+    });
+  }
+
+  /** Host: silencia (ou libera) áudio/vídeo de alguém para a sala inteira. */
+  setRoomMute(peerId: string, kind: MuteKind, muted: boolean) {
+    if (!this.state.isHost || !this.inRoom() || !this.canControlMute(peerId))
+      return;
+    this.applyRoomMute(peerId, { [kind]: muted }, false);
+    this.broadcast({ type: "room-mute", peerId, [kind]: muted });
   }
 
   async shareScreen() {
@@ -699,6 +734,8 @@ export class PeerSession {
       remotes: [],
       pending: [],
       leavePrompt: false,
+      localMutes: {},
+      roomMutes: {},
     });
   }
 
@@ -740,6 +777,7 @@ export class PeerSession {
   }
 
   private async enableCamera() {
+    if (this.selfLocked("video")) return;
     const tier = currentTier();
     let fresh: MediaStream;
     try {
@@ -1064,6 +1102,12 @@ export class PeerSession {
         if (this.state.roomSecret !== msg.secret)
           this.patch({ roomSecret: msg.secret });
       }
+      if (msg.mutes !== undefined) {
+        this.patch({
+          roomMutes: roomMutesFromWire(msg.mutes, this.state.hostPeerId),
+        });
+        this.enforceSelfLocks();
+      }
       for (const peer of msg.peers) {
         if (peer.peerId === this.state.identity?.peerId) continue;
         this.names.set(peer.peerId, peer.displayName);
@@ -1164,6 +1208,19 @@ export class PeerSession {
       return;
     }
 
+    if (msg.type === "room-mute") {
+      if (!this.isRoomAuthority(from)) return;
+      this.applyRoomMute(
+        msg.peerId,
+        {
+          ...(msg.audio !== undefined ? { audio: msg.audio } : {}),
+          ...(msg.video !== undefined ? { video: msg.video } : {}),
+        },
+        true,
+      );
+      return;
+    }
+
     if (msg.type === "media-meta") {
       if (msg.cameraOff !== undefined) {
         this.upsertRemote(from, { cameraOff: msg.cameraOff });
@@ -1197,6 +1254,75 @@ export class PeerSession {
     const host = this.state.hostPeerId;
     if (host && host !== me) return peerId === host;
     return peerId === this.dialedPeerId;
+  }
+
+  /** Host nunca é alvo; também não silenciamos a nós mesmos por este caminho. */
+  private canControlMute(peerId: string) {
+    const me = this.state.identity?.peerId;
+    const host = this.state.hostPeerId;
+    if (!peerId || peerId === me || (host && peerId === host)) return false;
+    return (
+      this.roomMembers.some((member) => member.peerId === peerId) ||
+      this.state.remotes.some((remote) => remote.peerId === peerId)
+    );
+  }
+
+  private acceptRoomMuteTarget(peerId: string) {
+    const me = this.state.identity?.peerId;
+    const host = this.state.hostPeerId;
+    if (!peerId || (host && peerId === host)) return false;
+    if (peerId === me) return true;
+    return (
+      this.roomMembers.some((member) => member.peerId === peerId) ||
+      this.state.remotes.some((remote) => remote.peerId === peerId)
+    );
+  }
+
+  private selfLocked(kind: MuteKind) {
+    const me = this.state.identity?.peerId;
+    return !!me && muteOf(this.state.roomMutes, me)[kind];
+  }
+
+  private applyRoomMute(
+    peerId: string,
+    flags: { audio?: boolean; video?: boolean },
+    notifySelf: boolean,
+  ) {
+    if (!this.acceptRoomMuteTarget(peerId)) return;
+    const prev = muteOf(this.state.roomMutes, peerId);
+    let map = this.state.roomMutes;
+    if (flags.audio !== undefined)
+      map = setMuteFlag(map, peerId, "audio", flags.audio);
+    if (flags.video !== undefined)
+      map = setMuteFlag(map, peerId, "video", flags.video);
+    if (map !== this.state.roomMutes) this.patch({ roomMutes: map });
+    this.enforceSelfLocks();
+    if (!notifySelf) return;
+    const me = this.state.identity?.peerId;
+    if (peerId !== me) return;
+    const next = muteOf(this.state.roomMutes, peerId);
+    if (flags.audio !== undefined && prev.audio !== next.audio) {
+      showToast(
+        next.audio ? "toast.roomMutedAudio" : "toast.roomUnmutedAudio",
+      );
+    } else if (flags.video !== undefined && prev.video !== next.video) {
+      showToast(
+        next.video ? "toast.roomMutedVideo" : "toast.roomUnmutedVideo",
+      );
+    }
+  }
+
+  private enforceSelfLocks() {
+    const me = this.state.identity?.peerId;
+    if (!me) return;
+    const flags = muteOf(this.state.roomMutes, me);
+    if (flags.audio) {
+      this.state.localStream?.getAudioTracks().forEach((track) => {
+        track.enabled = false;
+      });
+      if (!this.state.muted) this.patch({ muted: true });
+    }
+    if (flags.video && !this.state.cameraOff) this.disableCamera();
   }
 
   private appendMessage(message: ChatMessage) {
@@ -1262,16 +1388,29 @@ export class PeerSession {
   ) {
     const me = this.state.identity?.peerId;
     if (!me || !newHostId) return;
+    const roomMutes = dropMute(this.state.roomMutes, newHostId);
+    const localMutes = dropMute(this.state.localMutes, newHostId);
     if (newHostId === me) {
       // Como host, ninguém acima de nós manda: a confiança no peer discado
       // deixa de valer e a sala passa a ser anunciada por nós.
       this.dialedPeerId = null;
-      this.patch({ isHost: true, hostPeerId: me, pending: [] });
+      this.patch({
+        isHost: true,
+        hostPeerId: me,
+        pending: [],
+        roomMutes,
+        localMutes,
+      });
       this.broadcastRoom();
       showToast(youKey);
       return;
     }
-    this.patch({ isHost: false, hostPeerId: newHostId });
+    this.patch({
+      isHost: false,
+      hostPeerId: newHostId,
+      roomMutes,
+      localMutes,
+    });
     showToast(otherKey, {
       name: this.names.get(newHostId) ?? t("common.someone"),
     });
@@ -1339,7 +1478,12 @@ export class PeerSession {
     if (!hostPeerId || hostPeerId === me) return;
     if (this.state.isHost && this.state.callStatus === "in-call") return;
     if (!this.state.isHost && this.state.hostPeerId === hostPeerId) return;
-    this.patch({ isHost: false, hostPeerId });
+    this.patch({
+      isHost: false,
+      hostPeerId,
+      localMutes: dropMute(this.state.localMutes, hostPeerId),
+      roomMutes: dropMute(this.state.roomMutes, hostPeerId),
+    });
   }
 
   /**
@@ -1348,11 +1492,16 @@ export class PeerSession {
    * convidar com um link que funciona, inclusive depois de um giro.
    */
   private broadcastRoom() {
+    const mutes = roomMutesToWire(
+      this.state.roomMutes,
+      this.state.identity?.peerId ?? null,
+    );
     this.broadcast({
       type: "room-peers",
       peers: this.roomMembers,
       hostPeerId: this.state.identity?.peerId ?? "",
       ...(this.hostSecret ? { secret: this.hostSecret } : {}),
+      mutes,
     });
   }
 
@@ -1451,6 +1600,8 @@ export class PeerSession {
       pending: this.state.pending.filter((p) => p.peerId !== peerId),
       incoming:
         this.state.incoming?.peerId === peerId ? null : this.state.incoming,
+      localMutes: dropMute(this.state.localMutes, peerId),
+      roomMutes: dropMute(this.state.roomMutes, peerId),
     });
     if (this.state.isHost) {
       this.roomMembers = this.roomMembers.filter((p) => p.peerId !== peerId);
@@ -1773,6 +1924,8 @@ export class PeerSession {
       screenShareOrder: [],
       muted: false,
       cameraOff: false,
+      localMutes: {},
+      roomMutes: {},
       callMode: null,
       isHost: false,
       hostPeerId: null,
