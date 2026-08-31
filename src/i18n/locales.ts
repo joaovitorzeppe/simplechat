@@ -43,6 +43,11 @@ export const pt = {
   "home.installIos":
     "No Safari: toque em Compartilhar e depois em Adicionar à Tela de Início.",
   "home.simulatePro": "Simular Pro (só neste navegador)",
+  "home.recentsTitle": "Recentes",
+  "home.recentsBody":
+    "Pessoas com quem você já esteve numa chamada. Ligar convoca de novo; o convite antigo não reabre a sala.",
+  "home.recentsCall": "Ligar",
+  "home.recentsForget": "Esquecer",
 
   "call.host": "Chamada · você é o host",
   "call.guest": "Chamada",
@@ -187,6 +192,11 @@ export const en: Messages = {
   "home.install": "Install app",
   "home.installIos": "In Safari: tap Share, then Add to Home Screen.",
   "home.simulatePro": "Simulate Pro (this browser only)",
+  "home.recentsTitle": "Recent",
+  "home.recentsBody":
+    "People you already shared a call with. Call rings them again; an old invite will not reopen the room.",
+  "home.recentsCall": "Call",
+  "home.recentsForget": "Forget",
 
   "call.host": "Call · you are the host",
   "call.guest": "Call",
@@ -329,6 +339,11 @@ export const es: Messages = {
   "home.installIos":
     "En Safari: toca Compartir y luego Añadir a pantalla de inicio.",
   "home.simulatePro": "Simular Pro (solo en este navegador)",
+  "home.recentsTitle": "Recientes",
+  "home.recentsBody":
+    "Personas con las que ya estuviste en una llamada. Llamar las avisa de nuevo; la invitación vieja no reabre la sala.",
+  "home.recentsCall": "Llamar",
+  "home.recentsForget": "Olvidar",
 
   "call.host": "Llamada · eres el anfitrión",
   "call.guest": "Llamada",

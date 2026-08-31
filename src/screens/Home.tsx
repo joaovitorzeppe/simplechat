@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "../components/Button";
-import { CheckIcon, CopyIcon, DownloadIcon } from "../components/Icons";
+import { CheckIcon, CloseIcon, CopyIcon, DownloadIcon } from "../components/Icons";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { QualityBadge } from "../components/QualityBadge";
 import { useI18n } from "../i18n/use-i18n";
@@ -8,6 +8,8 @@ import { clearIdentity } from "../lib/identity";
 import { inviteLink, parseInvite } from "../lib/invite";
 import { useInstallPrompt } from "../lib/pwa";
 import { currentTier, setDemoTier } from "../lib/quality";
+import { forgetPeer, loadRecents, type Recent } from "../lib/recents";
+import { firstGrapheme } from "../lib/text";
 import { showToast } from "../lib/toast";
 import { useSession } from "../lib/use-session";
 
@@ -52,6 +54,7 @@ export const Home = () => {
     return found.secret ? `${found.peerId}#k=${found.secret}` : found.peerId;
   });
   const [tier, setTier] = useState(currentTier());
+  const [recents, setRecents] = useState<Recent[]>(loadRecents);
 
   const myId = state.identity?.peerId ?? "";
   const myLink = inviteLink(myId, state.roomSecret);
@@ -76,6 +79,7 @@ export const Home = () => {
       : t("home.disabledConnecting");
   const inviteDisabled = !state.peerReady || !inviteKey.trim();
   const startDisabled = !state.peerReady;
+  const others = recents.filter((entry) => entry.peerId !== myId);
 
   return (
     <main className="min-h-dvh px-4 py-8">
@@ -174,6 +178,50 @@ export const Home = () => {
             </Button>
           </div>
         </section>
+
+        {others.length > 0 && (
+          <section className="rounded-3xl border border-line bg-panel p-6 space-y-4">
+            <div>
+              <h2 className="text-lg font-medium">{t("home.recentsTitle")}</h2>
+              <p className="mt-1 text-sm text-zinc-400">{t("home.recentsBody")}</p>
+            </div>
+            <ul className="space-y-2">
+              {others.map((entry) => (
+                <li
+                  key={entry.peerId}
+                  className="flex items-center gap-3 rounded-xl border border-line bg-zinc-900 px-3 py-2"
+                >
+                  <div className="grid size-9 shrink-0 place-items-center rounded-full bg-zinc-800 text-sm font-semibold text-zinc-300">
+                    {firstGrapheme(entry.displayName).toUpperCase()}
+                  </div>
+                  <span className="min-w-0 flex-1 truncate text-sm">
+                    {entry.displayName}
+                  </span>
+                  <Button
+                    className="shrink-0 px-3 py-1.5 text-xs"
+                    disabled={startDisabled}
+                    title={startDisabled ? (brokerHint ?? undefined) : undefined}
+                    onClick={() => void session.callPeer(entry.peerId)}
+                  >
+                    {t("home.recentsCall")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="shrink-0 px-2 py-1"
+                    title={t("home.recentsForget")}
+                    aria-label={t("home.recentsForget")}
+                    onClick={() => {
+                      forgetPeer(entry.peerId);
+                      setRecents(loadRecents());
+                    }}
+                  >
+                    <CloseIcon width={16} height={16} />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <section className="rounded-3xl border border-line bg-panel p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <QualityBadge />

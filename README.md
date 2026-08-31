@@ -29,7 +29,8 @@ Toda chamada é uma sala em mesh. Quem inicia é o **host**; quem entra é convi
 - **Sair:** convidado só sai da sala. O host escolhe entre passar o papel adiante (`host-transfer`) ou encerrar para todos (`room-ended`).
 - **Queda do host:** se ele some sem avisar, quem ficou elege o substituto sozinho — o menor `peerId` entre os membros. Como a lista veio do host e é a mesma em todos, todos chegam ao mesmo nome sem negociar. Sobrando uma pessoa só, a chamada encerra.
 - **Câmera:** desligar a câmera para o track (`replaceTrack(null)` + `stop()`). Não envia frames pretos; o LED deve apagar. Os outros veem o avatar. Compartilhamento de tela segue em conexão separada.
-- **Arquivo:** clipe no chat. Vai P2P no data channel, em pedaços. Imagens (jpeg/png/gif/webp) têm prévia; o resto só baixa. Some ao sair da chamada.
+- **Arquivo:** clipe no chat. Vai P2P no data channel, em pedaços. A montagem e a leitura das fatias rodam num worker (com fallback na thread da UI). Imagens (jpeg/png/gif/webp) têm prévia; o resto só baixa. Some ao sair da chamada.
+- **Recentes:** quem já esteve numa chamada com você aparece na home para Ligar de novo. Não reabre a sala antiga: o segredo do convite gira.
 
 ## Limites do plano
 
@@ -75,7 +76,7 @@ O link chega a qualquer um, então **todo participante é tratado como potencial
 - **A sala é a lista que o host anuncia, e não há entrada por fora dela.** Isso vale inclusive entre convidados: como todos conhecem o `peerId` de todos pela lista da sala, um convidado que aceitasse conexão de qualquer um seria uma porta lateral sem tranca. Quem não está na lista não é atendido, não entra em broadcast e tem toda mensagem além do `hello` descartada.
 - **A entrada exige o segredo do link.** O host guarda um segredo de sala e o link de convite o carrega no fragmento (`#k=`), que o navegador não envia ao servidor nem repassa no `Referer`. Sem o segredo certo, o pedido nem chega a incomodar o host.
 
-Arquivos recebidos são acumulados em pedaços conforme chegam — o tamanho anunciado não reserva memória — com teto global, limite de transferências simultâneas e cooldown por peer.
+Arquivos recebidos são acumulados em pedaços conforme chegam — o tamanho anunciado não reserva memória — com teto global, limite de transferências simultâneas e cooldown por peer. A leitura das fatias no envio e a montagem na recepção saem da thread da UI via worker; o DataChannel em si fica na thread principal, porque o RTCDataChannel não é transferível. Sem Worker, o mesmo código roda in-process. Quando o OPFS existe, os bytes recebidos vão para o disco privado do origin durante a transferência, e só viram Blob no fim.
 
 **Recusar ou remover alguém gira o segredo.** Só o banimento por `peerId` não seguraria: bastaria limpar o `localStorage` para voltar com chave nova. Girando, todo link já distribuído morre junto, e os membros que ficaram recebem o segredo novo pelo `room-peers` — quem saiu, não. Para voltar, a pessoa precisaria de um convite novo *e* da aprovação do host.
 
@@ -91,9 +92,8 @@ As fontes embutidas (Outfit e IBM Plex Mono) cobrem só latino e latino estendid
 
 ## Fase 2 (fora deste MVP)
 
-- Recentes para religar (lista curta de `peerId` + nome), ou histórico na nuvem com conta.
 - Stripe/Lemon Squeezy + custom claim para liberar o tier Pro de verdade.
-- TURN (Metered, Open Relay ou coturn) para NAT difícil.
+- TURN (Metered, Open Relay ou coturn) para NAT difícil — o código já lê as variáveis; faltam as credenciais.
 - SFU se salas passarem do que o mesh aguenta.
 
 ## Histórico de versões

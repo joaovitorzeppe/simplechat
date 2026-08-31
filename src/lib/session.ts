@@ -15,11 +15,14 @@ import { t } from "../i18n/i18n";
 import { playCallEnded } from "./sounds";
 import { showToast } from "./toast";
 import { safeFileName } from "./chat";
+import { FILE_CHUNK } from "./file-assembly";
 import {
   clearAllFileProgress,
   clearFileProgress,
   setFileProgress,
 } from "./file-progress";
+import { FileBridge } from "./file-transfer";
+import { rememberPeer } from "./recents";
 import { clampChatText, clampDisplayName, parseWire } from "./wire-guard";
 import type {
   CallMode,
@@ -59,10 +62,8 @@ export type SessionState = {
   leavePrompt: boolean;
 };
 
-const FILE_CHUNK = 16 * 1024;
 const FILE_BUFFER_HIGH = 2_000_000;
 const MAX_MESSAGES = 500;
-const MAX_INCOMING_BYTES = 150 * 1024 * 1024;
 const MAX_CONCURRENT_INCOMING = 3;
 const FILE_START_COOLDOWN = 2000;
 const FLUSH_MS = 80;
@@ -149,6 +150,7 @@ export class PeerSession {
   private starting = false;
   private tearingDown = false;
   private sendingFile = false;
+  private files = new FileBridge();
   private incomingFiles = new Map<
     string,
     {
@@ -157,8 +159,6 @@ export class PeerSession {
       name: string;
       mime: string;
       size: number;
-      received: number;
-      chunks: Uint8Array[];
     }
   >();
   private incomingByteTail = new Map<string, Promise<void>>();
@@ -382,6 +382,7 @@ export class PeerSession {
       });
     }
     this.patch({ incoming: null, callStatus: "in-call" });
+    this.rememberContact(incoming.peerId, incoming.displayName);
     this.applyLimitsToAll();
   }
 
@@ -572,6 +573,7 @@ export class PeerSession {
         return;
       }
       for (const conn of peers) conn.send(start);
+      await this.files.openSend(id, file);
 
       // Cada peer avança no seu próprio ritmo: um destinatário congestionado
       // atrasa só a própria cópia, e o progresso mostrado é o do mais lento.
@@ -584,7 +586,7 @@ export class PeerSession {
       };
 
       await Promise.all(
-        peers.map((conn) => this.streamFileTo(conn, file, id, sent, report)),
+        peers.map((conn) => this.streamFileTo(conn, id, file.size, sent, report)),
       );
       setFileProgress(id, 1);
       this.patchFile(id, { status: "ready" });
@@ -593,6 +595,7 @@ export class PeerSession {
       this.toast("toast.fileFailed");
     } finally {
       this.sendingFile = false;
+      void this.files.closeSend(id);
     }
   }
 
@@ -1061,6 +1064,7 @@ export class PeerSession {
         if (peer.peerId === this.state.identity?.peerId) continue;
         this.names.set(peer.peerId, peer.displayName);
         this.upsertRemote(peer.peerId, { displayName: peer.displayName });
+        this.rememberContact(peer.peerId, peer.displayName);
         this.maybeConnect(peer.peerId);
         this.maybeCall(peer.peerId);
       }
@@ -1290,6 +1294,13 @@ export class PeerSession {
     if (!this.roomMembers.some((p) => p.peerId === info.peerId)) {
       this.roomMembers = [...this.roomMembers, info];
     }
+    this.rememberContact(info.peerId, info.displayName);
+  }
+
+  private rememberContact(peerId: string, displayName: string) {
+    const me = this.state.identity?.peerId;
+    if (!me || peerId === me) return;
+    rememberPeer(peerId, displayName);
   }
 
   private offerExistingHost(conn: DataConnection) {
@@ -1455,24 +1466,24 @@ export class PeerSession {
   }
 
   /**
-   * Lê o arquivo em fatias, então nem o remetente nem o destinatário precisam
-   * do arquivo inteiro em memória: só um pedaço por vez fica em trânsito.
+   * Lê o arquivo em fatias no worker. O canal continua aqui: só mandamos o
+   * próximo pedaço quando o buffer do DataChannel esvazia.
    */
   private async streamFileTo(
     conn: DataConnection,
-    file: File,
     id: string,
+    size: number,
     sent: Map<DataConnection, number>,
     report: () => void,
   ) {
     // O sequencial aqui é o ponto: cada pedaço só é lido depois que o canal
     // tem espaço, e é isso que segura a memória em um pedaço por vez.
     // oxlint-disable no-await-in-loop
-    for (let offset = 0; offset < file.size; offset += FILE_CHUNK) {
+    for (let offset = 0; offset < size; offset += FILE_CHUNK) {
       if (this.tearingDown) throw new Error("ended");
       await this.waitForFileBuffer(conn);
       if (!conn.open) return;
-      const chunk = await file.slice(offset, offset + FILE_CHUNK).arrayBuffer();
+      const chunk = await this.files.readSlice(id, offset, FILE_CHUNK);
       conn.send(chunk);
       sent.set(conn, offset + chunk.byteLength);
       report();
@@ -1501,62 +1512,46 @@ export class PeerSession {
     });
   }
 
-  private bytesFrom(raw: unknown): Uint8Array | null {
+  private takeFileBytes(raw: unknown): ArrayBuffer | Blob | null {
     // Um ArrayBuffer chega exclusivo por mensagem, então dá para adotá-lo sem
-    // copiar. Já uma view pode apontar para um buffer maior e compartilhado:
-    // guardá-la reteria bem mais memória do que os bytes úteis.
-    if (raw instanceof ArrayBuffer) return new Uint8Array(raw);
-    if (!ArrayBuffer.isView(raw)) return null;
-    const view = new Uint8Array(raw.buffer, raw.byteOffset, raw.byteLength);
-    const copy = new Uint8Array(view.byteLength);
-    copy.set(view);
-    return copy;
+    // copiar e transferir ao worker. Já uma view pode apontar para um buffer
+    // maior: copiamos só os bytes úteis.
+    if (raw instanceof ArrayBuffer) return raw;
+    if (ArrayBuffer.isView(raw)) {
+      const view = new Uint8Array(raw.buffer, raw.byteOffset, raw.byteLength);
+      const copy = new Uint8Array(view.byteLength);
+      copy.set(view);
+      return copy.buffer;
+    }
+    if (typeof Blob !== "undefined" && raw instanceof Blob) return raw;
+    return null;
   }
 
   private onFileBytes(conn: DataConnection, raw: unknown) {
-    const incoming = this.incomingFiles.get(conn.peer);
-    const bytes = this.bytesFrom(raw);
-    if (bytes) {
-      if (!incoming) return true;
-      this.applyIncomingBytes(conn.peer, bytes);
-      return true;
-    }
-    if (incoming && typeof Blob !== "undefined" && raw instanceof Blob) {
-      const prev = this.incomingByteTail.get(conn.peer) ?? Promise.resolve();
-      const next = prev
-        .then(async () => {
-          this.applyIncomingBytes(
-            conn.peer,
-            new Uint8Array(await raw.arrayBuffer()),
-          );
-        })
-        .catch(() => {
-          this.failIncomingFile(conn.peer);
-        });
-      this.incomingByteTail.set(conn.peer, next);
-      return true;
-    }
-    return false;
+    const data = this.takeFileBytes(raw);
+    if (!data) return false;
+    if (!this.incomingFiles.has(conn.peer)) return true;
+    this.queueIncoming(conn.peer, data);
+    return true;
   }
 
-  private applyIncomingBytes(peerId: string, bytes: Uint8Array) {
-    const incoming = this.incomingFiles.get(peerId);
-    if (!incoming) return;
-    const next = incoming.received + bytes.byteLength;
-    if (next > incoming.size || this.bufferedBytes() + bytes.byteLength > MAX_INCOMING_BYTES) {
-      this.failIncomingFile(peerId);
-      return;
-    }
-    incoming.chunks.push(bytes);
-    incoming.received = next;
-    setFileProgress(incoming.localId, next / incoming.size);
-  }
-
-  private bufferedBytes() {
-    let total = 0;
-    for (const incoming of this.incomingFiles.values())
-      total += incoming.received;
-    return total;
+  private queueIncoming(peerId: string, data: ArrayBuffer | Blob) {
+    const prev = this.incomingByteTail.get(peerId) ?? Promise.resolve();
+    const next = prev
+      .then(async () => {
+        const incoming = this.incomingFiles.get(peerId);
+        if (!incoming) return;
+        const received = await this.files.push(peerId, data);
+        if (received === null) {
+          this.failIncomingFile(peerId);
+          return;
+        }
+        setFileProgress(incoming.localId, received / incoming.size);
+      })
+      .catch(() => {
+        this.failIncomingFile(peerId);
+      });
+    this.incomingByteTail.set(peerId, next);
   }
 
   private isKnownPeer(peerId: string) {
@@ -1593,9 +1588,24 @@ export class PeerSession {
       name,
       mime: msg.mime,
       size: msg.size,
-      received: 0,
-      chunks: [],
     });
+    const prev = this.incomingByteTail.get(peerId) ?? Promise.resolve();
+    this.incomingByteTail.set(
+      peerId,
+      prev
+        .then(() =>
+          this.files.openReceive({
+            peerId,
+            remoteId: msg.id,
+            localId,
+            mime: msg.mime,
+            size: msg.size,
+          }),
+        )
+        .catch(() => {
+          this.failIncomingFile(peerId);
+        }),
+    );
     this.appendMessage({
       id: localId,
       fromPeerId: peerId,
@@ -1615,23 +1625,25 @@ export class PeerSession {
 
   private finishIncomingFile(peerId: string, remoteId: string) {
     const tail = this.incomingByteTail.get(peerId) ?? Promise.resolve();
-    void tail.then(() => {
+    void tail.then(async () => {
       const incoming = this.incomingFiles.get(peerId);
       if (!incoming || incoming.remoteId !== remoteId) return;
       this.incomingFiles.delete(peerId);
       this.incomingByteTail.delete(peerId);
-      if (incoming.received !== incoming.size) {
+      try {
+        const blob = await this.files.finish(peerId);
+        if (!blob) {
+          this.patchFile(incoming.localId, { status: "error" });
+          return;
+        }
+        setFileProgress(incoming.localId, 1);
+        this.patchFile(incoming.localId, {
+          status: "ready",
+          blobUrl: URL.createObjectURL(blob),
+        });
+      } catch {
         this.patchFile(incoming.localId, { status: "error" });
-        return;
       }
-      const blob = new Blob(incoming.chunks as BlobPart[], {
-        type: incoming.mime,
-      });
-      setFileProgress(incoming.localId, 1);
-      this.patchFile(incoming.localId, {
-        status: "ready",
-        blobUrl: URL.createObjectURL(blob),
-      });
     });
   }
 
@@ -1639,6 +1651,7 @@ export class PeerSession {
     const incoming = this.incomingFiles.get(peerId);
     this.incomingFiles.delete(peerId);
     this.incomingByteTail.delete(peerId);
+    void this.files.abort(peerId);
     if (incoming) this.patchFile(incoming.localId, { status: "error" });
   }
 
@@ -1715,6 +1728,7 @@ export class PeerSession {
     this.incomingByteTail.clear();
     this.lastFileStart.clear();
     this.sendingFile = false;
+    void this.files.abortAll();
     clearAllFileProgress();
     this.revokeMessageFiles();
     this.roomMembers = [];
