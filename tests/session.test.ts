@@ -18,6 +18,7 @@ type Internals = {
   names: Map<string, string>;
   roomMembers: PeerInfo[];
   banned: Set<string>;
+  hostSecret: string | null;
   data: Map<string, FakeConn>;
   dialedPeerId: string | null;
   incomingFiles: Map<string, unknown>;
@@ -52,11 +53,18 @@ const ZECA = "zeca-1";
 /** Ordena antes de ME, então vence a eleição contra ME. */
 const ANA = "ana-1";
 
-const hello = (peerId: string, displayName: string) => ({
+const SECRET = "segredo000000001";
+
+const hello = (
+  peerId: string,
+  displayName: string,
+  secret: string | null = SECRET,
+) => ({
   type: "hello",
   displayName,
   peerId,
   kind: "room-join",
+  ...(secret ? { secret } : {}),
 });
 
 let session: PeerSession;
@@ -86,7 +94,9 @@ const asHost = () => {
     view: "call",
     isHost: true,
     hostPeerId: ME,
+    roomSecret: SECRET,
   });
+  core.hostSecret = SECRET;
   core.roomMembers = [{ peerId: ME, displayName: "Eu" }];
 };
 
@@ -145,6 +155,10 @@ describe("autoridade das mensagens de sala", () => {
 describe("identidade das mensagens", () => {
   it("usa a conexão como remetente, não o que a mensagem afirma", () => {
     asGuest();
+    core.roomMembers = [...core.roomMembers, {
+      peerId: "bruno-1",
+      displayName: "Bruno",
+    }];
     core.names.set("bruno-1", "Bruno");
     core.onWire(conn("bruno-1"), {
       type: "chat",
@@ -387,6 +401,93 @@ describe("sala de espera", () => {
     expect(retry.sent).toContainEqual({ type: "room-denied" });
   });
 
+  it("recusa quem chega sem o segredo do link", () => {
+    asHost();
+    const c = conn(ZECA);
+    core.data.set(ZECA, c);
+    core.onWire(c, hello(ZECA, "Zeca", null));
+    expect(core.state.pending).toHaveLength(0);
+    expect(c.sent).toContainEqual({ type: "room-denied", reason: "stale" });
+  });
+
+  it("recusa quem chega com o segredo errado", () => {
+    asHost();
+    const c = conn(ZECA);
+    core.data.set(ZECA, c);
+    core.onWire(c, hello(ZECA, "Zeca", "chutedoerrado0001"));
+    expect(core.state.pending).toHaveLength(0);
+    expect(c.sent).toContainEqual({ type: "room-denied", reason: "stale" });
+  });
+
+  it("convidado distingue link velho de recusa do host", () => {
+    core.patch({
+      identity: { peerId: ME, displayName: "Eu" },
+      callStatus: "connecting",
+      view: "call",
+      isHost: false,
+      hostPeerId: HOST,
+    });
+    core.dialedPeerId = HOST;
+    core.onWire(conn(HOST), { type: "room-denied", reason: "stale" });
+    expect(core.state.callStatus).toBe("idle");
+  });
+});
+
+/**
+ * Sem girar o segredo, quem foi removido limpa o storage, ganha um peerId novo
+ * e volta pelo mesmo link — o banimento por peerId sozinho não segura.
+ */
+describe("giro do segredo da sala", () => {
+  it("remover alguém invalida o link que já estava por aí", () => {
+    asHost();
+    core.roomMembers = [
+      { peerId: ME, displayName: "Eu" },
+      { peerId: ZECA, displayName: "Zeca" },
+    ];
+    core.data.set(ZECA, conn(ZECA));
+    core.patch({ remotes: [remote(ZECA, "Zeca")] });
+
+    session.kickPeer(ZECA);
+    const rotated = core.hostSecret;
+    expect(rotated).not.toBe(SECRET);
+
+    // Volta com chave nova, driblando o banimento, mas com o link antigo.
+    const reborn = conn("outra-chave-1");
+    core.data.set("outra-chave-1", reborn);
+    core.onWire(reborn, hello("outra-chave-1", "Zeca", SECRET));
+    expect(core.state.pending).toHaveLength(0);
+    expect(reborn.sent).toContainEqual({
+      type: "room-denied",
+      reason: "stale",
+    });
+  });
+
+  it("recusar alguém também gira o segredo", () => {
+    asHost();
+    const c = conn(ZECA);
+    core.data.set(ZECA, c);
+    core.onWire(c, hello(ZECA, "Zeca"));
+    session.denyPeer(ZECA);
+    expect(core.hostSecret).not.toBe(SECRET);
+  });
+
+  it("membros que ficaram recebem o segredo novo", () => {
+    asHost();
+    core.roomMembers = [
+      { peerId: ME, displayName: "Eu" },
+      { peerId: ANA, displayName: "Ana" },
+      { peerId: ZECA, displayName: "Zeca" },
+    ];
+    const ana = conn(ANA);
+    core.data.set(ANA, ana);
+    core.data.set(ZECA, conn(ZECA));
+    core.patch({ remotes: [remote(ANA, "Ana"), remote(ZECA, "Zeca")] });
+
+    session.kickPeer(ZECA);
+    const announced = ana.sent.findLast((m) => m.type === "room-peers");
+    expect(announced).toMatchObject({ secret: core.hostSecret });
+  });
+
   it("quem nós discamos entra sem passar pela porta", () => {
     asHost();
     core.dialedPeerId = ZECA;
@@ -421,6 +522,47 @@ describe("sala de espera", () => {
     core.dialedPeerId = HOST;
     core.onWire(conn(HOST), { type: "room-denied" });
     expect(core.state.callStatus).toBe("idle");
+  });
+});
+
+/**
+ * A aprovação do host só vale se ela for a única porta. Cada convidado do mesh
+ * conhece o peerId dos outros pela lista da sala, então um estranho que
+ * descubra qualquer uma dessas chaves não pode entrar por ela.
+ */
+describe("porta lateral pelos convidados", () => {
+  it("convidado ignora hello de quem o host não admitiu", () => {
+    asGuest();
+    core.onWire(conn(INTRUDER), hello(INTRUDER, "Intruso"));
+    expect(core.state.remotes.map((r) => r.peerId)).not.toContain(INTRUDER);
+  });
+
+  it("convidado não aceita chat de quem não está na lista do host", () => {
+    asGuest();
+    core.onWire(conn(INTRUDER), hello(INTRUDER, "Intruso"));
+    core.onWire(conn(INTRUDER), {
+      type: "chat",
+      id: "x",
+      text: "oi",
+      fromPeerId: INTRUDER,
+      fromName: "Intruso",
+      at: 1700000000000,
+    });
+    expect(core.state.messages).toHaveLength(0);
+  });
+
+  it("convidado aceita quem o host anunciou em room-peers", () => {
+    asGuest();
+    core.onWire(conn(HOST), {
+      type: "room-peers",
+      peers: [
+        { peerId: HOST, displayName: "Host" },
+        { peerId: ME, displayName: "Eu" },
+        { peerId: ZECA, displayName: "Zeca" },
+      ],
+    });
+    core.onWire(conn(ZECA), hello(ZECA, "Zeca"));
+    expect(core.state.remotes.map((r) => r.peerId)).toContain(ZECA);
   });
 });
 

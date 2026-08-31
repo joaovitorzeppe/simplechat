@@ -5,7 +5,7 @@ import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { QualityBadge } from "../components/QualityBadge";
 import { useI18n } from "../i18n/use-i18n";
 import { clearIdentity } from "../lib/identity";
-import { parseInvite } from "../lib/invite";
+import { inviteLink, parseInvite } from "../lib/invite";
 import { useInstallPrompt } from "../lib/pwa";
 import { currentTier, setDemoTier } from "../lib/quality";
 import { showToast } from "../lib/toast";
@@ -45,18 +45,28 @@ export const Home = () => {
   const { t } = useI18n();
   const { state, session } = useSession();
   const { canInstall, showIosHelp, install } = useInstallPrompt();
-  const params = new URLSearchParams(window.location.search);
-  const [inviteKey, setInviteKey] = useState(
-    params.get("room") ?? params.get("call") ?? "",
-  );
+  // O segredo vem no fragmento, que some se lermos só a query string.
+  const [inviteKey, setInviteKey] = useState(() => {
+    const found = parseInvite(window.location.href);
+    if (!found) return "";
+    return found.secret ? `${found.peerId}#k=${found.secret}` : found.peerId;
+  });
   const [tier, setTier] = useState(currentTier());
 
   const myId = state.identity?.peerId ?? "";
-  const inviteLink = `${window.location.origin}/?room=${myId}`;
+  const myLink = inviteLink(myId, state.roomSecret);
 
   const applyInvite = (raw: string) => {
+    // Colar o link inteiro é o caso comum; guardamos a forma curta mas sem
+    // perder o segredo, senão o host recusa a entrada.
     const invite = parseInvite(raw);
-    setInviteKey(invite ? invite.peerId : raw);
+    if (!invite) {
+      setInviteKey(raw);
+      return;
+    }
+    setInviteKey(
+      invite.secret ? `${invite.peerId}#k=${invite.secret}` : invite.peerId,
+    );
   };
 
   const brokerHint = state.peerReady
@@ -115,7 +125,7 @@ export const Home = () => {
 
         <section className="rounded-3xl border border-line bg-panel p-6 space-y-4">
           <CopyField label={t("home.yourKey")} value={myId} />
-          <CopyField label={t("home.inviteLink")} value={inviteLink} />
+          <CopyField label={t("home.inviteLink")} value={myLink} />
           <p className="text-sm text-zinc-400">{t("home.inviteBody")}</p>
           <Button
             className="w-full"

@@ -21,11 +21,11 @@ Idiomas: português, inglês e espanhol (`LanguageSwitcher`). Em produção o ap
 
 Toda chamada é uma sala em mesh. Quem inicia é o **host**; quem entra é convidado.
 
-- **Identidade:** no onboarding você informa o nome. O app gera um `peerId` no formato `{nome}-{uuid}-{timestamp}` e, se você pedir para lembrar, grava `{ displayName, peerId }` no `localStorage`. Sem isso, a chave é nova a cada visita. A chave é o ID PeerJS.
-- **Iniciar:** você abre a chamada sozinho e compartilha o link `/?room=<sua-chave>`. Links antigos `?call=` ainda funcionam.
+- **Identidade:** no onboarding você informa o nome. O app gera um `peerId` opaco e, se você pedir para lembrar, grava `{ displayName, peerId }` no `localStorage`. Sem isso, a chave é nova a cada visita. A chave é o ID PeerJS.
+- **Iniciar:** você abre a chamada sozinho e compartilha o link `/?room=<sua-chave>#k=<segredo>`. Links antigos `?call=` ainda funcionam, mas sem o fragmento não entram mais.
 - **Ligar:** cola a chave (ou o link) da outra pessoa. Você vira host e convoca ela.
 - **Entrar:** junta você à chamada que a outra pessoa já começou. O cliente conecta no host por data channel e fica na **sala de espera** até o host aprovar; então o host envia a lista de peers e cada um monta mesh de mídia (quem tem o ID menor inicia, para evitar glare). Quem o host discou entra direto, sem passar pela espera.
-- **Moderação:** o host aprova ou recusa cada entrada e pode remover alguém da chamada. Recusado e removido ficam bloqueados enquanto a sala existir.
+- **Moderação:** o host aprova ou recusa cada entrada e pode remover alguém da chamada. Recusado e removido ficam bloqueados por `peerId` e, como o segredo gira junto, o link que eles têm deixa de valer.
 - **Sair:** convidado só sai da sala. O host escolhe entre passar o papel adiante (`host-transfer`) ou encerrar para todos (`room-ended`).
 - **Queda do host:** se ele some sem avisar, quem ficou elege o substituto sozinho — o menor `peerId` entre os membros. Como a lista veio do host e é a mesma em todos, todos chegam ao mesmo nome sem negociar. Sobrando uma pessoa só, a chamada encerra.
 - **Câmera:** desligar a câmera para o track (`replaceTrack(null)` + `stop()`). Não envia frames pretos; o LED deve apagar. Os outros veem o avatar. Compartilhamento de tela segue em conexão separada.
@@ -72,11 +72,16 @@ O link chega a qualquer um, então **todo participante é tratado como potencial
 
 - **Nada que chega pelo data channel é confiável.** `parseWire` (`wire-guard.ts`) valida formato, tipo e tamanho de cada campo antes de a mensagem chegar à sessão. O que não bate com o contrato é descartado, não corrigido.
 - **A identidade vem da conexão, nunca do payload.** O remetente de um chat ou arquivo é sempre `conn.peer`. Encerrar a sala, anunciar a lista de peers ou transferir o papel de host só é aceito do host (ou, antes do host existir, do peer que você discou).
-- **A sala de espera não vaza nada.** Quem ainda não foi aprovado tem data channel aberto só para receber a decisão: não entra em broadcast de chat ou arquivo, não tem a mídia atendida e qualquer mensagem que mande além do `hello` é descartada.
+- **A sala é a lista que o host anuncia, e não há entrada por fora dela.** Isso vale inclusive entre convidados: como todos conhecem o `peerId` de todos pela lista da sala, um convidado que aceitasse conexão de qualquer um seria uma porta lateral sem tranca. Quem não está na lista não é atendido, não entra em broadcast e tem toda mensagem além do `hello` descartada.
+- **A entrada exige o segredo do link.** O host guarda um segredo de sala e o link de convite o carrega no fragmento (`#k=`), que o navegador não envia ao servidor nem repassa no `Referer`. Sem o segredo certo, o pedido nem chega a incomodar o host.
 
 Arquivos recebidos são acumulados em pedaços conforme chegam — o tamanho anunciado não reserva memória — com teto global, limite de transferências simultâneas e cooldown por peer.
 
-O que continua fora do escopo: o `peerId` embute o primeiro nome e trafega pelo broker público do PeerJS, e o bloqueio de quem foi recusado ou removido vale por `peerId`, então não impede a volta com uma chave nova.
+**Recusar ou remover alguém gira o segredo.** Só o banimento por `peerId` não seguraria: bastaria limpar o `localStorage` para voltar com chave nova. Girando, todo link já distribuído morre junto, e os membros que ficaram recebem o segredo novo pelo `room-peers` — quem saiu, não. Para voltar, a pessoa precisaria de um convite novo *e* da aprovação do host.
+
+O `peerId` é opaco (128 bits em base36, sem nada do nome), porque ele trafega em claro pelo broker público do PeerJS. Chaves antigas, que embutiam o primeiro nome, são trocadas na primeira carga — links gerados antes disso param de funcionar.
+
+O que continua fora do escopo: sem servidor e sem conta, nada impede que um membro atual repasse o link para quem foi removido.
 
 ## Texto e idiomas
 

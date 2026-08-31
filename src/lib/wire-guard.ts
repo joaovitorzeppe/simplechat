@@ -8,6 +8,7 @@ export const MAX_PEER_ID = 200;
 export const MAX_MIME = 120;
 export const MAX_FILE_NAME = 260;
 export const MAX_TRANSFER_ID = 64;
+export const MAX_ROOM_SECRET = 64;
 export const MAX_PEERS = MAX_PARTICIPANTS.pro;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
@@ -22,6 +23,12 @@ const str = (value: unknown, max: number): string | null => {
 
 const optionalBool = (value: unknown) => {
   return value === undefined || typeof value === "boolean";
+};
+
+/** `null` quando ausente, `false` quando presente e inválido. */
+const optionalStr = (value: unknown, max: number): string | null | false => {
+  if (value === undefined) return null;
+  return str(value, max) ?? false;
 };
 
 const int = (value: unknown, min: number, max: number): number | null => {
@@ -56,7 +63,15 @@ export const parseWire = (raw: unknown): WireMessage | null => {
       const peerId = str(raw.peerId, MAX_PEER_ID);
       if (!displayName || !peerId) return null;
       if (raw.kind !== "direct" && raw.kind !== "room-join") return null;
-      return { type: "hello", displayName, peerId, kind: raw.kind };
+      const secret = optionalStr(raw.secret, MAX_ROOM_SECRET);
+      if (secret === false) return null;
+      return {
+        type: "hello",
+        displayName,
+        peerId,
+        kind: raw.kind,
+        ...(secret ? { secret } : {}),
+      };
     }
 
     case "room-peers": {
@@ -68,10 +83,15 @@ export const parseWire = (raw: unknown): WireMessage | null => {
         if (!peer) return null;
         peers.push(peer);
       }
-      if (raw.hostPeerId !== undefined && !str(raw.hostPeerId, MAX_PEER_ID))
-        return null;
-      const hostPeerId = raw.hostPeerId as string | undefined;
-      return { type: "room-peers", peers, ...(hostPeerId ? { hostPeerId } : {}) };
+      const hostPeerId = optionalStr(raw.hostPeerId, MAX_PEER_ID);
+      const secret = optionalStr(raw.secret, MAX_ROOM_SECRET);
+      if (hostPeerId === false || secret === false) return null;
+      return {
+        type: "room-peers",
+        peers,
+        ...(hostPeerId ? { hostPeerId } : {}),
+        ...(secret ? { secret } : {}),
+      };
     }
 
     case "room-host": {
@@ -99,7 +119,11 @@ export const parseWire = (raw: unknown): WireMessage | null => {
       return { type: "room-waiting" };
 
     case "room-denied":
-      return { type: "room-denied" };
+      if (raw.reason !== undefined && raw.reason !== "stale") return null;
+      return {
+        type: "room-denied",
+        ...(raw.reason === "stale" ? { reason: "stale" as const } : {}),
+      };
 
     case "room-kicked":
       return { type: "room-kicked" };
@@ -110,9 +134,8 @@ export const parseWire = (raw: unknown): WireMessage | null => {
     }
 
     case "hangup": {
-      if (raw.displayName !== undefined && !str(raw.displayName, MAX_DISPLAY_NAME))
-        return null;
-      const displayName = raw.displayName as string | undefined;
+      const displayName = optionalStr(raw.displayName, MAX_DISPLAY_NAME);
+      if (displayName === false) return null;
       return { type: "hangup", ...(displayName ? { displayName } : {}) };
     }
 

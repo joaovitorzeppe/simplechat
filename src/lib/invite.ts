@@ -1,5 +1,7 @@
 export type Invite = {
   peerId: string;
+  /** Segredo da sala, quando o link traz um. */
+  secret: string | null;
 };
 
 const decode = (value: string) => {
@@ -13,6 +15,15 @@ const decode = (value: string) => {
 const fromParams = (params: URLSearchParams): string | null => {
   const room = params.get("room") ?? params.get("call");
   return room?.trim() ? decode(room) : null;
+};
+
+const secretFrom = (params: URLSearchParams): string | null => {
+  const key = params.get("k");
+  return key?.trim() ? decode(key) : null;
+};
+
+const hashParams = (hash: string) => {
+  return new URLSearchParams(hash.replace(/^#\/?/, "").replace(/^\?/, ""));
 };
 
 const toUrl = (text: string): URL | null => {
@@ -37,27 +48,45 @@ export const parseInvite = (raw: string): Invite | null => {
 
   const url = toUrl(text);
   if (url) {
+    const hash = hashParams(url.hash);
+    const secret = secretFrom(hash);
     const fromSearch = fromParams(url.searchParams);
-    if (fromSearch) return { peerId: fromSearch };
-    const hash = url.hash.replace(/^#\/?/, "");
-    const fromHash = fromParams(new URLSearchParams(hash.replace(/^\?/, "")));
-    if (fromHash) return { peerId: fromHash };
+    if (fromSearch) return { peerId: fromSearch, secret };
+    const fromHash = fromParams(hash);
+    if (fromHash) return { peerId: fromHash, secret };
   }
 
   if (text.includes("=")) {
     const fromLoose = fromParams(
       new URLSearchParams(text.startsWith("?") ? text.slice(1) : text),
     );
-    if (fromLoose) return { peerId: fromLoose };
+    if (fromLoose) return { peerId: fromLoose, secret: null };
   }
 
   const embedded = text.match(/[?&](?:room|call)=([^&\s#]+)/i);
-  if (embedded) return { peerId: decode(embedded[1]) };
+  if (embedded) {
+    const [, fragment = ""] = text.split("#", 2);
+    return { peerId: decode(embedded[1]), secret: secretFrom(hashParams(fragment)) };
+  }
 
   if (/^https?:\/\//i.test(text) || text.includes("/?")) return null;
-  return { peerId: text };
+
+  // Forma nua: a chave sozinha, ou `chave#k=segredo` como o app mostra ao
+  // colar só o essencial.
+  const [bare = "", fragment = ""] = text.split("#", 2);
+  if (!bare.trim()) return null;
+  return { peerId: bare.trim(), secret: secretFrom(hashParams(fragment)) };
 };
 
 export const invitePeerId = (raw: string) => {
   return parseInvite(raw)?.peerId ?? "";
+};
+
+/**
+ * O segredo vai no fragmento de propósito: o navegador não o envia ao servidor
+ * nem o repassa no Referer, então ele não aparece em log de acesso nenhum.
+ */
+export const inviteLink = (peerId: string, secret: string | null) => {
+  const base = `${window.location.origin}/?room=${encodeURIComponent(peerId)}`;
+  return secret ? `${base}#k=${encodeURIComponent(secret)}` : base;
 };

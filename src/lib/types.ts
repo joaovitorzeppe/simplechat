@@ -51,8 +51,14 @@ export type WireMessage =
       displayName: string;
       peerId: string;
       kind: "direct" | "room-join";
+      secret?: string;
     }
-  | { type: "room-peers"; peers: PeerInfo[]; hostPeerId?: string }
+  | {
+      type: "room-peers";
+      peers: PeerInfo[];
+      hostPeerId?: string;
+      secret?: string;
+    }
   | { type: "room-host"; hostPeerId: string }
   | {
       type: "chat";
@@ -66,7 +72,7 @@ export type WireMessage =
   | { type: "room-full" }
   | { type: "host-transfer"; hostPeerId: string }
   | { type: "room-waiting" }
-  | { type: "room-denied" }
+  | { type: "room-denied"; reason?: "stale" }
   | { type: "room-kicked" }
   | { type: "hangup"; displayName?: string }
   | { type: "media-meta"; sharingScreen?: boolean; cameraOff?: boolean }

@@ -19,6 +19,7 @@ import { QualityBadge } from "../components/QualityBadge";
 import { VideoTile } from "../components/VideoTile";
 import { useI18n } from "../i18n/use-i18n";
 import { cn } from "../lib/cn";
+import { inviteLink } from "../lib/invite";
 import { maxParticipants } from "../lib/quality";
 import { electHost } from "../lib/session";
 import { useSession } from "../lib/use-session";
@@ -53,7 +54,9 @@ export const Call = () => {
     setSeenCount(state.messages.length);
   };
 
-  const invite = me ? `${window.location.origin}/?room=${me.peerId}` : "";
+  // Sempre o link do host: é a sala dele que aceita entradas.
+  const roomId = state.hostPeerId ?? me?.peerId ?? "";
+  const invite = roomId ? inviteLink(roomId, state.roomSecret) : "";
 
   const successorId = electHost(state.remotes.map((remote) => remote.peerId));
   const successorName =

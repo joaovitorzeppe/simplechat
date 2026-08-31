@@ -1,5 +1,6 @@
 import { Peer, type DataConnection, type MediaConnection } from "peerjs";
-import { invitePeerId } from "./invite";
+import { loadRoomSecret, rotateRoomSecret } from "./identity";
+import { invitePeerId, parseInvite } from "./invite";
 import {
   applySenderLimits,
   applyTrackConstraints,
@@ -50,6 +51,8 @@ export type SessionState = {
   hostPeerId: string | null;
   callStatus: "idle" | "connecting" | "waiting" | "in-call";
   incoming: IncomingInvite | null;
+  /** Segredo da sala que o link de convite deve carregar, se conhecido. */
+  roomSecret: string | null;
   /** Quem bateu na porta e ainda espera o host aprovar. Só o host preenche. */
   pending: PeerInfo[];
   /** Host pediu para sair e precisa escolher o destino da sala. */
@@ -113,6 +116,7 @@ const initialState: SessionState = {
   hostPeerId: null,
   callStatus: "idle",
   incoming: null,
+  roomSecret: null,
   pending: [],
   leavePrompt: false,
 };
@@ -135,6 +139,10 @@ export class PeerSession {
   private removed = new Set<string>();
   private screenTrack: MediaStreamTrack | null = null;
   private dialedPeerId: string | null = null;
+  /** Nosso segredo quando somos host. Gira a cada recusa ou remoção. */
+  private hostSecret: string | null = null;
+  /** Segredo que apresentamos ao entrar na sala de outra pessoa. */
+  private joinSecret: string | null = null;
   private iceRetries = new Map<string, number>();
   private reconnectAttempts = 0;
   private reconnectTimer = 0;
@@ -187,7 +195,13 @@ export class PeerSession {
     }
     this.starting = true;
     this.destroyPeer();
-    this.patch({ identity, peerReady: false, peerError: null });
+    this.hostSecret = loadRoomSecret();
+    this.patch({
+      identity,
+      peerReady: false,
+      peerError: null,
+      roomSecret: this.hostSecret,
+    });
 
     const peer = new Peer(identity.peerId, {
       config: { iceServers: iceServers() },
@@ -299,6 +313,7 @@ export class PeerSession {
     }
     const me = this.selfInfo();
     this.roomMembers = me ? [me] : [];
+    this.joinSecret = null;
     this.dialedPeerId = id;
     this.beginCall(true, me?.peerId ?? id);
     this.openData(id, {
@@ -319,12 +334,14 @@ export class PeerSession {
     }
     const me = this.selfInfo();
     this.roomMembers = me ? [me] : [];
+    this.joinSecret = null;
     this.beginCall(true, me?.peerId ?? "");
-    this.patch({ callStatus: "in-call" });
+    this.patch({ callStatus: "in-call", roomSecret: this.hostSecret });
   }
 
   async joinRoom(hostId: string) {
-    const id = invitePeerId(hostId);
+    const invite = parseInvite(hostId);
+    const id = invite?.peerId ?? "";
     if (!id || !this.peer || id === this.state.identity?.peerId) return;
     try {
       await this.ensureLocalStream();
@@ -332,6 +349,7 @@ export class PeerSession {
       this.toast("toast.mediaJoin");
       return;
     }
+    this.joinSecret = invite?.secret ?? null;
     this.dialedPeerId = id;
     this.beginCall(false, id);
     this.openData(id, {
@@ -339,7 +357,7 @@ export class PeerSession {
       ...this.helloPayload(),
       kind: "room-join",
     });
-    this.patch({ callStatus: "connecting" });
+    this.patch({ callStatus: "connecting", roomSecret: this.joinSecret });
   }
 
   async acceptIncoming() {
@@ -408,6 +426,8 @@ export class PeerSession {
     });
     this.banned.add(peerId);
     this.sendAndDrop(peerId, { type: "room-denied" });
+    this.rotateSecret();
+    this.broadcastRoom();
   }
 
   kickPeer(peerId: string) {
@@ -418,6 +438,11 @@ export class PeerSession {
     this.roomMembers = this.roomMembers.filter((p) => p.peerId !== peerId);
     const conn = this.data.get(peerId);
     if (conn?.open) conn.send({ type: "room-kicked" });
+    // Quem saiu já está fora de `roomMembers`, então `activeConnections` o
+    // exclui daqui em diante: ele não recebe o segredo novo e o link que tem
+    // morre aqui. Os que ficaram são avisados na hora, não no timer abaixo.
+    this.rotateSecret();
+    this.broadcastRoom();
     // Deixa o aviso escoar antes de derrubar o canal por baixo dele.
     window.setTimeout(() => this.onPeerLeft(peerId), FLUSH_MS);
   }
@@ -647,6 +672,7 @@ export class PeerSession {
     return {
       displayName: clampDisplayName(me?.displayName ?? t("common.someone")),
       peerId: me?.peerId ?? "",
+      ...(this.joinSecret ? { secret: this.joinSecret } : {}),
     };
   }
 
@@ -805,7 +831,7 @@ export class PeerSession {
     ]);
     for (const peerId of ids) {
       if (peerId === this.state.identity?.peerId) continue;
-      if (this.awaitingApproval(peerId)) continue;
+      if (this.notAdmitted(peerId)) continue;
       this.openScreen(peerId);
     }
   }
@@ -871,7 +897,7 @@ export class PeerSession {
       if (
         this.state.callStatus === "idle" ||
         this.banned.has(call.peer) ||
-        this.awaitingApproval(call.peer)
+        this.notAdmitted(call.peer)
       ) {
         call.close();
         return;
@@ -896,10 +922,18 @@ export class PeerSession {
         call.close();
         return;
       }
+      if (this.notAdmitted(call.peer)) {
+        // Só o host tem uma decisão pendente: ele segura a chamada sem atender
+        // até aprovar (`admitPeer` responde depois). Para os demais, quem não
+        // está na lista da sala simplesmente não é atendido.
+        if (!this.state.isHost) {
+          call.close();
+          return;
+        }
+        this.attachMedia(call);
+        return;
+      }
       this.attachMedia(call);
-      // Sem aprovação do host a chamada fica em espera, não atendida: nada de
-      // áudio ou vídeo atravessa antes da decisão. `admitPeer` responde depois.
-      if (this.awaitingApproval(call.peer)) return;
       if (this.state.localStream) call.answer(this.outboundStream());
       if (this.state.sharingScreen) this.openScreen(call.peer);
       return;
@@ -957,7 +991,7 @@ export class PeerSession {
 
     // Quem está na sala de espera só pode se apresentar. Nada do que mande
     // além disso conta enquanto o host não decidir.
-    if (msg.type !== "hello" && this.awaitingApproval(from)) return;
+    if (msg.type !== "hello" && this.notAdmitted(from)) return;
 
     if (msg.type === "hello") {
       this.names.set(from, msg.displayName);
@@ -979,6 +1013,12 @@ export class PeerSession {
             this.sendAndDrop(from, { type: "room-denied" });
             return;
           }
+          // Sem o segredo certo nem chega a incomodar o host: é link velho,
+          // de antes de alguém ser removido, ou chave garimpada no broker.
+          if (!this.hostSecret || msg.secret !== this.hostSecret) {
+            this.sendAndDrop(from, { type: "room-denied", reason: "stale" });
+            return;
+          }
           if (this.isRoomFull()) {
             this.refuseJoin(from);
             return;
@@ -991,6 +1031,9 @@ export class PeerSession {
         this.offerExistingHost(conn);
         this.broadcastRoom();
       } else {
+        // Convidado não admite ninguém: quem vale está na lista do host, que
+        // chega por `room-peers`. Se ainda não chegou, o hello espera lá.
+        if (this.notAdmitted(from)) return;
         this.upsertRemote(from, { displayName: msg.displayName });
       }
       this.maybeCall(from);
@@ -1007,6 +1050,13 @@ export class PeerSession {
       if (!this.isRoomAuthority(from)) return;
       this.becomeGuest(msg.hostPeerId || from);
       this.roomMembers = msg.peers;
+      if (msg.secret) {
+        // Guardamos para reapresentar numa reconexão e para que o convite
+        // mostrado aqui continue válido depois de o host girar o segredo.
+        this.joinSecret = msg.secret;
+        if (this.state.roomSecret !== msg.secret)
+          this.patch({ roomSecret: msg.secret });
+      }
       for (const peer of msg.peers) {
         if (peer.peerId === this.state.identity?.peerId) continue;
         this.names.set(peer.peerId, peer.displayName);
@@ -1068,7 +1118,9 @@ export class PeerSession {
 
     if (msg.type === "room-denied") {
       if (!this.isRoomAuthority(from)) return;
-      this.resetCall("toast.joinDenied");
+      this.resetCall(
+        msg.reason === "stale" ? "toast.inviteStale" : "toast.joinDenied",
+      );
       return;
     }
 
@@ -1137,8 +1189,14 @@ export class PeerSession {
     this.patch({ messages });
   }
 
-  private awaitingApproval(peerId: string) {
-    if (!this.state.isHost || peerId === this.dialedPeerId) return false;
+  /**
+   * A sala é a lista que o host anuncia, e ninguém entra por fora dela. Para o
+   * host isso é a decisão dele na sala de espera; para os demais é a lista que
+   * ele mandou — senão cada convidado seria uma porta lateral sem tranca, já
+   * que todos conhecem o peerId de todos.
+   */
+  private notAdmitted(peerId: string) {
+    if (peerId === this.dialedPeerId) return false;
     return !this.roomMembers.some((p) => p.peerId === peerId);
   }
 
@@ -1254,12 +1312,24 @@ export class PeerSession {
     this.patch({ isHost: false, hostPeerId });
   }
 
+  /**
+   * Só quem já foi admitido recebe isto — `activeConnections` exclui a sala de
+   * espera —, então mandar o segredo junto é seguro e deixa qualquer membro
+   * convidar com um link que funciona, inclusive depois de um giro.
+   */
   private broadcastRoom() {
     this.broadcast({
       type: "room-peers",
       peers: this.roomMembers,
       hostPeerId: this.state.identity?.peerId ?? "",
+      ...(this.hostSecret ? { secret: this.hostSecret } : {}),
     });
+  }
+
+  /** Invalida os links já distribuídos, para que uma saída forçada seja final. */
+  private rotateSecret() {
+    this.hostSecret = rotateRoomSecret();
+    this.patch({ roomSecret: this.hostSecret });
   }
 
   private maybeConnect(peerId: string) {
@@ -1594,7 +1664,7 @@ export class PeerSession {
   private activeConnections() {
     const open: DataConnection[] = [];
     for (const [peerId, conn] of this.data) {
-      if (conn.open && !this.awaitingApproval(peerId)) open.push(conn);
+      if (conn.open && !this.notAdmitted(peerId)) open.push(conn);
     }
     return open;
   }
@@ -1651,6 +1721,7 @@ export class PeerSession {
     this.banned.clear();
     this.removed.clear();
     this.dialedPeerId = null;
+    this.joinSecret = null;
     this.screenTrack?.stop();
     this.screenTrack = null;
     this.state.localStream?.getTracks().forEach((track) => track.stop());
@@ -1674,6 +1745,8 @@ export class PeerSession {
       hostPeerId: null,
       callStatus: "idle",
       incoming: null,
+      // De volta à home, o convite exibido volta a ser o da nossa própria sala.
+      roomSecret: this.hostSecret,
       pending: [],
       leavePrompt: false,
     });
