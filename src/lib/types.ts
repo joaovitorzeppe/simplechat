@@ -52,7 +52,8 @@ export type WireMessage =
       peerId: string;
       kind: "direct" | "room-join";
     }
-  | { type: "room-peers"; peers: PeerInfo[] }
+  | { type: "room-peers"; peers: PeerInfo[]; hostPeerId?: string }
+  | { type: "room-host"; hostPeerId: string }
   | {
       type: "chat";
       id: string;

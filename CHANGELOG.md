@@ -15,6 +15,10 @@ O formato segue a ideia de [Keep a Changelog](https://keepachangelog.com/pt-BR/1
 - Links no chat viram texto clicável. Antes de abrir, um aviso mostra o endereço com Cancelar ou Abrir em nova aba.
 - Arquivos no chat via data channel P2P (fatias de 16 KB). Teto de **50 MB no free** e **100 MB no Pro** só no envio. Preview de imagem e download; some ao sair da chamada.
 
+### Corrigido
+
+- Ligar no link de uma chamada já aberta entra como convidado. Não rouba o host nem encerra a sala ao sair.
+
 ## [2026-08-31]
 
 Tudo abaixo entrou no mesmo dia, do MVP até a chamada unificada.

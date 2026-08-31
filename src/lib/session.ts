@@ -639,6 +639,7 @@ export class PeerSession {
         conn.send({ type: "media-meta", sharingScreen: true });
       if (this.state.cameraOff)
         conn.send({ type: "media-meta", cameraOff: true });
+      this.offerExistingHost(conn);
     });
     conn.on("data", (raw) => {
       if (this.onFileBytes(conn, raw)) return;
@@ -772,7 +773,8 @@ export class PeerSession {
           peerId: msg.peerId,
           displayName: msg.displayName,
         });
-        this.broadcast({ type: "room-peers", peers: this.roomMembers });
+        this.offerExistingHost(conn);
+        this.broadcastRoom();
       } else {
         this.upsertRemote(msg.peerId, { displayName: msg.displayName });
       }
@@ -780,7 +782,13 @@ export class PeerSession {
       return;
     }
 
+    if (msg.type === "room-host") {
+      this.becomeGuest(msg.hostPeerId);
+      return;
+    }
+
     if (msg.type === "room-peers") {
+      this.becomeGuest(msg.hostPeerId || conn.peer);
       this.roomMembers = msg.peers;
       for (const peer of msg.peers) {
         if (peer.peerId === this.state.identity?.peerId) continue;
@@ -868,6 +876,34 @@ export class PeerSession {
     }
   }
 
+  private offerExistingHost(conn: DataConnection) {
+    const me = this.state.identity?.peerId;
+    if (
+      !me ||
+      !this.state.isHost ||
+      this.state.callStatus !== "in-call" ||
+      !conn.open
+    )
+      return;
+    conn.send({ type: "room-host", hostPeerId: me });
+  }
+
+  private becomeGuest(hostPeerId: string) {
+    const me = this.state.identity?.peerId;
+    if (!hostPeerId || hostPeerId === me) return;
+    if (this.state.isHost && this.state.callStatus === "in-call") return;
+    if (!this.state.isHost && this.state.hostPeerId === hostPeerId) return;
+    this.patch({ isHost: false, hostPeerId });
+  }
+
+  private broadcastRoom() {
+    this.broadcast({
+      type: "room-peers",
+      peers: this.roomMembers,
+      hostPeerId: this.state.identity?.peerId ?? "",
+    });
+  }
+
   private maybeConnect(peerId: string) {
     const me = this.state.identity?.peerId;
     if (!me || peerId === me || this.data.has(peerId)) return;
@@ -949,7 +985,7 @@ export class PeerSession {
     });
     if (this.state.isHost) {
       this.roomMembers = this.roomMembers.filter((p) => p.peerId !== peerId);
-      this.broadcast({ type: "room-peers", peers: this.roomMembers });
+      this.broadcastRoom();
       return;
     }
     if (

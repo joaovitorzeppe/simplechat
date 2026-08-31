@@ -32,7 +32,7 @@ export const pt = {
   "home.startCall": "Iniciar chamada",
   "home.joinTitle": "Entrar ou ligar",
   "home.joinBody":
-    "Ligar cria a chamada com você de host e convoca a outra pessoa. Entrar junta você à chamada que ela já começou.",
+    "Ligar convoca quem ainda não está em chamada: você é o host. Se a pessoa já começou, Ligar entra como convidado. Entrar junta você à chamada que ela já iniciou.",
   "home.invitePlaceholder": "chave ou link (?room=)",
   "home.call": "Ligar",
   "home.join": "Entrar",
@@ -143,7 +143,7 @@ export const en: Messages = {
   "home.startCall": "Start call",
   "home.joinTitle": "Join or call",
   "home.joinBody":
-    "Call starts a room with you as host and rings the other person. Join puts you in a call they already started.",
+    "Call rings someone who is not in a call yet: you are the host. If they already started, Call joins as a guest. Join puts you in a call they already started.",
   "home.invitePlaceholder": "key or link (?room=)",
   "home.call": "Call",
   "home.join": "Join",
@@ -251,7 +251,7 @@ export const es: Messages = {
   "home.startCall": "Iniciar llamada",
   "home.joinTitle": "Entrar o llamar",
   "home.joinBody":
-    "Llamar crea la llamada contigo como anfitrión y avisa a la otra persona. Entrar te une a una llamada que ya empezó.",
+    "Llamar avisa a quien aún no está en una llamada: tú eres el anfitrión. Si ya empezó, Llamar entra como invitado. Entrar te une a una llamada que ya empezó.",
   "home.invitePlaceholder": "clave o enlace (?room=)",
   "home.call": "Llamar",
   "home.join": "Entrar",
