@@ -4,7 +4,7 @@ Chat P2P 100% frontend: áudio, vídeo, tela e texto no navegador. Sem API próp
 
 ## Stack e como rodar
 
-Vite 8, React 19, TypeScript, Tailwind CSS v4, PeerJS e Dexie (IndexedDB).
+Vite 8, React 19, TypeScript ~7, Tailwind CSS v4, PeerJS e Dexie (IndexedDB).
 
 ```bash
 npm i
@@ -13,13 +13,36 @@ npm run dev
 
 Para testar duas pessoas no mesmo computador, abra uma janela anônima (o mesmo origin compartilha `localStorage` e a chave).
 
+Idiomas: português, inglês e espanhol (`LanguageSwitcher`). Em produção o app é instalável (PWA); o service worker não registra em `npm run dev`.
+
 ## Como funciona
 
-- **Identidade:** você informa o nome. O app gera um `crypto.randomUUID()`, grava `{ displayName, peerId }` no `localStorage` e abre `new Peer(peerId)`. A chave é o próprio ID PeerJS — copiar/colar ou link `?call=<uuid>`.
-- **1:1:** a outra pessoa cola a chave e clica Ligar. O cliente faz `peer.call` (mídia) e `peer.connect` (chat/metadados).
-- **Sala mesh:** o host cria a sala e compartilha a chave dele (`?room=<uuid>`). Quem entra conecta no host por data channel; o host envia a lista de peers; cada um monta mesh de mídia com os demais (quem tem o ID menor inicia, para evitar glare). Se o host sair, a sala encerra.
+Toda chamada é uma sala em mesh. Quem inicia é o **host**; quem entra é convidado.
 
-## Limitações
+- **Identidade:** no onboarding você informa o nome. O app gera um `peerId` no formato `{nome}-{uuid}-{timestamp}` e, se você pedir para lembrar, grava `{ displayName, peerId }` no `localStorage`. Sem isso, a chave é nova a cada visita. A chave é o ID PeerJS.
+- **Iniciar:** você abre a chamada sozinho e compartilha o link `/?room=<sua-chave>`. Links antigos `?call=` ainda funcionam.
+- **Ligar:** cola a chave (ou o link) da outra pessoa. Você vira host e convoca ela.
+- **Entrar:** junta você à chamada que a outra pessoa já começou. O cliente conecta no host por data channel; o host envia a lista de peers; cada um monta mesh de mídia (quem tem o ID menor inicia, para evitar glare).
+- **Sair:** convidado só sai da sala. Se o host sair, a chamada encerra para todos (`room-ended`).
+- **Câmera:** desligar a câmera para o track (`replaceTrack(null)` + `stop()`). Não envia frames pretos; o LED deve apagar. Os outros veem o avatar. Compartilhamento de tela segue em conexão separada.
+
+## Limites do plano
+
+O host aplica o teto do **tier dele** (`quality.ts`):
+
+| | Free | Pro (demo) |
+|---|---|---|
+| Pessoas | 5 | 12 |
+| Câmera | 640×480 @ 15 fps, ~400 kbps | 1280×720 @ 30 fps, ~2.5 Mbps |
+| Tela | 1280×720 @ 15 fps, ~800 kbps | 1920×1080 @ 30 fps, ~4 Mbps |
+
+O 6º no free recebe toast de sala cheia e volta para a home, sem derrubar a chamada. O toggle **Simular Pro** no `localStorage` só demonstra o tier — não há pagamento.
+
+Num app só frontend o paywall é burável (o JS roda no navegador). A UI mostra “qualidade gratuita” e “Pro em breve”.
+
+Isso usa `getUserMedia` / `getDisplayMedia` e `RTCRtpSender.setParameters({ encodings: [{ maxBitrate }] })`.
+
+## Limitações de rede
 
 WebRTC sempre precisa de sinalização, STUN e, em alguns NATs, TURN.
 
@@ -27,26 +50,19 @@ WebRTC sempre precisa de sinalização, STUN e, em alguns NATs, TURN.
 - STUN: `stun.l.google.com` (e `stun1`).
 - Sem TURN no MVP. Firewalls corporativos rígidos podem não conectar.
 - Áudio/vídeo não passam pelo nosso servidor: vão P2P (ou por TURN, se um dia existir).
-- Mesh funciona bem com até ~4 pessoas em vídeo. Acima disso o notebook sofre; grupo grande pediria SFU (LiveKit/mediasoup) e deixaria de ser P2P puro.
+- Mesh em vídeo pesa no notebook. Grupo grande pediria SFU (LiveKit/mediasoup) e deixaria de ser P2P puro.
 
-## Qualidade free/pro e paywall futuro
+## Histórico local
 
-O módulo `quality.ts` trava resolução, fps e bitrate no cliente:
-
-- **Free:** 640×480 @ 15 fps, ~400 kbps câmera, ~800 kbps tela.
-- **Pro:** 1280×720 @ 30 fps, ~2.5 Mbps câmera, ~4 Mbps tela.
-
-Isso usa `getUserMedia` / `getDisplayMedia` e `RTCRtpSender.setParameters({ encodings: [{ maxBitrate }] })`.
-
-Num app só frontend o paywall é burável (o JS roda no navegador). No MVP o tier padrão é free, a UI mostra “qualidade gratuita” e “Pro em breve”, e há um toggle local **Simular Pro** só para demonstrar a diferença. Sem pagamento.
+Dexie/IndexedDB, só neste navegador, com opt-in. Só liga se você marcar “lembrar quem eu sou”, porque o histórico fica atrelado à identidade. Não sincroniza e some se limpar os dados do site.
 
 ## Fase 2 (fora deste MVP)
 
 - Firebase Auth (Google) + Firestore para histórico na nuvem; IndexedDB continua como modo anônimo.
 - Stripe/Lemon Squeezy + custom claim para liberar o tier Pro de verdade.
 - TURN (Metered, Open Relay ou coturn) para NAT difícil.
-- SFU se salas > 4–6 pessoas.
+- SFU se salas passarem do que o mesh aguenta.
 
-## Histórico
+## Histórico de versões
 
-- **30/08/2026** — MVP: onboarding com nome e chave UUID, chamada 1:1 (áudio/vídeo + chat), compartilhamento de tela, salas mesh, histórico local com opt-in, tiers de qualidade e UI “Pro em breve”.
+Ver [CHANGELOG.md](./CHANGELOG.md).
