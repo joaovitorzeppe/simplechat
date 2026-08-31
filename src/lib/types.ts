@@ -49,6 +49,7 @@ export type WireMessage =
       at: number;
     }
   | { type: "room-ended" }
+  | { type: "hangup" }
   | { type: "media-meta"; sharingScreen: boolean };
 
 export type HistoryCall = {

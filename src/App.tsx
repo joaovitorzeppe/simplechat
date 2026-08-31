@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { IncomingCall } from "./components/IncomingCall";
-import { useI18n } from "./i18n/use-i18n";
+import { Toast } from "./components/Toast";
 import { loadIdentity } from "./lib/identity";
 import { session } from "./lib/session";
 import { unlockAudio } from "./lib/sounds";
@@ -12,7 +12,6 @@ import { Onboarding } from "./screens/Onboarding";
 
 const App = () => {
   const { state } = useSession();
-  const { t } = useI18n();
 
   useEffect(() => {
     const identity = loadIdentity();
@@ -31,15 +30,20 @@ const App = () => {
 
   if (!state.identity && !loadIdentity()) {
     return (
-      <Onboarding
-        onDone={(identity) => {
-          void session.start(identity);
-        }}
-      />
+      <>
+        <Onboarding
+          onDone={(identity) => {
+            void session.start(identity);
+          }}
+        />
+        <Toast />
+      </>
     );
   }
 
-  if (!state.identity) return null;
+  if (!state.identity) {
+    return <Toast />;
+  }
 
   return (
     <>
@@ -57,11 +61,7 @@ const App = () => {
           onReject={() => session.rejectIncoming()}
         />
       )}
-      {state.toast && (
-        <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-2xl border border-line bg-panel px-5 py-3 text-sm font-medium shadow-2xl">
-          {t(state.toast)}
-        </div>
-      )}
+      <Toast />
     </>
   );
 };

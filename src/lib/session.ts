@@ -15,6 +15,7 @@ import {
 import type { MessageKey } from "../i18n/locales";
 import { t } from "../i18n/i18n";
 import { playCallEnded } from "./sounds";
+import { showToast } from "./toast";
 import type {
   CallMode,
   ChatMessage,
@@ -31,7 +32,6 @@ export type SessionState = {
   identity: Identity | null;
   peerReady: boolean;
   peerError: MessageKey | null;
-  toast: MessageKey | null;
   localStream: MediaStream | null;
   localScreenStream: MediaStream | null;
   remotes: RemotePeer[];
@@ -59,7 +59,6 @@ const initialState: SessionState = {
   identity: null,
   peerReady: false,
   peerError: null,
-  toast: null,
   localStream: null,
   localScreenStream: null,
   remotes: [],
@@ -88,7 +87,6 @@ export class PeerSession {
   private names = new Map<string, string>();
   private roomMembers: PeerInfo[] = [];
   private screenTrack: MediaStreamTrack | null = null;
-  private toastTimer = 0;
   private starting = false;
   private ending = false;
 
@@ -107,12 +105,7 @@ export class PeerSession {
   }
 
   private toast(key: MessageKey) {
-    window.clearTimeout(this.toastTimer);
-    this.patch({ toast: key });
-    this.toastTimer = window.setTimeout(
-      () => this.patch({ toast: null }),
-      3200,
-    );
+    showToast(key);
   }
 
   async start(identity: Identity) {
@@ -262,11 +255,20 @@ export class PeerSession {
   }
 
   hangUp() {
-    if (this.state.callStatus === 'idle' && this.state.view !== 'call') return
-    if (this.state.isHost && this.state.callMode === 'room') {
-      this.broadcast({ type: 'room-ended' })
+    if (this.ending) return;
+    if (this.state.callStatus === "idle" && this.state.view !== "call") return;
+    this.ending = true;
+    playCallEnded();
+    showToast("toast.callEnded");
+    if (this.state.isHost && this.state.callMode === "room") {
+      this.broadcast({ type: "room-ended" });
+    } else if (this.state.callMode === "direct") {
+      this.broadcast({ type: "hangup" });
     }
-    this.resetCall(true, 'toast.callEnded')
+    window.setTimeout(() => {
+      this.ending = false;
+      this.resetCall(true);
+    }, 80);
   }
 
   sendChat(text: string) {
@@ -505,6 +507,14 @@ export class PeerSession {
     this.media.set(call.peer, call);
     call.on("stream", (stream) => {
       this.upsertRemote(call.peer, { stream });
+      const onRemoteEnded = () => {
+        if (stream.getTracks().some((track) => track.readyState === "live"))
+          return;
+        this.onPeerLeft(call.peer);
+      };
+      for (const track of stream.getTracks()) {
+        track.addEventListener("ended", onRemoteEnded);
+      }
       if (this.state.callStatus !== "in-call")
         this.patch({ callStatus: "in-call" });
       window.setTimeout(() => this.applyLimitsToAll(), 400);
@@ -649,6 +659,13 @@ export class PeerSession {
       return;
     }
 
+    if (msg.type === "hangup") {
+      if (this.state.callStatus !== "idle") {
+        this.resetCall(true, "toast.peerLeft");
+      }
+      return;
+    }
+
     if (msg.type === "room-ended") {
       this.resetCall(true, "toast.roomEndedByHost");
       return;
@@ -731,7 +748,7 @@ export class PeerSession {
   }
 
   private onPeerLeft(peerId: string) {
-    if (this.ending) return
+    if (this.ending) return;
     this.data.get(peerId)?.close();
     this.media.get(peerId)?.close();
     this.screenOut.get(peerId)?.close();
@@ -744,7 +761,8 @@ export class PeerSession {
     this.patch({
       remotes,
       screenShareOrder: this.removeShare(peerId),
-      incoming: this.state.incoming?.peerId === peerId ? null : this.state.incoming,
+      incoming:
+        this.state.incoming?.peerId === peerId ? null : this.state.incoming,
     });
     if (this.state.isHost && this.state.callMode === "room") {
       this.roomMembers = this.roomMembers.filter((p) => p.peerId !== peerId);
@@ -753,7 +771,8 @@ export class PeerSession {
     if (
       this.state.callMode === "direct" &&
       remotes.length === 0 &&
-      (this.state.callStatus === "in-call" || this.state.callStatus === "connecting")
+      (this.state.callStatus === "in-call" ||
+        this.state.callStatus === "connecting")
     ) {
       this.resetCall(true, "toast.peerLeft");
     }
@@ -761,7 +780,8 @@ export class PeerSession {
       this.state.callMode === "room" &&
       !this.state.isHost &&
       remotes.length === 0 &&
-      (this.state.callStatus === "in-call" || this.state.callStatus === "connecting")
+      (this.state.callStatus === "in-call" ||
+        this.state.callStatus === "connecting")
     ) {
       this.resetCall(true, "toast.roomEnded");
     }
@@ -806,31 +826,30 @@ export class PeerSession {
   }
 
   private resetCall(endHistory: boolean, endedReason?: MessageKey) {
-    if (this.ending) return
-    this.ending = true
+    if (this.ending) return;
+    this.ending = true;
     if (endHistory && this.state.activeCallId) {
-      void endHistoryCall(this.state.activeCallId)
+      void endHistoryCall(this.state.activeCallId);
     }
-    for (const conn of this.data.values()) conn.close()
-    for (const call of this.media.values()) call.close()
-    for (const call of this.screenOut.values()) call.close()
-    for (const call of this.screenIn.values()) call.close()
-    this.data.clear()
-    this.media.clear()
-    this.screenOut.clear()
-    this.screenIn.clear()
-    this.roomMembers = []
-    this.screenTrack?.stop()
-    this.screenTrack = null
-    this.state.localStream?.getTracks().forEach((track) => track.stop())
-    this.names.clear()
+    for (const conn of this.data.values()) conn.close();
+    for (const call of this.media.values()) call.close();
+    for (const call of this.screenOut.values()) call.close();
+    for (const call of this.screenIn.values()) call.close();
+    this.data.clear();
+    this.media.clear();
+    this.screenOut.clear();
+    this.screenIn.clear();
+    this.roomMembers = [];
+    this.screenTrack?.stop();
+    this.screenTrack = null;
+    this.state.localStream?.getTracks().forEach((track) => track.stop());
+    this.names.clear();
     if (endedReason) {
-      window.clearTimeout(this.toastTimer)
-      this.toastTimer = window.setTimeout(() => this.patch({ toast: null }), 4200)
-      playCallEnded()
+      playCallEnded();
+      showToast(endedReason);
     }
     this.patch({
-      view: 'home',
+      view: "home",
       localStream: null,
       localScreenStream: null,
       remotes: [],
@@ -841,12 +860,13 @@ export class PeerSession {
       cameraOff: false,
       callMode: null,
       isHost: false,
-      callStatus: 'idle',
+      callStatus: "idle",
       incoming: null,
       activeCallId: null,
-      toast: endedReason ?? this.state.toast,
-    })
-    this.ending = false
+    });
+    window.setTimeout(() => {
+      this.ending = false;
+    }, 400);
   }
 
   private destroyPeer() {
