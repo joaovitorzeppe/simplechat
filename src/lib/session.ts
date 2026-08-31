@@ -279,6 +279,11 @@ export class PeerSession {
     playCallEnded();
     showToast(hostLeaving ? "toast.callEnded" : "toast.leftCall");
     if (hostLeaving) this.broadcast({ type: "room-ended" });
+    else
+      this.broadcast({
+        type: "hangup",
+        displayName: this.state.identity?.displayName,
+      });
     window.setTimeout(() => {
       this.ending = false;
       this.resetCall();
@@ -825,6 +830,7 @@ export class PeerSession {
     }
 
     if (msg.type === "hangup") {
+      if (msg.displayName) this.names.set(conn.peer, msg.displayName);
       this.onPeerLeft(conn.peer);
       return;
     }
@@ -967,6 +973,17 @@ export class PeerSession {
 
   private onPeerLeft(peerId: string) {
     if (this.ending) return;
+    const name =
+      this.state.remotes.find((r) => r.peerId === peerId)?.displayName ??
+      this.names.get(peerId) ??
+      t("common.someone");
+    const wasPresent =
+      this.state.remotes.some((r) => r.peerId === peerId) ||
+      this.roomMembers.some((p) => p.peerId === peerId);
+    const hostGone =
+      peerId === this.state.hostPeerId &&
+      (this.state.callStatus === "in-call" ||
+        this.state.callStatus === "connecting");
     this.data.get(peerId)?.close();
     this.media.get(peerId)?.close();
     this.screenOut.get(peerId)?.close();
@@ -986,15 +1003,35 @@ export class PeerSession {
     if (this.state.isHost) {
       this.roomMembers = this.roomMembers.filter((p) => p.peerId !== peerId);
       this.broadcastRoom();
+    } else if (hostGone) {
+      this.resetCall("toast.roomEndedByHost");
       return;
     }
     if (
-      peerId === this.state.hostPeerId &&
+      wasPresent &&
+      !hostGone &&
       (this.state.callStatus === "in-call" ||
         this.state.callStatus === "connecting")
     ) {
-      this.resetCall("toast.roomEndedByHost");
+      showToast("toast.peerLeft", { name });
+      this.appendLeaveNotice(peerId, name);
     }
+  }
+
+  private appendLeaveNotice(peerId: string, name: string) {
+    this.patch({
+      messages: [
+        ...this.state.messages,
+        {
+          id: crypto.randomUUID(),
+          fromPeerId: peerId,
+          fromName: name,
+          text: "",
+          at: Date.now(),
+          system: "left",
+        },
+      ],
+    });
   }
 
   private waitForFileBuffer(conn: DataConnection) {

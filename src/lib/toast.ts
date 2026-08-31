@@ -1,7 +1,12 @@
 import { useSyncExternalStore } from "react";
 import type { MessageKey } from "../i18n/locales";
 
-let current: MessageKey | null = null;
+export type ToastState = {
+  key: MessageKey;
+  vars?: Record<string, string | number>;
+};
+
+let current: ToastState | null = null;
 let timer = 0;
 const listeners = new Set<() => void>();
 
@@ -18,9 +23,13 @@ export const subscribeToast = (listener: () => void) => {
 
 export const getToast = () => current;
 
-export const showToast = (key: MessageKey, ms = 4500) => {
+export const showToast = (
+  key: MessageKey,
+  vars?: Record<string, string | number>,
+  ms = 4500,
+) => {
   window.clearTimeout(timer);
-  current = key;
+  current = { key, vars };
   emit();
   timer = window.setTimeout(() => {
     current = null;

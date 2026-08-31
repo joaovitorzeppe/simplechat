@@ -109,7 +109,7 @@ const FileCard = ({ file }: { file: ChatFile }) => {
 };
 
 export const ChatMessages = ({ messages, selfId }: Props) => {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const groups = groupChatMessages(messages);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
@@ -123,6 +123,16 @@ export const ChatMessages = ({ messages, selfId }: Props) => {
     <>
       {groups.map((group) => {
         const mine = group.fromPeerId === selfId;
+        if (group.messages[0]?.system === "left") {
+          return (
+            <p
+              key={group.messages[0].id}
+              className="py-1 text-center text-[11px] text-zinc-500"
+            >
+              {t("toast.peerLeft", { name: group.fromName })}
+            </p>
+          );
+        }
         return (
           <div key={group.messages[0].id} className="space-y-1">
             <div

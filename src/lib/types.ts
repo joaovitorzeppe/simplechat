@@ -38,6 +38,7 @@ export type ChatMessage = {
   text: string;
   at: number;
   file?: ChatFile;
+  system?: "left";
 };
 
 export type IncomingInvite = {
@@ -64,7 +65,7 @@ export type WireMessage =
     }
   | { type: "room-ended" }
   | { type: "room-full" }
-  | { type: "hangup" }
+  | { type: "hangup"; displayName?: string }
   | { type: "media-meta"; sharingScreen?: boolean; cameraOff?: boolean }
   | {
       type: "file-start";

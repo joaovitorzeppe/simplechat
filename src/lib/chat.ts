@@ -20,6 +20,8 @@ export const groupChatMessages = (
     const lastAt = last?.messages[last.messages.length - 1]?.at;
     if (
       last &&
+      !msg.system &&
+      !last.messages[0]?.system &&
       last.fromPeerId === msg.fromPeerId &&
       lastAt !== undefined &&
       msg.at - lastAt <= windowMs
@@ -150,4 +152,3 @@ export const formatFileSize = (bytes: number, locale: Locale) => {
   if (bytes < 1024 * 1024) return format(bytes / 1024, "KB");
   return format(bytes / (1024 * 1024), "MB");
 };
-

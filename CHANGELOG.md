@@ -18,6 +18,7 @@ O formato segue a ideia de [Keep a Changelog](https://keepachangelog.com/pt-BR/1
 ### Corrigido
 
 - Ligar no link de uma chamada já aberta entra como convidado. Não rouba o host nem encerra a sala ao sair.
+- Quando alguém sai da chamada, os outros veem toast e uma linha no chat com o nome.
 
 ## [2026-08-31]
 
