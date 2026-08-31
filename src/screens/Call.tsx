@@ -32,10 +32,23 @@ export const Call = () => {
   const [chatOpen, setChatOpen] = useState(
     () => window.matchMedia("(min-width: 768px)").matches,
   );
+  const [seenCount, setSeenCount] = useState(0);
   const [copied, setCopied] = useState(false);
   const [pinnedId, setPinnedId] = useState<string | null>(null);
   const [showCameras, setShowCameras] = useState(false);
   const me = state.identity;
+  const selfId = me?.peerId;
+  const unread = chatOpen
+    ? 0
+    : state.messages
+        .slice(seenCount)
+        .filter((message) => message.fromPeerId !== selfId).length;
+
+  const setChat = (open: boolean) => {
+    setChatOpen(open);
+    setSeenCount(state.messages.length);
+  };
+
   const invite =
     state.callMode === "room" && me
       ? `${window.location.origin}/?room=${me.peerId}`
@@ -222,10 +235,22 @@ export const Call = () => {
           </Button>
           <Button
             variant="icon"
-            onClick={() => setChatOpen((v) => !v)}
-            title={t("call.chat")}
+            className={
+              unread > 0 && !chatOpen ? "relative border-accent text-accent" : "relative"
+            }
+            onClick={() => setChat(!chatOpen)}
+            title={
+              unread > 0 && !chatOpen
+                ? `${t("call.chat")} (${unread})`
+                : t("call.chat")
+            }
           >
             <ChatIcon />
+            {unread > 0 && !chatOpen && (
+              <span className="absolute -top-1 -right-1 grid min-w-5 place-items-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-5 text-ink">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
           </Button>
           <Button
             variant="icon"
@@ -243,6 +268,7 @@ export const Call = () => {
             messages={state.messages}
             selfId={me.peerId}
             onSend={(text) => session.sendChat(text)}
+            onClose={() => setChat(false)}
           />
         </div>
       )}
@@ -250,7 +276,7 @@ export const Call = () => {
       {chatOpen && me && (
         <div
           className="md:hidden fixed inset-0 z-40 bg-black/60"
-          onClick={() => setChatOpen(false)}
+          onClick={() => setChat(false)}
         >
           <div
             className="absolute inset-y-0 right-0 w-[min(100%,24rem)]"
@@ -260,6 +286,7 @@ export const Call = () => {
               messages={state.messages}
               selfId={me.peerId}
               onSend={(text) => session.sendChat(text)}
+              onClose={() => setChat(false)}
             />
           </div>
         </div>

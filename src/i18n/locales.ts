@@ -84,6 +84,7 @@ export const pt = {
   "call.pinScreen": "Centralizar esta tela",
 
   "chat.title": "Chat",
+  "chat.close": "Fechar chat",
   "chat.empty": "Mensagens desta chamada. Sem opt-in, nada é gravado.",
   "chat.placeholder": "Escreva uma mensagem",
   "chat.send": "Enviar",
@@ -198,6 +199,7 @@ export const en: Messages = {
   "call.pinScreen": "Focus this screen",
 
   "chat.title": "Chat",
+  "chat.close": "Close chat",
   "chat.empty": "Messages from this call. Without opt-in, nothing is saved.",
   "chat.placeholder": "Write a message",
   "chat.send": "Send",
@@ -311,6 +313,7 @@ export const es: Messages = {
   "call.pinScreen": "Centrar esta pantalla",
 
   "chat.title": "Chat",
+  "chat.close": "Cerrar chat",
   "chat.empty": "Mensajes de esta llamada. Sin la opción, no se guarda nada.",
   "chat.placeholder": "Escribe un mensaje",
   "chat.send": "Enviar",

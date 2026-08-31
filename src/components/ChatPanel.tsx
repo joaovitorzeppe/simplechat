@@ -3,14 +3,16 @@ import { useI18n } from "../i18n/use-i18n";
 import type { ChatMessage } from "../lib/types";
 import { Button } from "./Button";
 import { ChatMessages } from "./ChatMessages";
+import { CloseIcon } from "./Icons";
 
 type Props = {
   messages: ChatMessage[];
   selfId: string;
   onSend: (text: string) => void;
+  onClose: () => void;
 };
 
-export const ChatPanel = ({ messages, selfId, onSend }: Props) => {
+export const ChatPanel = ({ messages, selfId, onSend, onClose }: Props) => {
   const { t } = useI18n();
   const [text, setText] = useState("");
 
@@ -18,12 +20,20 @@ export const ChatPanel = ({ messages, selfId, onSend }: Props) => {
     event.preventDefault();
     onSend(text);
     setText("");
-  }
+  };
 
   return (
     <aside className="flex h-full w-full max-w-sm flex-col border-l border-line bg-panel">
-      <div className="border-b border-line px-4 py-3 text-sm font-medium">
-        {t("chat.title")}
+      <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
+        <div className="px-1 text-sm font-medium">{t("chat.title")}</div>
+        <Button
+          variant="ghost"
+          className="px-2 py-1"
+          onClick={onClose}
+          title={t("chat.close")}
+        >
+          <CloseIcon />
+        </Button>
       </div>
       <div className="flex-1 space-y-3 overflow-y-auto p-4 text-sm">
         {messages.length === 0 && (
@@ -44,4 +54,4 @@ export const ChatPanel = ({ messages, selfId, onSend }: Props) => {
       </form>
     </aside>
   );
-}
+};
