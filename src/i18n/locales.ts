@@ -54,6 +54,8 @@ export const pt = {
   "call.host": "Chamada · você é o host",
   "call.guest": "Chamada",
   "call.connecting": "Conectando…",
+  "call.networkHint":
+    "Esta rede pode estar bloqueando a chamada P2P. Troque Wi‑Fi por dados móveis (ou o contrário) e tente de novo.",
   "call.inCall": "{count}/{max} na chamada",
   "call.copyInvite": "Copiar convite",
   "call.endForEveryone": "Encerrar para todos",
@@ -134,6 +136,10 @@ export const pt = {
   "error.crashReload": "Recarregar",
   "error.insecureContext":
     "Abra por HTTPS ou localhost. Câmera e microfone não funcionam nesta origem.",
+  "toast.networkPath":
+    "Não deu para conectar nesta rede. Troque Wi‑Fi por dados móveis (ou o contrário) e tente de novo — algumas redes bloqueiam chamadas P2P.",
+  "toast.networkPathPeer":
+    "Não deu para chegar em {name} nesta rede. Troque Wi‑Fi por dados móveis (ou o contrário).",
   "toast.peerUnavailable": "Pessoa não encontrada. Confira a chave.",
   "toast.mediaCall": "Permita câmera e microfone para ligar.",
   "toast.mediaRoom": "Permita câmera e microfone para criar a sala.",
@@ -234,6 +240,8 @@ export const en: Messages = {
   "call.host": "Call · you are the host",
   "call.guest": "Call",
   "call.connecting": "Connecting…",
+  "call.networkHint":
+    "This network may be blocking the P2P call. Switch Wi‑Fi to mobile data (or the other way around) and try again.",
   "call.inCall": "{count}/{max} in the call",
   "call.copyInvite": "Copy invite",
   "call.endForEveryone": "End for everyone",
@@ -314,6 +322,10 @@ export const en: Messages = {
   "error.crashReload": "Reload",
   "error.insecureContext":
     "Open this over HTTPS or localhost. Camera and microphone will not work on this origin.",
+  "toast.networkPath":
+    "Could not connect on this network. Switch Wi‑Fi to mobile data (or the other way around) and try again — some networks block P2P calls.",
+  "toast.networkPathPeer":
+    "Could not reach {name} on this network. Switch Wi‑Fi to mobile data (or the other way around).",
   "toast.peerUnavailable": "Person not found. Check the key.",
   "toast.mediaCall": "Allow camera and microphone to call.",
   "toast.mediaRoom": "Allow camera and microphone to create a room.",
@@ -410,6 +422,8 @@ export const es: Messages = {
   "call.host": "Llamada · eres el anfitrión",
   "call.guest": "Llamada",
   "call.connecting": "Conectando…",
+  "call.networkHint":
+    "Esta red puede estar bloqueando la llamada P2P. Cambia Wi‑Fi por datos móviles (o al revés) e inténtalo de nuevo.",
   "call.inCall": "{count}/{max} en la llamada",
   "call.copyInvite": "Copiar invitación",
   "call.endForEveryone": "Terminar para todos",
@@ -490,6 +504,10 @@ export const es: Messages = {
   "error.crashReload": "Recargar",
   "error.insecureContext":
     "Abre por HTTPS o localhost. La cámara y el micrófono no funcionan en este origen.",
+  "toast.networkPath":
+    "No se pudo conectar en esta red. Cambia Wi‑Fi por datos móviles (o al revés) e inténtalo de nuevo — algunas redes bloquean llamadas P2P.",
+  "toast.networkPathPeer":
+    "No se pudo llegar a {name} en esta red. Cambia Wi‑Fi por datos móviles (o al revés).",
   "toast.peerUnavailable": "Persona no encontrada. Revisa la clave.",
   "toast.mediaCall": "Permite la cámara y el micrófono para llamar.",
   "toast.mediaRoom": "Permite la cámara y el micrófono para crear la sala.",

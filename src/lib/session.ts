@@ -23,6 +23,11 @@ import {
   setFileProgress,
 } from "./file-progress";
 import { FileBridge } from "./file-transfer";
+import {
+  CONNECT_GIVE_UP_MS,
+  CONNECT_HINT_MS,
+  iceGaveUpKind,
+} from "./ice-path";
 import { acquireLocalMedia, mediaStreamOf } from "./media-access";
 import { rememberPeer } from "./recents";
 import {
@@ -75,6 +80,11 @@ export type SessionState = {
   pending: PeerInfo[];
   /** Host pediu para sair e precisa escolher o destino da sala. */
   leavePrompt: boolean;
+  /**
+   * ICE nunca fechou (ou a entrada ficou presa em connecting). Vale a pena
+   * trocar de rede; não é o mesmo que a pessoa ter saído.
+   */
+  pathHint: boolean;
 };
 
 const FILE_BUFFER_HIGH = 2_000_000;
@@ -137,6 +147,7 @@ const initialState: SessionState = {
   roomSecret: null,
   pending: [],
   leavePrompt: false,
+  pathHint: false,
 };
 
 type Listener = () => void;
@@ -162,6 +173,10 @@ export class PeerSession {
   /** Segredo que apresentamos ao entrar na sala de outra pessoa. */
   private joinSecret: string | null = null;
   private iceRetries = new Map<string, number>();
+  private iceEverConnected = new Set<string>();
+  private iceWatched = new WeakSet<RTCPeerConnection>();
+  private connectHintTimer = 0;
+  private connectGiveUpTimer = 0;
   private reconnectAttempts = 0;
   private reconnectTimer = 0;
   private starting = false;
@@ -192,6 +207,9 @@ export class PeerSession {
 
   private patch(partial: Partial<SessionState>) {
     this.state = { ...this.state, ...partial };
+    if (partial.callStatus && partial.callStatus !== "connecting") {
+      this.clearConnectWatch();
+    }
     for (const listener of this.listeners) listener();
   }
 
@@ -248,6 +266,10 @@ export class PeerSession {
         if (this.state.callStatus === "connecting") this.resetCall();
         return;
       }
+      if (type === "webrtc" && this.state.callStatus === "connecting") {
+        this.failPath();
+        return;
+      }
       this.patch({ peerError: "error.peerjs" });
     });
 
@@ -283,19 +305,30 @@ export class PeerSession {
   /**
    * Uma conexão em `failed` não se recupera sozinha. Tentamos primeiro o ICE
    * restart, que é barato, e só depois refazemos a chamada do zero.
+   * Sem nunca ter chegado em `connected`, é bloqueio de caminho (NAT/firewall),
+   * não "a pessoa saiu".
    */
   private watchIce(peerId: string, pc: RTCPeerConnection) {
-    pc.addEventListener("iceconnectionstatechange", () => {
-      const state = pc.iceConnectionState;
-      if (state === "connected" || state === "completed") {
+    if (this.iceWatched.has(pc)) return;
+    this.iceWatched.add(pc);
+    const onState = () => {
+      const ice = pc.iceConnectionState;
+      const conn = pc.connectionState;
+      if (
+        ice === "connected" ||
+        ice === "completed" ||
+        conn === "connected"
+      ) {
         this.iceRetries.delete(peerId);
+        this.iceEverConnected.add(peerId);
+        if (this.state.pathHint) this.patch({ pathHint: false });
         return;
       }
-      if (state !== "failed") return;
+      if (ice !== "failed" && conn !== "failed") return;
 
       const attempts = this.iceRetries.get(peerId) ?? 0;
       if (attempts >= MAX_ICE_RETRIES) {
-        this.onPeerLeft(peerId);
+        this.handleIceGaveUp(peerId);
         return;
       }
       this.iceRetries.set(peerId, attempts + 1);
@@ -305,10 +338,55 @@ export class PeerSession {
         // navegadores antigos não expõem restartIce
       }
       window.setTimeout(() => {
-        if (pc.iceConnectionState !== "failed") return;
+        if (pc.iceConnectionState !== "failed" && pc.connectionState !== "failed")
+          return;
         this.redialPeer(peerId);
       }, ICE_RECOVERY_MS);
-    });
+    };
+    pc.addEventListener("iceconnectionstatechange", onState);
+    pc.addEventListener("connectionstatechange", onState);
+  }
+
+  private handleIceGaveUp(peerId: string) {
+    if (iceGaveUpKind(this.iceEverConnected.has(peerId)) === "path") {
+      this.failPath(peerId);
+      return;
+    }
+    this.onPeerLeft(peerId);
+  }
+
+  private failPath(peerId?: string) {
+    if (this.state.callStatus === "connecting") {
+      this.resetCall("toast.networkPath");
+      return;
+    }
+    this.patch({ pathHint: true });
+    if (!peerId) return;
+    const name =
+      this.state.remotes.find((r) => r.peerId === peerId)?.displayName ??
+      this.names.get(peerId) ??
+      t("common.someone");
+    showToast("toast.networkPathPeer", { name }, 8000);
+    this.onPeerLeft(peerId, { silent: true });
+  }
+
+  private armConnectWatch() {
+    this.clearConnectWatch();
+    this.connectHintTimer = window.setTimeout(() => {
+      if (this.state.callStatus !== "connecting") return;
+      this.patch({ pathHint: true });
+    }, CONNECT_HINT_MS);
+    this.connectGiveUpTimer = window.setTimeout(() => {
+      if (this.state.callStatus !== "connecting") return;
+      this.failPath();
+    }, CONNECT_GIVE_UP_MS);
+  }
+
+  private clearConnectWatch() {
+    window.clearTimeout(this.connectHintTimer);
+    window.clearTimeout(this.connectGiveUpTimer);
+    this.connectHintTimer = 0;
+    this.connectGiveUpTimer = 0;
   }
 
   private redialPeer(peerId: string) {
@@ -344,6 +422,7 @@ export class PeerSession {
     });
     this.openMedia(id);
     this.patch({ callStatus: "connecting" });
+    this.armConnectWatch();
   }
 
   async createRoom() {
@@ -385,6 +464,7 @@ export class PeerSession {
       kind: "room-join",
     });
     this.patch({ callStatus: "connecting", roomSecret: this.joinSecret });
+    this.armConnectWatch();
   }
 
   async acceptIncoming() {
@@ -931,7 +1011,14 @@ export class PeerSession {
     first?: WireMessage,
   ) {
     this.data.set(conn.peer, conn);
+    const watchDataIce = () => {
+      if (conn.peerConnection) this.watchIce(conn.peer, conn.peerConnection);
+    };
+    watchDataIce();
+    conn.on("iceStateChanged", watchDataIce);
     conn.on("open", () => {
+      watchDataIce();
+      this.iceEverConnected.add(conn.peer);
       if (outgoing && first) conn.send(first);
       else if (outgoing && this.state.callMode) {
         conn.send({
@@ -951,7 +1038,13 @@ export class PeerSession {
       this.onWire(conn, raw);
     });
     conn.on("close", () => this.onPeerLeft(conn.peer));
-    conn.on("error", () => this.onPeerLeft(conn.peer));
+    conn.on("error", () => {
+      if (!conn.open && this.state.callStatus === "connecting") {
+        this.failPath(conn.peer);
+        return;
+      }
+      this.onPeerLeft(conn.peer);
+    });
   }
 
   private attachMedia(call: MediaConnection) {
@@ -1616,9 +1709,10 @@ export class PeerSession {
     this.patch({ screenShareOrder });
   }
 
-  private onPeerLeft(peerId: string) {
+  private onPeerLeft(peerId: string, opts?: { silent?: boolean }) {
     if (this.tearingDown) return;
     this.iceRetries.delete(peerId);
+    this.iceEverConnected.delete(peerId);
     const name =
       this.state.remotes.find((r) => r.peerId === peerId)?.displayName ??
       this.names.get(peerId) ??
@@ -1658,6 +1752,7 @@ export class PeerSession {
     if (
       wasPresent &&
       !hostGone &&
+      !opts?.silent &&
       (this.state.callStatus === "in-call" ||
         this.state.callStatus === "connecting")
     ) {
@@ -1956,7 +2051,11 @@ export class PeerSession {
     this.names.clear();
     if (endedReason) {
       playCallEnded();
-      showToast(endedReason);
+      showToast(
+        endedReason,
+        undefined,
+        endedReason === "toast.networkPath" ? 8000 : 4500,
+      );
     }
     this.patch({
       view: "home",
@@ -1979,8 +2078,11 @@ export class PeerSession {
       roomSecret: this.hostSecret,
       pending: [],
       leavePrompt: false,
+      pathHint: false,
     });
     this.iceRetries.clear();
+    this.iceEverConnected.clear();
+    this.clearConnectWatch();
     this.tearingDown = false;
   }
 

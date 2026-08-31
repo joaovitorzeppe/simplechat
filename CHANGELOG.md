@@ -40,6 +40,10 @@ Commits: `872b2f8`, `395ac4c`, `2732ee2`, `1f4e155`.
 - Criar sala, entrar, ligar ou atender não exige mais os dois dispositivos. A cascata tenta áudio+vídeo, depois só áudio, só vídeo, e por fim entra só ouvindo (chat + receber mídia dos outros).
 - Toast avisa o fallback. Religar microfone ou câmera na barra pede o dispositivo de novo. A chamada de mídia atende mesmo com stream vazio, para quem entrou sem tracks ainda receber áudio/vídeo.
 
+### Rede P2P
+
+- ICE que **nunca** chega em `connected` (e entrada presa em “Conectando…” por ~25s) deixa de parecer que a pessoa saiu. O app avisa para trocar Wi‑Fi ↔ dados móveis. Queda depois de a mídia já ter fluído continua como saída.
+
 ### Segurança e texto
 
 - `parseWire` valida cada mensagem do data channel antes da sessão. O remetente é sempre `conn.peer`, nunca o payload.

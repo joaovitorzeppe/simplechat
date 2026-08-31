@@ -58,7 +58,7 @@ WebRTC sempre precisa de sinalização, STUN e, em alguns NATs, TURN.
 
 - Sinalização: broker gratuito `0.peerjs.com` (PeerJS).
 - STUN: `stun.l.google.com` (e `stun1`).
-- TURN é opcional e vem do ambiente. Sem ele, NAT simétrico e firewall corporativo não conectam.
+- Sem TURN, NAT simétrico e firewall corporativo não conectam. O app detecta ICE que nunca fecha e avisa para trocar de rede (Wi‑Fi ↔ dados móveis).
 - Áudio/vídeo não passam pelo nosso servidor: vão P2P (ou por TURN, quando configurado).
 - Mesh em vídeo pesa no notebook. Grupo grande pediria SFU (LiveKit/mediasoup) e deixaria de ser P2P puro.
 

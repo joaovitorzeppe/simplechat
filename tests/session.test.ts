@@ -16,6 +16,9 @@ type Internals = {
   patch: (partial: Partial<SessionState>) => void;
   onWire: (conn: unknown, raw: unknown) => void;
   onPeerLeft: (peerId: string) => void;
+  handleIceGaveUp: (peerId: string) => void;
+  failPath: (peerId?: string) => void;
+  iceEverConnected: Set<string>;
   names: Map<string, string>;
   roomMembers: PeerInfo[];
   banned: Set<string>;
@@ -824,5 +827,41 @@ describe("entrada sem câmera ou microfone", () => {
     await session.toggleMute();
     expect(core.state.muted).toBe(false);
     expect(core.state.localStream?.getAudioTracks().length).toBeGreaterThan(0);
+  });
+});
+
+describe("falha de caminho ICE", () => {
+  it("volta à home com aviso de rede se o ICE nunca conectou ao ligar", () => {
+    core.patch({
+      identity: { peerId: ME, displayName: "Eu" },
+      callStatus: "connecting",
+      view: "call",
+      isHost: true,
+      hostPeerId: ME,
+    });
+    core.handleIceGaveUp(HOST);
+    expect(core.state.callStatus).toBe("idle");
+    expect(core.state.view).toBe("home");
+    expect(getToast()?.key).toBe("toast.networkPath");
+  });
+
+  it("não diz que a pessoa saiu se o ICE falhou sem nunca conectar", () => {
+    asHost();
+    core.names.set(ZECA, "Zeca");
+    core.patch({ remotes: [remote(ZECA, "Zeca")] });
+    core.handleIceGaveUp(ZECA);
+    expect(core.state.pathHint).toBe(true);
+    expect(core.state.remotes).toHaveLength(0);
+    expect(getToast()?.key).toBe("toast.networkPathPeer");
+  });
+
+  it("trata ICE failed depois de conectar como queda normal", () => {
+    asHost();
+    core.names.set(ZECA, "Zeca");
+    core.patch({ remotes: [remote(ZECA, "Zeca")] });
+    core.iceEverConnected.add(ZECA);
+    core.handleIceGaveUp(ZECA);
+    expect(core.state.pathHint).toBe(false);
+    expect(getToast()?.key).toBe("toast.peerLeft");
   });
 });

@@ -213,6 +213,14 @@ export const Call = () => {
             <QualityBadge compact />
           </div>
         </header>
+        {state.pathHint && (
+          <p
+            role="status"
+            className="border-b border-amber-900/60 bg-amber-950/50 px-4 py-2 text-sm text-amber-100"
+          >
+            {t("call.networkHint")}
+          </p>
+        )}
 
         {focused ? (
           <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
