@@ -143,3 +143,11 @@ export const DownloadIcon = (props: IconProps) => {
     </svg>
   );
 }
+
+export const PaperclipIcon = (props: IconProps) => {
+  return (
+    <svg {...base(props)}>
+      <path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9.9-9.9a4 4 0 0 1 5.7 5.7l-9.9 9.9a2 2 0 1 1-2.8-2.8l8.5-8.5" />
+    </svg>
+  );
+}

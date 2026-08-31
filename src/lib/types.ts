@@ -19,12 +19,25 @@ export type RemotePeer = PeerInfo & {
   cameraOff: boolean;
 };
 
+export type ChatFileStatus = "sending" | "receiving" | "ready" | "error";
+
+export type ChatFile = {
+  id: string;
+  name: string;
+  mime: string;
+  size: number;
+  status: ChatFileStatus;
+  progress: number;
+  blobUrl: string | null;
+};
+
 export type ChatMessage = {
   id: string;
   fromPeerId: string;
   fromName: string;
   text: string;
   at: number;
+  file?: ChatFile;
 };
 
 export type IncomingInvite = {
@@ -51,4 +64,15 @@ export type WireMessage =
   | { type: "room-ended" }
   | { type: "room-full" }
   | { type: "hangup" }
-  | { type: "media-meta"; sharingScreen?: boolean; cameraOff?: boolean };
+  | { type: "media-meta"; sharingScreen?: boolean; cameraOff?: boolean }
+  | {
+      type: "file-start";
+      id: string;
+      name: string;
+      mime: string;
+      size: number;
+      fromPeerId: string;
+      fromName: string;
+      at: number;
+    }
+  | { type: "file-end"; id: string };

@@ -1,20 +1,28 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useI18n } from "../i18n/use-i18n";
 import type { ChatMessage } from "../lib/types";
 import { Button } from "./Button";
 import { ChatMessages } from "./ChatMessages";
-import { CloseIcon } from "./Icons";
+import { CloseIcon, PaperclipIcon } from "./Icons";
 
 type Props = {
   messages: ChatMessage[];
   selfId: string;
   onSend: (text: string) => void;
+  onSendFile: (file: File) => void;
   onClose: () => void;
 };
 
-export const ChatPanel = ({ messages, selfId, onSend, onClose }: Props) => {
+export const ChatPanel = ({
+  messages,
+  selfId,
+  onSend,
+  onSendFile,
+  onClose,
+}: Props) => {
   const { t } = useI18n();
   const [text, setText] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -42,6 +50,24 @@ export const ChatPanel = ({ messages, selfId, onSend, onClose }: Props) => {
         <ChatMessages messages={messages} selfId={selfId} />
       </div>
       <form onSubmit={submit} className="flex gap-2 border-t border-line p-3">
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) onSendFile(file);
+          }}
+        />
+        <Button
+          variant="ghost"
+          className="px-2.5"
+          title={t("chat.attach")}
+          onClick={() => fileRef.current?.click()}
+        >
+          <PaperclipIcon />
+        </Button>
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}

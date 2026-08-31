@@ -263,6 +263,7 @@ export const Call = () => {
             messages={state.messages}
             selfId={me.peerId}
             onSend={(text) => session.sendChat(text)}
+            onSendFile={(file) => void session.sendFile(file)}
             onClose={() => setChat(false)}
           />
         </div>
@@ -281,6 +282,7 @@ export const Call = () => {
               messages={state.messages}
               selfId={me.peerId}
               onSend={(text) => session.sendChat(text)}
+              onSendFile={(file) => void session.sendFile(file)}
               onClose={() => setChat(false)}
             />
           </div>

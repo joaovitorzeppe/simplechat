@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { useI18n } from "../i18n/use-i18n";
 import {
+  formatFileSize,
   formatMessageTime,
   groupChatMessages,
+  isPreviewableImage,
   splitMessageText,
 } from "../lib/chat";
-import type { ChatMessage } from "../lib/types";
+import type { ChatFile, ChatMessage } from "../lib/types";
 import { cn } from "../lib/cn";
+import { DownloadIcon } from "./Icons";
+import { Button } from "./Button";
 import { LinkWarning } from "./LinkWarning";
 
 type Props = {
@@ -39,6 +43,68 @@ const MessageBody = ({
         ),
       )}
     </span>
+  );
+};
+
+const saveFile = (file: ChatFile) => {
+  if (!file.blobUrl) return;
+  const link = document.createElement("a");
+  link.href = file.blobUrl;
+  link.download = file.name;
+  link.rel = "noopener";
+  document.body.append(link);
+  link.click();
+  link.remove();
+};
+
+const FileCard = ({ file }: { file: ChatFile }) => {
+  const { locale, t } = useI18n();
+  const ready = file.status === "ready" && file.blobUrl;
+  const statusLabel =
+    file.status === "sending"
+      ? t("chat.fileSending")
+      : file.status === "receiving"
+        ? t("chat.fileReceiving")
+        : file.status === "error"
+          ? t("chat.fileError")
+          : null;
+
+  return (
+    <div className="space-y-2">
+      {ready && isPreviewableImage(file.mime) && (
+        <img
+          src={file.blobUrl ?? undefined}
+          alt={file.name}
+          className="max-h-40 w-full rounded-xl object-cover"
+        />
+      )}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate font-medium">{file.name}</p>
+          <p className="text-[11px] text-zinc-500">
+            {statusLabel ?? formatFileSize(file.size, locale)}
+          </p>
+        </div>
+        {ready && (
+          <Button
+            variant="ghost"
+            className="shrink-0 px-2 py-1"
+            title={t("chat.download")}
+            onClick={() => saveFile(file)}
+          >
+            <DownloadIcon width={16} height={16} />
+          </Button>
+        )}
+      </div>
+      {file.status !== "ready" && file.status !== "error" && (
+        <div className="h-1 overflow-hidden rounded-full bg-zinc-700">
+          <div
+            className="h-full bg-accent"
+            style={{ width: `${Math.round(file.progress * 100)}%` }}
+          />
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -76,7 +142,10 @@ export const ChatMessages = ({ messages, selfId }: Props) => {
                     mine ? "bg-accent/15" : "bg-zinc-800",
                   )}
                 >
-                  <MessageBody text={msg.text} onOpenLink={setPendingHref} />
+                  {msg.file && <FileCard file={msg.file} />}
+                  {msg.text ? (
+                    <MessageBody text={msg.text} onOpenLink={setPendingHref} />
+                  ) : null}
                 </div>
               </div>
             ))}

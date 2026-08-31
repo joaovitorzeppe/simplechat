@@ -25,4 +25,4 @@ export const QualityBadge = ({ compact }: { compact?: boolean }) => {
       {!pro && <span className="text-zinc-500">{t("quality.proSoon")}</span>}
     </div>
   );
-}
+};

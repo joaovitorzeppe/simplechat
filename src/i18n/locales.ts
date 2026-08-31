@@ -73,6 +73,11 @@ export const pt = {
     "Ele pode levar a um site falso ou malicioso. Confira o endereço antes de abrir.",
   "chat.linkCancel": "Cancelar",
   "chat.linkOpen": "Abrir mesmo assim",
+  "chat.attach": "Enviar arquivo",
+  "chat.download": "Baixar",
+  "chat.fileSending": "Enviando…",
+  "chat.fileReceiving": "Recebendo…",
+  "chat.fileError": "Falha no arquivo",
 
   "incoming.title": "Chamada recebida",
   "incoming.body": "Áudio, vídeo e chat P2P.",
@@ -96,6 +101,10 @@ export const pt = {
   "toast.callEnded": "Chamada encerrada.",
   "toast.roomFull": "Esta chamada está cheia.",
   "toast.mediaCamera": "Permita a câmera para ligá-la.",
+  "toast.fileTooBigFree": "Arquivo acima de 50 MB (plano gratuito).",
+  "toast.fileTooBigPro": "Arquivo acima de 100 MB (plano Pro).",
+  "toast.fileFailed": "Não foi possível enviar ou receber o arquivo.",
+  "toast.fileBusy": "Espere o arquivo atual terminar de enviar.",
 } as const;
 
 export type MessageKey = keyof typeof pt;
@@ -174,6 +183,11 @@ export const en: Messages = {
     "It could send you to a fake or malicious site. Check the address before opening.",
   "chat.linkCancel": "Cancel",
   "chat.linkOpen": "Open anyway",
+  "chat.attach": "Send file",
+  "chat.download": "Download",
+  "chat.fileSending": "Sending…",
+  "chat.fileReceiving": "Receiving…",
+  "chat.fileError": "File failed",
 
   "incoming.title": "Incoming call",
   "incoming.body": "Audio, video and P2P chat.",
@@ -197,6 +211,10 @@ export const en: Messages = {
   "toast.callEnded": "Call ended.",
   "toast.roomFull": "This call is full.",
   "toast.mediaCamera": "Allow the camera to turn it on.",
+  "toast.fileTooBigFree": "File is over 50 MB (free plan).",
+  "toast.fileTooBigPro": "File is over 100 MB (Pro plan).",
+  "toast.fileFailed": "Could not send or receive the file.",
+  "toast.fileBusy": "Wait for the current file to finish sending.",
 };
 
 export const es: Messages = {
@@ -273,6 +291,11 @@ export const es: Messages = {
     "Puede llevar a un sitio falso o malicioso. Revisa la dirección antes de abrir.",
   "chat.linkCancel": "Cancelar",
   "chat.linkOpen": "Abrir de todos modos",
+  "chat.attach": "Enviar archivo",
+  "chat.download": "Descargar",
+  "chat.fileSending": "Enviando…",
+  "chat.fileReceiving": "Recibiendo…",
+  "chat.fileError": "Fallo en el archivo",
 
   "incoming.title": "Llamada entrante",
   "incoming.body": "Audio, vídeo y chat P2P.",
@@ -296,6 +319,10 @@ export const es: Messages = {
   "toast.callEnded": "Llamada finalizada.",
   "toast.roomFull": "Esta llamada está llena.",
   "toast.mediaCamera": "Permite la cámara para encenderla.",
+  "toast.fileTooBigFree": "Archivo por encima de 50 MB (plan gratuito).",
+  "toast.fileTooBigPro": "Archivo por encima de 100 MB (plan Pro).",
+  "toast.fileFailed": "No se pudo enviar o recibir el archivo.",
+  "toast.fileBusy": "Espera a que termine el envío actual.",
 };
 
 export const dictionaries: Record<"pt" | "en" | "es", Messages> = {

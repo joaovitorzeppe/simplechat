@@ -6,14 +6,18 @@ import {
   currentTier,
   getCameraConstraints,
   getDisplayConstraints,
+  maxFileBytes,
   maxParticipants,
+  MAX_FILE_BYTES,
 } from "./quality";
 import type { MessageKey } from "../i18n/locales";
 import { t } from "../i18n/i18n";
 import { playCallEnded } from "./sounds";
 import { showToast } from "./toast";
+import { safeFileName } from "./chat";
 import type {
   CallMode,
+  ChatFile,
   ChatMessage,
   Identity,
   IncomingInvite,
@@ -42,6 +46,9 @@ export type SessionState = {
   callStatus: "idle" | "connecting" | "in-call";
   incoming: IncomingInvite | null;
 };
+
+const FILE_CHUNK = 16 * 1024;
+const FILE_BUFFER_HIGH = 2_000_000;
 
 const STUN = {
   iceServers: [
@@ -85,6 +92,20 @@ export class PeerSession {
   private screenTrack: MediaStreamTrack | null = null;
   private starting = false;
   private ending = false;
+  private sendingFile = false;
+  private incomingFiles = new Map<
+    string,
+    {
+      id: string;
+      name: string;
+      mime: string;
+      size: number;
+      received: number;
+      buffer: Uint8Array;
+      lastPatch: number;
+    }
+  >();
+  private incomingByteTail = new Map<string, Promise<void>>();
 
   subscribe = (listener: Listener) => {
     this.listeners.add(listener);
@@ -279,6 +300,91 @@ export class PeerSession {
     this.broadcast({ type: "chat", ...message });
   }
 
+  async sendFile(file: File) {
+    const me = this.state.identity;
+    if (!me || this.state.callStatus === "idle" || this.ending) return;
+    if (this.sendingFile) {
+      this.toast("toast.fileBusy");
+      return;
+    }
+    const max = maxFileBytes();
+    if (file.size <= 0 || file.size > max) {
+      this.toast(
+        currentTier() === "pro"
+          ? "toast.fileTooBigPro"
+          : "toast.fileTooBigFree",
+      );
+      return;
+    }
+    const id = crypto.randomUUID();
+    const name = safeFileName(file.name);
+    const mime = file.type || "application/octet-stream";
+    const blobUrl = URL.createObjectURL(file);
+    const message: ChatMessage = {
+      id,
+      fromPeerId: me.peerId,
+      fromName: me.displayName,
+      text: "",
+      at: Date.now(),
+      file: {
+        id,
+        name,
+        mime,
+        size: file.size,
+        status: "sending",
+        progress: 0,
+        blobUrl,
+      },
+    };
+    this.patch({ messages: [...this.state.messages, message] });
+    this.sendingFile = true;
+    try {
+      const buffer = await file.arrayBuffer();
+      const start = {
+        type: "file-start" as const,
+        id,
+        name,
+        mime,
+        size: file.size,
+        fromPeerId: me.peerId,
+        fromName: me.displayName,
+        at: message.at,
+      };
+      const peers = [...this.data.values()].filter((conn) => conn.open);
+      if (peers.length === 0) {
+        this.patchFile(id, { status: "ready", progress: 1 });
+        return;
+      }
+      let lastPatch = 0;
+      for (const conn of peers) conn.send(start);
+      for (let offset = 0; offset < buffer.byteLength; offset += FILE_CHUNK) {
+        if (this.ending) throw new Error("ended");
+        const chunk = buffer.slice(offset, offset + FILE_CHUNK);
+        for (const conn of peers) {
+          if (!conn.open) continue;
+          await this.waitForFileBuffer(conn);
+          if (!conn.open) continue;
+          conn.send(chunk);
+        }
+        const progress = Math.min(1, (offset + chunk.byteLength) / file.size);
+        const now = Date.now();
+        if (progress === 1 || now - lastPatch > 200) {
+          lastPatch = now;
+          this.patchFile(id, { progress });
+        }
+      }
+      for (const conn of peers) {
+        if (conn.open) conn.send({ type: "file-end", id });
+      }
+      this.patchFile(id, { status: "ready", progress: 1 });
+    } catch {
+      this.patchFile(id, { status: "error" });
+      this.toast("toast.fileFailed");
+    } finally {
+      this.sendingFile = false;
+    }
+  }
+
   toggleMute() {
     const next = !this.state.muted;
     this.state.localStream?.getAudioTracks().forEach((track) => {
@@ -443,17 +549,18 @@ export class PeerSession {
       if (!pc) continue;
       const sender =
         pc.getSenders().find((s) => s.track?.kind === "video") ??
-        pc
-          .getTransceivers()
-          .find((tr) => {
-            const kind = tr.sender.track?.kind ?? tr.receiver.track?.kind;
-            return kind === "video";
-          })?.sender;
+        pc.getTransceivers().find((tr) => {
+          const kind = tr.sender.track?.kind ?? tr.receiver.track?.kind;
+          return kind === "video";
+        })?.sender;
       if (sender) {
         void sender.replaceTrack(track);
       } else if (track) {
         try {
-          pc.addTrack(track, this.state.localStream ?? new MediaStream([track]));
+          pc.addTrack(
+            track,
+            this.state.localStream ?? new MediaStream([track]),
+          );
         } catch {
           // a linha de vídeo já existe nesta conexão
         }
@@ -534,6 +641,7 @@ export class PeerSession {
         conn.send({ type: "media-meta", cameraOff: true });
     });
     conn.on("data", (raw) => {
+      if (this.onFileBytes(conn, raw)) return;
       this.onWire(conn, raw);
     });
     conn.on("close", () => this.onPeerLeft(conn.peer));
@@ -698,6 +806,16 @@ export class PeerSession {
       return;
     }
 
+    if (msg.type === "file-start") {
+      this.beginIncomingFile(conn.peer, msg);
+      return;
+    }
+
+    if (msg.type === "file-end") {
+      this.finishIncomingFile(conn.peer, msg.id);
+      return;
+    }
+
     if (msg.type === "hangup") {
       this.onPeerLeft(conn.peer);
       return;
@@ -821,6 +939,7 @@ export class PeerSession {
     this.media.delete(peerId);
     this.screenOut.delete(peerId);
     this.screenIn.delete(peerId);
+    this.failIncomingFile(peerId);
     const remotes = this.state.remotes.filter((r) => r.peerId !== peerId);
     this.patch({
       remotes,
@@ -839,6 +958,173 @@ export class PeerSession {
         this.state.callStatus === "connecting")
     ) {
       this.resetCall("toast.roomEndedByHost");
+    }
+  }
+
+  private waitForFileBuffer(conn: DataConnection) {
+    const dc = conn.dataChannel;
+    if (!dc || dc.bufferedAmount < FILE_BUFFER_HIGH) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      const tick = () => {
+        if (!conn.open || dc.bufferedAmount < FILE_BUFFER_HIGH / 4) resolve();
+        else window.setTimeout(tick, 30);
+      };
+      tick();
+    });
+  }
+
+  private bytesFrom(raw: unknown): Uint8Array | null {
+    let view: Uint8Array | null = null;
+    if (raw instanceof ArrayBuffer) view = new Uint8Array(raw);
+    else if (ArrayBuffer.isView(raw)) {
+      view = new Uint8Array(raw.buffer, raw.byteOffset, raw.byteLength);
+    }
+    if (!view) return null;
+    const copy = new Uint8Array(view.byteLength);
+    copy.set(view);
+    return copy;
+  }
+
+  private onFileBytes(conn: DataConnection, raw: unknown) {
+    const incoming = this.incomingFiles.get(conn.peer);
+    const bytes = this.bytesFrom(raw);
+    if (bytes) {
+      if (!incoming) return true;
+      this.applyIncomingBytes(conn.peer, bytes);
+      return true;
+    }
+    if (incoming && typeof Blob !== "undefined" && raw instanceof Blob) {
+      const prev = this.incomingByteTail.get(conn.peer) ?? Promise.resolve();
+      const next = prev
+        .then(async () => {
+          this.applyIncomingBytes(
+            conn.peer,
+            new Uint8Array(await raw.arrayBuffer()),
+          );
+        })
+        .catch(() => {
+          this.failIncomingFile(conn.peer);
+        });
+      this.incomingByteTail.set(conn.peer, next);
+      return true;
+    }
+    return false;
+  }
+
+  private applyIncomingBytes(peerId: string, bytes: Uint8Array) {
+    const incoming = this.incomingFiles.get(peerId);
+    if (!incoming) return;
+    const next = incoming.received + bytes.byteLength;
+    if (next > incoming.size) {
+      this.failIncomingFile(peerId);
+      return;
+    }
+    incoming.buffer.set(bytes, incoming.received);
+    incoming.received = next;
+    const now = Date.now();
+    if (now - incoming.lastPatch > 200 || next === incoming.size) {
+      incoming.lastPatch = now;
+      this.patchFile(incoming.id, { progress: next / incoming.size });
+    }
+  }
+
+  private beginIncomingFile(
+    peerId: string,
+    msg: Extract<WireMessage, { type: "file-start" }>,
+  ) {
+    if (this.incomingFiles.has(peerId)) this.failIncomingFile(peerId);
+    const size = msg.size;
+    if (
+      !Number.isFinite(size) ||
+      size <= 0 ||
+      size > MAX_FILE_BYTES.pro ||
+      typeof msg.id !== "string" ||
+      typeof msg.name !== "string"
+    ) {
+      this.toast("toast.fileFailed");
+      return;
+    }
+    const name = safeFileName(msg.name);
+    const mime =
+      typeof msg.mime === "string" && msg.mime.length < 120
+        ? msg.mime
+        : "application/octet-stream";
+    let buffer: Uint8Array;
+    try {
+      buffer = new Uint8Array(size);
+    } catch {
+      this.toast("toast.fileFailed");
+      return;
+    }
+    this.incomingFiles.set(peerId, {
+      id: msg.id,
+      name,
+      mime,
+      size,
+      received: 0,
+      buffer,
+      lastPatch: 0,
+    });
+    const message: ChatMessage = {
+      id: msg.id,
+      fromPeerId: msg.fromPeerId || peerId,
+      fromName: msg.fromName || this.names.get(peerId) || t("common.someone"),
+      text: "",
+      at: msg.at || Date.now(),
+      file: {
+        id: msg.id,
+        name,
+        mime,
+        size,
+        status: "receiving",
+        progress: 0,
+        blobUrl: null,
+      },
+    };
+    this.patch({ messages: [...this.state.messages, message] });
+  }
+
+  private finishIncomingFile(peerId: string, id: string) {
+    const tail = this.incomingByteTail.get(peerId) ?? Promise.resolve();
+    void tail.then(() => {
+      const incoming = this.incomingFiles.get(peerId);
+      if (!incoming || incoming.id !== id) return;
+      this.incomingFiles.delete(peerId);
+      this.incomingByteTail.delete(peerId);
+      if (incoming.received !== incoming.size) {
+        this.patchFile(incoming.id, { status: "error" });
+        return;
+      }
+      const copy = new Uint8Array(incoming.buffer);
+      const blob = new Blob([copy], { type: incoming.mime });
+      const blobUrl = URL.createObjectURL(blob);
+      this.patchFile(incoming.id, {
+        status: "ready",
+        progress: 1,
+        blobUrl,
+      });
+    });
+  }
+
+  private failIncomingFile(peerId: string) {
+    const incoming = this.incomingFiles.get(peerId);
+    this.incomingFiles.delete(peerId);
+    this.incomingByteTail.delete(peerId);
+    if (incoming) this.patchFile(incoming.id, { status: "error" });
+  }
+
+  private patchFile(id: string, file: Partial<ChatFile>) {
+    this.patch({
+      messages: this.state.messages.map((message) => {
+        if (message.id !== id || !message.file) return message;
+        return { ...message, file: { ...message.file, ...file } };
+      }),
+    });
+  }
+
+  private revokeMessageFiles() {
+    for (const message of this.state.messages) {
+      if (message.file?.blobUrl) URL.revokeObjectURL(message.file.blobUrl);
     }
   }
 
@@ -877,6 +1163,10 @@ export class PeerSession {
     this.media.clear();
     this.screenOut.clear();
     this.screenIn.clear();
+    this.incomingFiles.clear();
+    this.incomingByteTail.clear();
+    this.sendingFile = false;
+    this.revokeMessageFiles();
     this.roomMembers = [];
     this.screenTrack?.stop();
     this.screenTrack = null;

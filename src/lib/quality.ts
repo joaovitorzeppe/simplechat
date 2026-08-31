@@ -27,6 +27,11 @@ export const MAX_PARTICIPANTS: Record<QualityTier, number> = {
   pro: 12,
 };
 
+export const MAX_FILE_BYTES: Record<QualityTier, number> = {
+  free: 50 * 1024 * 1024,
+  pro: 100 * 1024 * 1024,
+};
+
 export const currentTier = (): QualityTier => {
   return localStorage.getItem(DEMO_KEY) === "pro" ? "pro" : "free";
 };
@@ -36,6 +41,8 @@ export const setDemoTier = (tier: QualityTier) => {
 };
 
 export const maxParticipants = () => MAX_PARTICIPANTS[currentTier()];
+
+export const maxFileBytes = () => MAX_FILE_BYTES[currentTier()];
 
 export const getCameraConstraints = (
   tier: QualityTier,

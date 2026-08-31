@@ -128,3 +128,26 @@ export const splitMessageText = (text: string): MessagePart[] => {
   }
   return parts;
 };
+
+export const safeFileName = (name: string) => {
+  const base = name.replace(/[\\/]/g, "_").replace(/^\.+/, "").trim();
+  return base.slice(0, 180) || "file";
+};
+
+export const isPreviewableImage = (mime: string) => {
+  return /^(image\/(jpeg|jpg|png|gif|webp))$/i.test(mime);
+};
+
+export const formatFileSize = (bytes: number, locale: Locale) => {
+  const tag = localeTags[locale];
+  const format = (value: number, unit: string) => {
+    const n = new Intl.NumberFormat(tag, {
+      maximumFractionDigits: value < 10 ? 1 : 0,
+    }).format(value);
+    return `${n} ${unit}`;
+  };
+  if (bytes < 1024) return format(bytes, "B");
+  if (bytes < 1024 * 1024) return format(bytes / 1024, "KB");
+  return format(bytes / (1024 * 1024), "MB");
+};
+

@@ -36,4 +36,4 @@ export const IncomingCall = ({ name, onAccept, onReject }: Props) => {
       </div>
     </div>
   );
-}
+};

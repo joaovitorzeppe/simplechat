@@ -25,16 +25,18 @@ Toda chamada é uma sala em mesh. Quem inicia é o **host**; quem entra é convi
 - **Entrar:** junta você à chamada que a outra pessoa já começou. O cliente conecta no host por data channel; o host envia a lista de peers; cada um monta mesh de mídia (quem tem o ID menor inicia, para evitar glare).
 - **Sair:** convidado só sai da sala. Se o host sair, a chamada encerra para todos (`room-ended`).
 - **Câmera:** desligar a câmera para o track (`replaceTrack(null)` + `stop()`). Não envia frames pretos; o LED deve apagar. Os outros veem o avatar. Compartilhamento de tela segue em conexão separada.
+- **Arquivo:** clipe no chat. Vai P2P no data channel, em pedaços. Imagens (jpeg/png/gif/webp) têm prévia; o resto só baixa. Some ao sair da chamada.
 
 ## Limites do plano
 
-O host aplica o teto do **tier dele** (`quality.ts`):
+O host aplica o teto de **pessoas** do plano dele. O teto de **arquivo** vale só para quem envia (`quality.ts`):
 
-| | Free | Pro (demo) |
-|---|---|---|
-| Pessoas | 5 | 12 |
-| Câmera | 640×480 @ 15 fps, ~400 kbps | 1280×720 @ 30 fps, ~2.5 Mbps |
-| Tela | 1280×720 @ 15 fps, ~800 kbps | 1920×1080 @ 30 fps, ~4 Mbps |
+|                 | Free                         | Pro (demo)                   |
+| --------------- | ---------------------------- | ---------------------------- |
+| Pessoas         | 5                            | 12                           |
+| Arquivo no chat | 50 MB                        | 100 MB                       |
+| Câmera          | 640×480 @ 15 fps, ~400 kbps  | 1280×720 @ 30 fps, ~2.5 Mbps |
+| Tela            | 1280×720 @ 15 fps, ~800 kbps | 1920×1080 @ 30 fps, ~4 Mbps  |
 
 O 6º no free recebe toast de sala cheia e volta para a home, sem derrubar a chamada. O toggle **Simular Pro** no `localStorage` só demonstra o tier — não há pagamento.
 
