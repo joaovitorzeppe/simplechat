@@ -141,3 +141,13 @@ export const GlobeIcon = (props: IconProps) => {
     </svg>
   );
 }
+
+export const DownloadIcon = (props: IconProps) => {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 4v10" />
+      <path d="m8 10 4 4 4-4" />
+      <path d="M5 19h14" />
+    </svg>
+  );
+}

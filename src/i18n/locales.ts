@@ -43,6 +43,9 @@ export const pt = {
   "home.roomLink": "Link da sua sala",
   "home.hostPlaceholder": "chave do host",
   "home.joinRoom": "Entrar em sala",
+  "home.install": "Instalar app",
+  "home.installIos":
+    "No Safari: toque em Compartilhar e depois em Adicionar à Tela de Início.",
   "home.simulatePro": "Simular Pro (só neste navegador)",
 
   "history.title": "Histórico",
@@ -150,6 +153,9 @@ export const en: Messages = {
   "home.roomLink": "Your room link",
   "home.hostPlaceholder": "host key",
   "home.joinRoom": "Join room",
+  "home.install": "Install app",
+  "home.installIos":
+    "In Safari: tap Share, then Add to Home Screen.",
   "home.simulatePro": "Simulate Pro (this browser only)",
 
   "history.title": "History",
@@ -256,6 +262,9 @@ export const es: Messages = {
   "home.roomLink": "Enlace de tu sala",
   "home.hostPlaceholder": "clave del anfitrión",
   "home.joinRoom": "Entrar a la sala",
+  "home.install": "Instalar app",
+  "home.installIos":
+    "En Safari: toca Compartir y luego Añadir a pantalla de inicio.",
   "home.simulatePro": "Simular Pro (solo en este navegador)",
 
   "history.title": "Historial",

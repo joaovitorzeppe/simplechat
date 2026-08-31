@@ -1,12 +1,19 @@
 import { useState } from "react";
 import { Button } from "../components/Button";
-import { CheckIcon, CopyIcon, HistoryIcon } from "../components/Icons";
+import {
+  CheckIcon,
+  CopyIcon,
+  DownloadIcon,
+  HistoryIcon,
+} from "../components/Icons";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { QualityBadge } from "../components/QualityBadge";
 import { useI18n } from "../i18n/use-i18n";
 import { setHistoryOptIn } from "../lib/db";
 import { clearIdentity } from "../lib/identity";
+import { useInstallPrompt } from "../lib/pwa";
 import { currentTier, setDemoTier } from "../lib/quality";
+import { showToast } from "../lib/toast";
 import { useSession } from "../lib/use-session";
 
 const CopyField = ({ label, value }: { label: string; value: string }) => {
@@ -16,7 +23,7 @@ const CopyField = ({ label, value }: { label: string; value: string }) => {
     await navigator.clipboard.writeText(value);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
-  }
+  };
 
   return (
     <div>
@@ -37,11 +44,12 @@ const CopyField = ({ label, value }: { label: string; value: string }) => {
       </div>
     </div>
   );
-}
+};
 
 export const Home = () => {
   const { t } = useI18n();
   const { state, session } = useSession();
+  const { canInstall, showIosHelp, install } = useInstallPrompt();
   const params = new URLSearchParams(window.location.search);
   const [peerKey, setPeerKey] = useState(params.get("call") ?? "");
   const [roomKey, setRoomKey] = useState(params.get("room") ?? "");
@@ -72,6 +80,19 @@ export const Home = () => {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <LanguageSwitcher />
+            {canInstall && (
+              <Button variant="secondary" onClick={() => void install()}>
+                <DownloadIcon /> {t("home.install")}
+              </Button>
+            )}
+            {showIosHelp && !canInstall && (
+              <Button
+                variant="secondary"
+                onClick={() => showToast("home.installIos")}
+              >
+                <DownloadIcon /> {t("home.install")}
+              </Button>
+            )}
             <Button
               variant="secondary"
               onClick={() => session.setView("history")}
@@ -162,4 +183,4 @@ export const Home = () => {
       </div>
     </main>
   );
-}
+};
