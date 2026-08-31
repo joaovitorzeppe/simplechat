@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --color-ink: #070708;
+  --color-panel: #121214;
+  --color-line: #27272a;
+  --color-accent: #2dd4bf;
+  --color-accent-dim: #115e59;
+}
+
+html,
+body,
+#root {
+  min-height: 100dvh;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ink);
+  color: #f4f4f5;
+  font-family: var(--font-sans);
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+::selection {
+  background: #2dd4bf33;
+}
