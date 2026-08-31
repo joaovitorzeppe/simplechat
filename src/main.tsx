@@ -2,6 +2,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import "./i18n/i18n";
 import "./index.css";
 import { registerPwa } from "./lib/pwa";
@@ -10,7 +11,9 @@ registerPwa();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
     <SpeedInsights />
   </StrictMode>,
 );

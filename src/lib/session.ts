@@ -8,13 +8,18 @@ import {
   getDisplayConstraints,
   maxFileBytes,
   maxParticipants,
-  MAX_FILE_BYTES,
 } from "./quality";
 import type { MessageKey } from "../i18n/locales";
 import { t } from "../i18n/i18n";
 import { playCallEnded } from "./sounds";
 import { showToast } from "./toast";
 import { safeFileName } from "./chat";
+import {
+  clearAllFileProgress,
+  clearFileProgress,
+  setFileProgress,
+} from "./file-progress";
+import { clampChatText, clampDisplayName, parseWire } from "./wire-guard";
 import type {
   CallMode,
   ChatFile,
@@ -43,18 +48,51 @@ export type SessionState = {
   callMode: CallMode | null;
   isHost: boolean;
   hostPeerId: string | null;
-  callStatus: "idle" | "connecting" | "in-call";
+  callStatus: "idle" | "connecting" | "waiting" | "in-call";
   incoming: IncomingInvite | null;
+  /** Quem bateu na porta e ainda espera o host aprovar. Só o host preenche. */
+  pending: PeerInfo[];
+  /** Host pediu para sair e precisa escolher o destino da sala. */
+  leavePrompt: boolean;
 };
 
 const FILE_CHUNK = 16 * 1024;
 const FILE_BUFFER_HIGH = 2_000_000;
+const MAX_MESSAGES = 500;
+const MAX_INCOMING_BYTES = 150 * 1024 * 1024;
+const MAX_CONCURRENT_INCOMING = 3;
+const FILE_START_COOLDOWN = 2000;
+const FLUSH_MS = 80;
+const MAX_ICE_RETRIES = 2;
+const ICE_RECOVERY_MS = 4000;
+const RECONNECT_MAX_MS = 30_000;
 
-const STUN = {
-  iceServers: [
+/**
+ * Sem TURN, NAT simétrico e redes corporativas simplesmente não conectam. As
+ * credenciais vêm do ambiente para não ficarem versionadas; sem elas o app
+ * segue funcionando só com STUN.
+ */
+const iceServers = (): RTCIceServer[] => {
+  const servers: RTCIceServer[] = [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
-  ],
+  ];
+  const url = import.meta.env.VITE_TURN_URL;
+  const username = import.meta.env.VITE_TURN_USERNAME;
+  const credential = import.meta.env.VITE_TURN_CREDENTIAL;
+  if (url && username && credential) {
+    servers.push({ urls: url, username, credential });
+  }
+  return servers;
+};
+
+/**
+ * Sucessor determinístico: o menor peerId entre os candidatos. Como todos
+ * partem da mesma lista de membros, que veio do host, cada peer chega sozinho
+ * ao mesmo nome — sem negociação e sem risco de dois hosts ao mesmo tempo.
+ */
+export const electHost = (candidates: string[]) => {
+  return candidates.length > 0 ? candidates.toSorted()[0] : null;
 };
 
 const initialState: SessionState = {
@@ -75,6 +113,8 @@ const initialState: SessionState = {
   hostPeerId: null,
   callStatus: "idle",
   incoming: null,
+  pending: [],
+  leavePrompt: false,
 };
 
 type Listener = () => void;
@@ -89,23 +129,32 @@ export class PeerSession {
   private screenIn = new Map<string, MediaConnection>();
   private names = new Map<string, string>();
   private roomMembers: PeerInfo[] = [];
+  /** Removidos pelo host: não voltam com o mesmo link enquanto a sala existir. */
+  private banned = new Set<string>();
+  /** Saídas provocadas por remoção, para o aviso não dizer que a pessoa saiu. */
+  private removed = new Set<string>();
   private screenTrack: MediaStreamTrack | null = null;
+  private dialedPeerId: string | null = null;
+  private iceRetries = new Map<string, number>();
+  private reconnectAttempts = 0;
+  private reconnectTimer = 0;
   private starting = false;
-  private ending = false;
+  private tearingDown = false;
   private sendingFile = false;
   private incomingFiles = new Map<
     string,
     {
-      id: string;
+      remoteId: string;
+      localId: string;
       name: string;
       mime: string;
       size: number;
       received: number;
-      buffer: Uint8Array;
-      lastPatch: number;
+      chunks: Uint8Array[];
     }
   >();
   private incomingByteTail = new Map<string, Promise<void>>();
+  private lastFileStart = new Map<string, number>();
 
   subscribe = (listener: Listener) => {
     this.listeners.add(listener);
@@ -140,11 +189,15 @@ export class PeerSession {
     this.destroyPeer();
     this.patch({ identity, peerReady: false, peerError: null });
 
-    const peer = new Peer(identity.peerId, { config: STUN, debug: 0 });
+    const peer = new Peer(identity.peerId, {
+      config: { iceServers: iceServers() },
+      debug: 0,
+    });
     this.peer = peer;
 
     peer.on("open", () => {
       this.starting = false;
+      this.reconnectAttempts = 0;
       this.patch({ peerReady: true, peerError: null });
     });
 
@@ -168,7 +221,7 @@ export class PeerSession {
 
     peer.on("disconnected", () => {
       if (peer.destroyed) return;
-      peer.reconnect();
+      this.scheduleReconnect(peer);
     });
 
     peer.on("connection", (conn) => {
@@ -185,6 +238,56 @@ export class PeerSession {
     this.patch({ view });
   }
 
+  private scheduleReconnect(peer: Peer) {
+    window.clearTimeout(this.reconnectTimer);
+    const delay = Math.min(RECONNECT_MAX_MS, 1000 * 2 ** this.reconnectAttempts);
+    this.reconnectAttempts += 1;
+    this.reconnectTimer = window.setTimeout(() => {
+      if (peer.destroyed || peer.open) return;
+      peer.reconnect();
+    }, delay);
+  }
+
+  /**
+   * Uma conexão em `failed` não se recupera sozinha. Tentamos primeiro o ICE
+   * restart, que é barato, e só depois refazemos a chamada do zero.
+   */
+  private watchIce(peerId: string, pc: RTCPeerConnection) {
+    pc.addEventListener("iceconnectionstatechange", () => {
+      const state = pc.iceConnectionState;
+      if (state === "connected" || state === "completed") {
+        this.iceRetries.delete(peerId);
+        return;
+      }
+      if (state !== "failed") return;
+
+      const attempts = this.iceRetries.get(peerId) ?? 0;
+      if (attempts >= MAX_ICE_RETRIES) {
+        this.onPeerLeft(peerId);
+        return;
+      }
+      this.iceRetries.set(peerId, attempts + 1);
+      try {
+        pc.restartIce();
+      } catch {
+        // navegadores antigos não expõem restartIce
+      }
+      window.setTimeout(() => {
+        if (pc.iceConnectionState !== "failed") return;
+        this.redialPeer(peerId);
+      }, ICE_RECOVERY_MS);
+    });
+  }
+
+  private redialPeer(peerId: string) {
+    const me = this.state.identity?.peerId;
+    if (!me || this.state.callStatus === "idle" || this.tearingDown) return;
+    this.media.get(peerId)?.close();
+    this.media.delete(peerId);
+    // Só o lado de ID menor disca, igual ao caminho normal, para evitar glare.
+    if (me < peerId) this.openMedia(peerId);
+  }
+
   async callPeer(remoteId: string) {
     const id = invitePeerId(remoteId);
     if (!id || !this.peer || id === this.state.identity?.peerId) return;
@@ -196,6 +299,7 @@ export class PeerSession {
     }
     const me = this.selfInfo();
     this.roomMembers = me ? [me] : [];
+    this.dialedPeerId = id;
     this.beginCall(true, me?.peerId ?? id);
     this.openData(id, {
       type: "hello",
@@ -228,6 +332,7 @@ export class PeerSession {
       this.toast("toast.mediaJoin");
       return;
     }
+    this.dialedPeerId = id;
     this.beginCall(false, id);
     this.openData(id, {
       type: "hello",
@@ -246,6 +351,7 @@ export class PeerSession {
       this.toast("toast.mediaAccept");
       return;
     }
+    this.dialedPeerId = incoming.peerId;
     this.beginCall(false, incoming.peerId);
     const queued = this.media.get(incoming.peerId);
     if (queued && this.state.localStream) queued.answer(this.outboundStream());
@@ -271,12 +377,62 @@ export class PeerSession {
     this.patch({ incoming: null });
   }
 
+  admitPeer(peerId: string) {
+    if (!this.state.isHost) return;
+    const info = this.state.pending.find((p) => p.peerId === peerId);
+    if (!info) return;
+    this.patch({
+      pending: this.state.pending.filter((p) => p.peerId !== peerId),
+    });
+    if (this.isRoomFull()) {
+      this.refuseJoin(peerId);
+      return;
+    }
+    this.names.set(peerId, info.displayName);
+    this.upsertRemote(peerId, { displayName: info.displayName });
+    this.addRoomMember(info);
+    // A chamada de mídia dele já chegou e ficou parada esperando esta decisão.
+    const queued = this.media.get(peerId);
+    if (queued && this.state.localStream) queued.answer(this.outboundStream());
+    const conn = this.data.get(peerId);
+    if (conn) this.offerExistingHost(conn);
+    this.broadcastRoom();
+    this.maybeCall(peerId);
+  }
+
+  denyPeer(peerId: string) {
+    if (!this.state.isHost) return;
+    if (!this.state.pending.some((p) => p.peerId === peerId)) return;
+    this.patch({
+      pending: this.state.pending.filter((p) => p.peerId !== peerId),
+    });
+    this.banned.add(peerId);
+    this.sendAndDrop(peerId, { type: "room-denied" });
+  }
+
+  kickPeer(peerId: string) {
+    if (!this.state.isHost || peerId === this.state.identity?.peerId) return;
+    if (!this.state.remotes.some((remote) => remote.peerId === peerId)) return;
+    this.banned.add(peerId);
+    this.removed.add(peerId);
+    this.roomMembers = this.roomMembers.filter((p) => p.peerId !== peerId);
+    const conn = this.data.get(peerId);
+    if (conn?.open) conn.send({ type: "room-kicked" });
+    // Deixa o aviso escoar antes de derrubar o canal por baixo dele.
+    window.setTimeout(() => this.onPeerLeft(peerId), FLUSH_MS);
+  }
+
   hangUp() {
-    if (this.ending) return;
+    if (this.tearingDown) return;
     if (this.state.callStatus === "idle" && this.state.view !== "call") return;
-    this.ending = true;
-    const hostLeaving = this.state.isHost;
+    // Sair como host apaga a sala de todo mundo, então a decisão é dele: passar
+    // o bastão ou encerrar. Sozinho não há o que decidir.
+    if (this.state.isHost && this.state.remotes.length > 0) {
+      this.patch({ leavePrompt: true });
+      return;
+    }
     playCallEnded();
+    const hostLeaving = this.state.isHost;
     showToast(hostLeaving ? "toast.callEnded" : "toast.leftCall");
     if (hostLeaving) this.broadcast({ type: "room-ended" });
     else
@@ -284,16 +440,47 @@ export class PeerSession {
         type: "hangup",
         displayName: this.state.identity?.displayName,
       });
-    window.setTimeout(() => {
-      this.ending = false;
-      this.resetCall();
-    }, 80);
+    this.resetCall();
+  }
+
+  cancelLeave() {
+    if (this.state.leavePrompt) this.patch({ leavePrompt: false });
+  }
+
+  endRoomForAll() {
+    if (!this.state.isHost || this.tearingDown) return;
+    this.patch({ leavePrompt: false });
+    playCallEnded();
+    showToast("toast.callEnded");
+    this.broadcast({ type: "room-ended" });
+    this.resetCall();
+  }
+
+  transferHostAndLeave() {
+    if (!this.state.isHost || this.tearingDown) return;
+    const successor = electHost(
+      this.state.remotes.map((remote) => remote.peerId),
+    );
+    if (!successor) {
+      this.endRoomForAll();
+      return;
+    }
+    const name = this.names.get(successor) ?? t("common.someone");
+    this.patch({ leavePrompt: false });
+    this.broadcast({ type: "host-transfer", hostPeerId: successor });
+    this.broadcast({
+      type: "hangup",
+      displayName: this.state.identity?.displayName,
+    });
+    playCallEnded();
+    showToast("toast.hostHandedOver", { name });
+    this.resetCall();
   }
 
   sendChat(text: string) {
-    const trimmed = text.trim();
+    const trimmed = clampChatText(text.trim());
     const me = this.state.identity;
-    if (!trimmed || !me) return;
+    if (!trimmed || !me || !this.inRoom()) return;
     const message: ChatMessage = {
       id: crypto.randomUUID(),
       fromPeerId: me.peerId,
@@ -301,13 +488,13 @@ export class PeerSession {
       text: trimmed,
       at: Date.now(),
     };
-    this.patch({ messages: [...this.state.messages, message] });
+    this.appendMessage(message);
     this.broadcast({ type: "chat", ...message });
   }
 
   async sendFile(file: File) {
     const me = this.state.identity;
-    if (!me || this.state.callStatus === "idle" || this.ending) return;
+    if (!me || !this.inRoom() || this.tearingDown) return;
     if (this.sendingFile) {
       this.toast("toast.fileBusy");
       return;
@@ -337,14 +524,12 @@ export class PeerSession {
         mime,
         size: file.size,
         status: "sending",
-        progress: 0,
         blobUrl,
       },
     };
-    this.patch({ messages: [...this.state.messages, message] });
+    this.appendMessage(message);
     this.sendingFile = true;
     try {
-      const buffer = await file.arrayBuffer();
       const start = {
         type: "file-start" as const,
         id,
@@ -355,33 +540,29 @@ export class PeerSession {
         fromName: me.displayName,
         at: message.at,
       };
-      const peers = [...this.data.values()].filter((conn) => conn.open);
+      const peers = this.activeConnections();
       if (peers.length === 0) {
-        this.patchFile(id, { status: "ready", progress: 1 });
+        setFileProgress(id, 1);
+        this.patchFile(id, { status: "ready" });
         return;
       }
-      let lastPatch = 0;
       for (const conn of peers) conn.send(start);
-      for (let offset = 0; offset < buffer.byteLength; offset += FILE_CHUNK) {
-        if (this.ending) throw new Error("ended");
-        const chunk = buffer.slice(offset, offset + FILE_CHUNK);
-        for (const conn of peers) {
-          if (!conn.open) continue;
-          await this.waitForFileBuffer(conn);
-          if (!conn.open) continue;
-          conn.send(chunk);
-        }
-        const progress = Math.min(1, (offset + chunk.byteLength) / file.size);
-        const now = Date.now();
-        if (progress === 1 || now - lastPatch > 200) {
-          lastPatch = now;
-          this.patchFile(id, { progress });
-        }
-      }
-      for (const conn of peers) {
-        if (conn.open) conn.send({ type: "file-end", id });
-      }
-      this.patchFile(id, { status: "ready", progress: 1 });
+
+      // Cada peer avança no seu próprio ritmo: um destinatário congestionado
+      // atrasa só a própria cópia, e o progresso mostrado é o do mais lento.
+      const sent = new Map<DataConnection, number>();
+      const report = () => {
+        let slowest = file.size;
+        for (const conn of peers)
+          slowest = Math.min(slowest, sent.get(conn) ?? 0);
+        setFileProgress(id, Math.min(1, slowest / file.size));
+      };
+
+      await Promise.all(
+        peers.map((conn) => this.streamFileTo(conn, file, id, sent, report)),
+      );
+      setFileProgress(id, 1);
+      this.patchFile(id, { status: "ready" });
     } catch {
       this.patchFile(id, { status: "error" });
       this.toast("toast.fileFailed");
@@ -464,7 +645,7 @@ export class PeerSession {
   private helloPayload() {
     const me = this.state.identity;
     return {
-      displayName: me?.displayName ?? t("common.someone"),
+      displayName: clampDisplayName(me?.displayName ?? t("common.someone")),
       peerId: me?.peerId ?? "",
     };
   }
@@ -483,6 +664,8 @@ export class PeerSession {
       callStatus: "connecting",
       messages: [],
       remotes: [],
+      pending: [],
+      leavePrompt: false,
     });
   }
 
@@ -621,7 +804,9 @@ export class PeerSession {
       ...this.state.remotes.map((r) => r.peerId),
     ]);
     for (const peerId of ids) {
-      if (peerId !== this.state.identity?.peerId) this.openScreen(peerId);
+      if (peerId === this.state.identity?.peerId) continue;
+      if (this.awaitingApproval(peerId)) continue;
+      this.openScreen(peerId);
     }
   }
 
@@ -657,6 +842,7 @@ export class PeerSession {
   private attachMedia(call: MediaConnection) {
     this.media.set(call.peer, call);
     call.on("stream", (stream) => {
+      if (call.peerConnection) this.watchIce(call.peer, call.peerConnection);
       this.upsertRemote(call.peer, {
         stream,
         ...(stream.getVideoTracks().length === 0 ? { cameraOff: true } : {}),
@@ -682,7 +868,11 @@ export class PeerSession {
       | { displayName?: string; kind?: string }
       | undefined;
     if (meta?.kind === "screen") {
-      if (this.state.callStatus === "idle") {
+      if (
+        this.state.callStatus === "idle" ||
+        this.banned.has(call.peer) ||
+        this.awaitingApproval(call.peer)
+      ) {
         call.close();
         return;
       }
@@ -697,14 +887,20 @@ export class PeerSession {
     }
 
     if (this.state.callStatus !== "idle") {
+      if (this.banned.has(call.peer)) {
+        call.close();
+        return;
+      }
       if (this.shouldRefusePeer(call.peer)) {
         this.refuseJoin(call.peer);
         call.close();
         return;
       }
-      this.media.set(call.peer, call);
-      if (this.state.localStream) call.answer(this.outboundStream());
       this.attachMedia(call);
+      // Sem aprovação do host a chamada fica em espera, não atendida: nada de
+      // áudio ou vídeo atravessa antes da decisão. `admitPeer` responde depois.
+      if (this.awaitingApproval(call.peer)) return;
+      if (this.state.localStream) call.answer(this.outboundStream());
       if (this.state.sharingScreen) this.openScreen(call.peer);
       return;
     }
@@ -752,48 +948,64 @@ export class PeerSession {
   }
 
   private onWire(conn: DataConnection, raw: unknown) {
-    const msg = raw as WireMessage;
-    if (!msg || typeof msg !== "object" || !("type" in msg)) return;
+    const msg = parseWire(raw);
+    if (!msg) return;
+
+    // `conn.peer` é a única identidade que o broker garante. Tudo que o payload
+    // afirma sobre quem enviou é ignorado.
+    const from = conn.peer;
+
+    // Quem está na sala de espera só pode se apresentar. Nada do que mande
+    // além disso conta enquanto o host não decidir.
+    if (msg.type !== "hello" && this.awaitingApproval(from)) return;
 
     if (msg.type === "hello") {
-      this.names.set(msg.peerId, msg.displayName);
+      this.names.set(from, msg.displayName);
       if (this.state.callStatus === "idle") {
-        this.upsertRemote(msg.peerId, { displayName: msg.displayName });
+        this.upsertRemote(from, { displayName: msg.displayName });
         this.patch({
-          incoming: {
-            peerId: msg.peerId,
-            displayName: msg.displayName,
-          },
+          incoming: { peerId: from, displayName: msg.displayName },
         });
         return;
       }
       if (this.state.isHost) {
-        const already = this.roomMembers.some((p) => p.peerId === msg.peerId);
-        if (!already && this.isRoomFull()) {
-          this.refuseJoin(msg.peerId);
+        // Quem já é membro ou foi discado por nós não passa pela sala de
+        // espera: a aprovação já aconteceu, explícita ou implicitamente.
+        const known =
+          this.roomMembers.some((p) => p.peerId === from) ||
+          from === this.dialedPeerId;
+        if (!known) {
+          if (this.banned.has(from)) {
+            this.sendAndDrop(from, { type: "room-denied" });
+            return;
+          }
+          if (this.isRoomFull()) {
+            this.refuseJoin(from);
+            return;
+          }
+          this.knock(from, msg.displayName, conn);
           return;
         }
-        this.upsertRemote(msg.peerId, { displayName: msg.displayName });
-        this.addRoomMember({
-          peerId: msg.peerId,
-          displayName: msg.displayName,
-        });
+        this.upsertRemote(from, { displayName: msg.displayName });
+        this.addRoomMember({ peerId: from, displayName: msg.displayName });
         this.offerExistingHost(conn);
         this.broadcastRoom();
       } else {
-        this.upsertRemote(msg.peerId, { displayName: msg.displayName });
+        this.upsertRemote(from, { displayName: msg.displayName });
       }
-      this.maybeCall(msg.peerId);
+      this.maybeCall(from);
       return;
     }
 
     if (msg.type === "room-host") {
+      if (!this.isRoomAuthority(from)) return;
       this.becomeGuest(msg.hostPeerId);
       return;
     }
 
     if (msg.type === "room-peers") {
-      this.becomeGuest(msg.hostPeerId || conn.peer);
+      if (!this.isRoomAuthority(from)) return;
+      this.becomeGuest(msg.hostPeerId || from);
       this.roomMembers = msg.peers;
       for (const peer of msg.peers) {
         if (peer.peerId === this.state.identity?.peerId) continue;
@@ -808,52 +1020,84 @@ export class PeerSession {
     }
 
     if (msg.type === "chat") {
-      const message: ChatMessage = {
-        id: msg.id,
-        fromPeerId: msg.fromPeerId,
-        fromName: msg.fromName,
+      if (!this.inRoom()) return;
+      this.appendMessage({
+        id: crypto.randomUUID(),
+        fromPeerId: from,
+        fromName: this.names.get(from) ?? t("common.someone"),
         text: msg.text,
-        at: msg.at,
-      };
-      this.patch({ messages: [...this.state.messages, message] });
+        at: Date.now(),
+      });
       return;
     }
 
     if (msg.type === "file-start") {
-      this.beginIncomingFile(conn.peer, msg);
+      if (!this.inRoom()) return;
+      this.beginIncomingFile(from, msg);
       return;
     }
 
     if (msg.type === "file-end") {
-      this.finishIncomingFile(conn.peer, msg.id);
+      this.finishIncomingFile(from, msg.id);
       return;
     }
 
     if (msg.type === "hangup") {
-      if (msg.displayName) this.names.set(conn.peer, msg.displayName);
-      this.onPeerLeft(conn.peer);
+      this.onPeerLeft(from);
       return;
     }
 
     if (msg.type === "room-ended") {
+      if (!this.isRoomAuthority(from)) return;
       this.resetCall("toast.roomEndedByHost");
       return;
     }
 
     if (msg.type === "room-full") {
+      if (!this.isRoomAuthority(from)) return;
       this.resetCall("toast.roomFull");
+      return;
+    }
+
+    if (msg.type === "room-waiting") {
+      if (!this.isRoomAuthority(from)) return;
+      if (this.state.callStatus === "connecting")
+        this.patch({ callStatus: "waiting" });
+      return;
+    }
+
+    if (msg.type === "room-denied") {
+      if (!this.isRoomAuthority(from)) return;
+      this.resetCall("toast.joinDenied");
+      return;
+    }
+
+    if (msg.type === "room-kicked") {
+      if (!this.isRoomAuthority(from)) return;
+      this.resetCall("toast.kicked");
+      return;
+    }
+
+    if (msg.type === "host-transfer") {
+      if (!this.isRoomAuthority(from)) return;
+      this.roomMembers = this.roomMembers.filter((p) => p.peerId !== from);
+      this.assumeHost(
+        msg.hostPeerId,
+        "toast.hostLeftYouHost",
+        "toast.hostLeftNewHost",
+      );
       return;
     }
 
     if (msg.type === "media-meta") {
       if (msg.cameraOff !== undefined) {
-        this.upsertRemote(conn.peer, { cameraOff: msg.cameraOff });
+        this.upsertRemote(from, { cameraOff: msg.cameraOff });
       }
       if (msg.sharingScreen === true) {
-        this.upsertRemote(conn.peer, { sharingScreen: true });
-        this.rememberShare(conn.peer);
+        this.upsertRemote(from, { sharingScreen: true });
+        this.rememberShare(from);
       } else if (msg.sharingScreen === false) {
-        this.clearRemoteScreen(conn.peer);
+        this.clearRemoteScreen(from);
       }
     }
   }
@@ -862,18 +1106,126 @@ export class PeerSession {
     return this.roomMembers.length >= maxParticipants();
   }
 
+  /** Já dentro da sala, e não parado na porta nem fora de chamada. */
+  private inRoom() {
+    const status = this.state.callStatus;
+    return status === "connecting" || status === "in-call";
+  }
+
+  /**
+   * Só o host manda encerrar a sala, anunciar a lista de peers ou transferir o
+   * papel de host. Antes do host estar definido vale apenas o peer que nós
+   * discamos, que é o único em quem já depositamos confiança.
+   */
+  private isRoomAuthority(peerId: string) {
+    const me = this.state.identity?.peerId;
+    const host = this.state.hostPeerId;
+    if (host && host !== me) return peerId === host;
+    return peerId === this.dialedPeerId;
+  }
+
+  private appendMessage(message: ChatMessage) {
+    const messages = [...this.state.messages, message];
+    if (messages.length > MAX_MESSAGES) {
+      const dropped = messages.splice(0, messages.length - MAX_MESSAGES);
+      for (const old of dropped) {
+        if (!old.file) continue;
+        if (old.file.blobUrl) URL.revokeObjectURL(old.file.blobUrl);
+        clearFileProgress(old.file.id);
+      }
+    }
+    this.patch({ messages });
+  }
+
+  private awaitingApproval(peerId: string) {
+    if (!this.state.isHost || peerId === this.dialedPeerId) return false;
+    return !this.roomMembers.some((p) => p.peerId === peerId);
+  }
+
   private shouldRefusePeer(peerId: string) {
     if (!this.state.isHost || !this.isRoomFull()) return false;
     return !this.roomMembers.some((p) => p.peerId === peerId);
   }
 
   private refuseJoin(peerId: string) {
+    this.sendAndDrop(peerId, { type: "room-full" });
+  }
+
+  /**
+   * Envia o último recado e só então derruba: fechar na mesma volta do laço
+   * de eventos descartaria a mensagem antes de ela sair do canal.
+   */
+  private sendAndDrop(peerId: string, message: WireMessage) {
     const conn = this.data.get(peerId);
-    if (conn?.open) conn.send({ type: "room-full" });
-    conn?.close();
-    this.media.get(peerId)?.close();
+    const call = this.media.get(peerId);
+    if (conn?.open) conn.send(message);
     this.data.delete(peerId);
     this.media.delete(peerId);
+    window.setTimeout(() => {
+      conn?.close();
+      call?.close();
+    }, FLUSH_MS);
+  }
+
+  private knock(peerId: string, displayName: string, conn: DataConnection) {
+    if (this.state.pending.some((p) => p.peerId === peerId)) return;
+    this.patch({ pending: [...this.state.pending, { peerId, displayName }] });
+    if (conn.open) conn.send({ type: "room-waiting" });
+    showToast("toast.knock", { name: displayName });
+  }
+
+  private assumeHost(
+    newHostId: string,
+    youKey: MessageKey,
+    otherKey: MessageKey,
+  ) {
+    const me = this.state.identity?.peerId;
+    if (!me || !newHostId) return;
+    if (newHostId === me) {
+      // Como host, ninguém acima de nós manda: a confiança no peer discado
+      // deixa de valer e a sala passa a ser anunciada por nós.
+      this.dialedPeerId = null;
+      this.patch({ isHost: true, hostPeerId: me, pending: [] });
+      this.broadcastRoom();
+      showToast(youKey);
+      return;
+    }
+    this.patch({ isHost: false, hostPeerId: newHostId });
+    showToast(otherKey, {
+      name: this.names.get(newHostId) ?? t("common.someone"),
+    });
+  }
+
+  /**
+   * Host sumiu sem se despedir. Em vez de derrubar a sala, quem sobra elege o
+   * substituto. Com uma pessoa só não há sala para manter.
+   */
+  private handleHostGone(goneHostId: string) {
+    const me = this.state.identity?.peerId;
+    if (!me || this.state.callStatus !== "in-call") {
+      this.resetCall("toast.roomEndedByHost");
+      return;
+    }
+    this.roomMembers = this.roomMembers.filter((p) => p.peerId !== goneHostId);
+    const pool = (
+      this.roomMembers.length > 0
+        ? this.roomMembers.map((p) => p.peerId)
+        : [me, ...this.state.remotes.map((remote) => remote.peerId)]
+    ).filter((id) => id !== goneHostId);
+    if (pool.filter((id) => id !== me).length === 0) {
+      this.resetCall("toast.hostDroppedAlone");
+      return;
+    }
+    const successor = electHost(pool);
+    if (!successor) {
+      this.resetCall("toast.roomEndedByHost");
+      return;
+    }
+    this.assumeHost(
+      successor,
+      "toast.hostDroppedYouHost",
+      "toast.hostDroppedNewHost",
+    );
   }
 
   private addRoomMember(info: PeerInfo) {
@@ -972,7 +1324,8 @@ export class PeerSession {
   }
 
   private onPeerLeft(peerId: string) {
-    if (this.ending) return;
+    if (this.tearingDown) return;
+    this.iceRetries.delete(peerId);
     const name =
       this.state.remotes.find((r) => r.peerId === peerId)?.displayName ??
       this.names.get(peerId) ??
@@ -981,9 +1334,7 @@ export class PeerSession {
       this.state.remotes.some((r) => r.peerId === peerId) ||
       this.roomMembers.some((p) => p.peerId === peerId);
     const hostGone =
-      peerId === this.state.hostPeerId &&
-      (this.state.callStatus === "in-call" ||
-        this.state.callStatus === "connecting");
+      peerId === this.state.hostPeerId && this.state.callStatus !== "idle";
     this.data.get(peerId)?.close();
     this.media.get(peerId)?.close();
     this.screenOut.get(peerId)?.close();
@@ -997,6 +1348,7 @@ export class PeerSession {
     this.patch({
       remotes,
       screenShareOrder: this.removeShare(peerId),
+      pending: this.state.pending.filter((p) => p.peerId !== peerId),
       incoming:
         this.state.incoming?.peerId === peerId ? null : this.state.incoming,
     });
@@ -1004,7 +1356,8 @@ export class PeerSession {
       this.roomMembers = this.roomMembers.filter((p) => p.peerId !== peerId);
       this.broadcastRoom();
     } else if (hostGone) {
-      this.resetCall("toast.roomEndedByHost");
+      this.appendLeaveNotice(peerId, name);
+      this.handleHostGone(peerId);
       return;
     }
     if (
@@ -1013,46 +1366,78 @@ export class PeerSession {
       (this.state.callStatus === "in-call" ||
         this.state.callStatus === "connecting")
     ) {
-      showToast("toast.peerLeft", { name });
+      showToast(this.removed.delete(peerId) ? "toast.removed" : "toast.peerLeft", {
+        name,
+      });
       this.appendLeaveNotice(peerId, name);
     }
   }
 
   private appendLeaveNotice(peerId: string, name: string) {
-    this.patch({
-      messages: [
-        ...this.state.messages,
-        {
-          id: crypto.randomUUID(),
-          fromPeerId: peerId,
-          fromName: name,
-          text: "",
-          at: Date.now(),
-          system: "left",
-        },
-      ],
+    this.appendMessage({
+      id: crypto.randomUUID(),
+      fromPeerId: peerId,
+      fromName: name,
+      text: "",
+      at: Date.now(),
+      system: "left",
     });
+  }
+
+  /**
+   * Lê o arquivo em fatias, então nem o remetente nem o destinatário precisam
+   * do arquivo inteiro em memória: só um pedaço por vez fica em trânsito.
+   */
+  private async streamFileTo(
+    conn: DataConnection,
+    file: File,
+    id: string,
+    sent: Map<DataConnection, number>,
+    report: () => void,
+  ) {
+    // O sequencial aqui é o ponto: cada pedaço só é lido depois que o canal
+    // tem espaço, e é isso que segura a memória em um pedaço por vez.
+    // oxlint-disable no-await-in-loop
+    for (let offset = 0; offset < file.size; offset += FILE_CHUNK) {
+      if (this.tearingDown) throw new Error("ended");
+      await this.waitForFileBuffer(conn);
+      if (!conn.open) return;
+      const chunk = await file.slice(offset, offset + FILE_CHUNK).arrayBuffer();
+      conn.send(chunk);
+      sent.set(conn, offset + chunk.byteLength);
+      report();
+    }
+    // oxlint-enable no-await-in-loop
+    if (conn.open) conn.send({ type: "file-end", id });
   }
 
   private waitForFileBuffer(conn: DataConnection) {
     const dc = conn.dataChannel;
     if (!dc || dc.bufferedAmount < FILE_BUFFER_HIGH) return Promise.resolve();
+    const low = FILE_BUFFER_HIGH / 4;
     return new Promise<void>((resolve) => {
-      const tick = () => {
-        if (!conn.open || dc.bufferedAmount < FILE_BUFFER_HIGH / 4) resolve();
-        else window.setTimeout(tick, 30);
+      // O evento não dispara se o canal fechar no meio da drenagem, daí a
+      // verificação periódica de segurança em paralelo.
+      const guard = window.setInterval(() => {
+        if (!conn.open || dc.bufferedAmount < low) settle();
+      }, 250);
+      const settle = () => {
+        window.clearInterval(guard);
+        dc.removeEventListener("bufferedamountlow", settle);
+        resolve();
       };
-      tick();
+      dc.bufferedAmountLowThreshold = low;
+      dc.addEventListener("bufferedamountlow", settle);
     });
   }
 
   private bytesFrom(raw: unknown): Uint8Array | null {
-    let view: Uint8Array | null = null;
-    if (raw instanceof ArrayBuffer) view = new Uint8Array(raw);
-    else if (ArrayBuffer.isView(raw)) {
-      view = new Uint8Array(raw.buffer, raw.byteOffset, raw.byteLength);
-    }
-    if (!view) return null;
+    // Um ArrayBuffer chega exclusivo por mensagem, então dá para adotá-lo sem
+    // copiar. Já uma view pode apontar para um buffer maior e compartilhado:
+    // guardá-la reteria bem mais memória do que os bytes úteis.
+    if (raw instanceof ArrayBuffer) return new Uint8Array(raw);
+    if (!ArrayBuffer.isView(raw)) return null;
+    const view = new Uint8Array(raw.buffer, raw.byteOffset, raw.byteLength);
     const copy = new Uint8Array(view.byteLength);
     copy.set(view);
     return copy;
@@ -1088,93 +1473,94 @@ export class PeerSession {
     const incoming = this.incomingFiles.get(peerId);
     if (!incoming) return;
     const next = incoming.received + bytes.byteLength;
-    if (next > incoming.size) {
+    if (next > incoming.size || this.bufferedBytes() + bytes.byteLength > MAX_INCOMING_BYTES) {
       this.failIncomingFile(peerId);
       return;
     }
-    incoming.buffer.set(bytes, incoming.received);
+    incoming.chunks.push(bytes);
     incoming.received = next;
-    const now = Date.now();
-    if (now - incoming.lastPatch > 200 || next === incoming.size) {
-      incoming.lastPatch = now;
-      this.patchFile(incoming.id, { progress: next / incoming.size });
-    }
+    setFileProgress(incoming.localId, next / incoming.size);
   }
 
+  private bufferedBytes() {
+    let total = 0;
+    for (const incoming of this.incomingFiles.values())
+      total += incoming.received;
+    return total;
+  }
+
+  private isKnownPeer(peerId: string) {
+    return (
+      this.roomMembers.some((p) => p.peerId === peerId) ||
+      this.state.remotes.some((r) => r.peerId === peerId)
+    );
+  }
+
+  /**
+   * O anúncio do remetente não reserva memória: os bytes só são guardados à
+   * medida que chegam, e um teto global cobre o caso de vários peers hostis
+   * transmitindo ao mesmo tempo.
+   */
   private beginIncomingFile(
     peerId: string,
     msg: Extract<WireMessage, { type: "file-start" }>,
   ) {
+    if (!this.isKnownPeer(peerId)) return;
+
+    const now = Date.now();
+    const previous = this.lastFileStart.get(peerId) ?? 0;
+    if (now - previous < FILE_START_COOLDOWN) return;
+    this.lastFileStart.set(peerId, now);
+
     if (this.incomingFiles.has(peerId)) this.failIncomingFile(peerId);
-    const size = msg.size;
-    if (
-      !Number.isFinite(size) ||
-      size <= 0 ||
-      size > MAX_FILE_BYTES.pro ||
-      typeof msg.id !== "string" ||
-      typeof msg.name !== "string"
-    ) {
-      this.toast("toast.fileFailed");
-      return;
-    }
+    if (this.incomingFiles.size >= MAX_CONCURRENT_INCOMING) return;
+
     const name = safeFileName(msg.name);
-    const mime =
-      typeof msg.mime === "string" && msg.mime.length < 120
-        ? msg.mime
-        : "application/octet-stream";
-    let buffer: Uint8Array;
-    try {
-      buffer = new Uint8Array(size);
-    } catch {
-      this.toast("toast.fileFailed");
-      return;
-    }
+    const localId = crypto.randomUUID();
     this.incomingFiles.set(peerId, {
-      id: msg.id,
+      remoteId: msg.id,
+      localId,
       name,
-      mime,
-      size,
+      mime: msg.mime,
+      size: msg.size,
       received: 0,
-      buffer,
-      lastPatch: 0,
+      chunks: [],
     });
-    const message: ChatMessage = {
-      id: msg.id,
-      fromPeerId: msg.fromPeerId || peerId,
-      fromName: msg.fromName || this.names.get(peerId) || t("common.someone"),
+    this.appendMessage({
+      id: localId,
+      fromPeerId: peerId,
+      fromName: this.names.get(peerId) ?? t("common.someone"),
       text: "",
-      at: msg.at || Date.now(),
+      at: now,
       file: {
-        id: msg.id,
+        id: localId,
         name,
-        mime,
-        size,
+        mime: msg.mime,
+        size: msg.size,
         status: "receiving",
-        progress: 0,
         blobUrl: null,
       },
-    };
-    this.patch({ messages: [...this.state.messages, message] });
+    });
   }
 
-  private finishIncomingFile(peerId: string, id: string) {
+  private finishIncomingFile(peerId: string, remoteId: string) {
     const tail = this.incomingByteTail.get(peerId) ?? Promise.resolve();
     void tail.then(() => {
       const incoming = this.incomingFiles.get(peerId);
-      if (!incoming || incoming.id !== id) return;
+      if (!incoming || incoming.remoteId !== remoteId) return;
       this.incomingFiles.delete(peerId);
       this.incomingByteTail.delete(peerId);
       if (incoming.received !== incoming.size) {
-        this.patchFile(incoming.id, { status: "error" });
+        this.patchFile(incoming.localId, { status: "error" });
         return;
       }
-      const copy = new Uint8Array(incoming.buffer);
-      const blob = new Blob([copy], { type: incoming.mime });
-      const blobUrl = URL.createObjectURL(blob);
-      this.patchFile(incoming.id, {
+      const blob = new Blob(incoming.chunks as BlobPart[], {
+        type: incoming.mime,
+      });
+      setFileProgress(incoming.localId, 1);
+      this.patchFile(incoming.localId, {
         status: "ready",
-        progress: 1,
-        blobUrl,
+        blobUrl: URL.createObjectURL(blob),
       });
     });
   }
@@ -1183,7 +1569,7 @@ export class PeerSession {
     const incoming = this.incomingFiles.get(peerId);
     this.incomingFiles.delete(peerId);
     this.incomingByteTail.delete(peerId);
-    if (incoming) this.patchFile(incoming.id, { status: "error" });
+    if (incoming) this.patchFile(incoming.localId, { status: "error" });
   }
 
   private patchFile(id: string, file: Partial<ChatFile>) {
@@ -1201,10 +1587,20 @@ export class PeerSession {
     }
   }
 
-  private broadcast(message: WireMessage) {
-    for (const conn of this.data.values()) {
-      if (conn.open) conn.send(message);
+  /**
+   * Conexões que já valem como sala. Quem está na porta tem data channel
+   * aberto para poder ser avisado, mas não entra em nada que seja conversa.
+   */
+  private activeConnections() {
+    const open: DataConnection[] = [];
+    for (const [peerId, conn] of this.data) {
+      if (conn.open && !this.awaitingApproval(peerId)) open.push(conn);
     }
+    return open;
+  }
+
+  private broadcast(message: WireMessage) {
+    for (const conn of this.activeConnections()) conn.send(message);
   }
 
   private applyLimitsToAll() {
@@ -1225,10 +1621,19 @@ export class PeerSession {
     }
   }
 
+  /**
+   * O desligamento é síncrono do início ao fim: `tearingDown` vale só enquanto
+   * este método roda, então nenhum evento consegue se intercalar e ser
+   * descartado por engano. As data connections são as únicas que esperam, o
+   * bastante para o último aviso escoar pelo canal antes do fechamento.
+   */
   private resetCall(endedReason?: MessageKey) {
-    if (this.ending) return;
-    this.ending = true;
-    for (const conn of this.data.values()) conn.close();
+    if (this.tearingDown) return;
+    this.tearingDown = true;
+    const draining = [...this.data.values()];
+    window.setTimeout(() => {
+      for (const conn of draining) conn.close();
+    }, FLUSH_MS);
     for (const call of this.media.values()) call.close();
     for (const call of this.screenOut.values()) call.close();
     for (const call of this.screenIn.values()) call.close();
@@ -1238,9 +1643,14 @@ export class PeerSession {
     this.screenIn.clear();
     this.incomingFiles.clear();
     this.incomingByteTail.clear();
+    this.lastFileStart.clear();
     this.sendingFile = false;
+    clearAllFileProgress();
     this.revokeMessageFiles();
     this.roomMembers = [];
+    this.banned.clear();
+    this.removed.clear();
+    this.dialedPeerId = null;
     this.screenTrack?.stop();
     this.screenTrack = null;
     this.state.localStream?.getTracks().forEach((track) => track.stop());
@@ -1264,13 +1674,15 @@ export class PeerSession {
       hostPeerId: null,
       callStatus: "idle",
       incoming: null,
+      pending: [],
+      leavePrompt: false,
     });
-    window.setTimeout(() => {
-      this.ending = false;
-    }, 400);
+    this.iceRetries.clear();
+    this.tearingDown = false;
   }
 
   private destroyPeer() {
+    window.clearTimeout(this.reconnectTimer);
     this.peer?.destroy();
     this.peer = null;
   }

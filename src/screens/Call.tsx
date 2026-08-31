@@ -12,12 +12,15 @@ import {
   PhoneOffIcon,
   ScreenIcon,
 } from "../components/Icons";
+import { HostLeaveDialog } from "../components/HostLeaveDialog";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { Lobby } from "../components/Lobby";
 import { QualityBadge } from "../components/QualityBadge";
 import { VideoTile } from "../components/VideoTile";
 import { useI18n } from "../i18n/use-i18n";
 import { cn } from "../lib/cn";
 import { maxParticipants } from "../lib/quality";
+import { electHost } from "../lib/session";
 import { useSession } from "../lib/use-session";
 
 type ScreenItem = {
@@ -51,6 +54,11 @@ export const Call = () => {
   };
 
   const invite = me ? `${window.location.origin}/?room=${me.peerId}` : "";
+
+  const successorId = electHost(state.remotes.map((remote) => remote.peerId));
+  const successorName =
+    state.remotes.find((remote) => remote.peerId === successorId)
+      ?.displayName ?? null;
 
   const screens = useMemo(() => {
     const items: ScreenItem[] = [];
@@ -110,6 +118,9 @@ export const Call = () => {
           stream={remote.stream}
           name={remote.displayName}
           cameraOff={remote.cameraOff}
+          onRemove={
+            state.isHost ? () => session.kickPeer(remote.peerId) : undefined
+          }
           className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
         />
       ))}
@@ -125,12 +136,14 @@ export const Call = () => {
               {state.isHost ? t("call.host") : t("call.guest")}
             </p>
             <p className="text-sm text-zinc-300">
-              {state.callStatus === "connecting"
-                ? t("call.connecting")
-                : t("call.inCall", {
-                    count: state.remotes.length + 1,
-                    max: maxParticipants(),
-                  })}
+              {state.callStatus === "waiting"
+                ? t("call.waiting")
+                : state.callStatus === "connecting"
+                  ? t("call.connecting")
+                  : t("call.inCall", {
+                      count: state.remotes.length + 1,
+                      max: maxParticipants(),
+                    })}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -250,12 +263,29 @@ export const Call = () => {
             variant="icon"
             className="bg-red-500 hover:bg-red-400 border-red-400"
             onClick={() => session.hangUp()}
-            title={state.isHost ? t("call.endForEveryone") : t("call.leave")}
+            title={t("call.leave")}
           >
             <PhoneOffIcon />
           </Button>
         </div>
       </div>
+
+      {state.isHost && (
+        <Lobby
+          pending={state.pending}
+          onAdmit={(peerId) => session.admitPeer(peerId)}
+          onDeny={(peerId) => session.denyPeer(peerId)}
+        />
+      )}
+
+      {state.leavePrompt && (
+        <HostLeaveDialog
+          successorName={successorName}
+          onTransfer={() => session.transferHostAndLeave()}
+          onEnd={() => session.endRoomForAll()}
+          onCancel={() => session.cancelLeave()}
+        />
+      )}
 
       {chatOpen && me && (
         <div className="hidden w-full max-w-sm md:block">

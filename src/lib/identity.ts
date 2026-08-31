@@ -1,4 +1,5 @@
 import type { Identity } from "./types";
+import { clampDisplayName, MAX_PEER_ID } from "./wire-guard";
 
 const KEY = "simplechat.identity";
 
@@ -7,8 +8,12 @@ export const loadIdentity = (): Identity | null => {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<Identity>;
-    if (!parsed.displayName || !parsed.peerId) return null;
-    return { displayName: parsed.displayName, peerId: parsed.peerId };
+    if (typeof parsed.displayName !== "string") return null;
+    if (typeof parsed.peerId !== "string") return null;
+    const displayName = clampDisplayName(parsed.displayName);
+    if (!displayName || !parsed.peerId || parsed.peerId.length > MAX_PEER_ID)
+      return null;
+    return { displayName, peerId: parsed.peerId };
   } catch {
     return null;
   }
@@ -21,7 +26,9 @@ const slugFirstName = (displayName: string): string => {
     .replace(/\p{M}/gu, "")
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
-  return cleaned || "user";
+  // Nomes fora do alfabeto latino sobram vazios aqui e caem no rótulo genérico;
+  // o UUID a seguir é quem garante unicidade, o slug é só legibilidade.
+  return cleaned.slice(0, 24) || "user";
 };
 
 export const createPeerId = (displayName: string): string => {
@@ -32,7 +39,7 @@ export const createIdentity = (
   displayName: string,
   peerId = createPeerId(displayName),
 ): Identity => {
-  return { displayName: displayName.trim(), peerId };
+  return { displayName: clampDisplayName(displayName), peerId };
 };
 
 export const persistIdentity = (identity: Identity) => {

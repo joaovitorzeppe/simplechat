@@ -104,6 +104,16 @@ export const CheckIcon = (props: IconProps) => {
   );
 }
 
+export const UserRemoveIcon = (props: IconProps) => {
+  return (
+    <svg {...base(props)}>
+      <path d="M15 20v-1a5 5 0 0 0-5-5H7a5 5 0 0 0-5 5v1" />
+      <circle cx="8.5" cy="7" r="3.5" />
+      <path d="M17 10h5" />
+    </svg>
+  );
+}
+
 export const ExpandIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>

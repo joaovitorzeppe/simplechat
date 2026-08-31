@@ -27,7 +27,6 @@ export type ChatFile = {
   mime: string;
   size: number;
   status: ChatFileStatus;
-  progress: number;
   blobUrl: string | null;
 };
 
@@ -65,6 +64,10 @@ export type WireMessage =
     }
   | { type: "room-ended" }
   | { type: "room-full" }
+  | { type: "host-transfer"; hostPeerId: string }
+  | { type: "room-waiting" }
+  | { type: "room-denied" }
+  | { type: "room-kicked" }
   | { type: "hangup"; displayName?: string }
   | { type: "media-meta"; sharingScreen?: boolean; cameraOff?: boolean }
   | {

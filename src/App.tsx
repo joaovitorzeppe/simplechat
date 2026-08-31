@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { IncomingCall } from "./components/IncomingCall";
 import { Toast } from "./components/Toast";
 import { loadIdentity } from "./lib/identity";
 import { session } from "./lib/session";
 import { unlockAudio } from "./lib/sounds";
+import { showToast } from "./lib/toast";
 import { useSession } from "./lib/use-session";
 import { Call } from "./screens/Call";
 import { Home } from "./screens/Home";
@@ -11,10 +12,12 @@ import { Onboarding } from "./screens/Onboarding";
 
 const App = () => {
   const { state } = useSession();
+  const [storedIdentity] = useState(loadIdentity);
 
   useEffect(() => {
-    localStorage.removeItem("simplechat.historyOptIn");
-    indexedDB.deleteDatabase("simplechat");
+    // getUserMedia e crypto.randomUUID exigem contexto seguro, então acessar
+    // pelo IP da rede local em HTTP quebra o app sem mensagem nenhuma.
+    if (!window.isSecureContext) showToast("error.insecureContext");
     const identity = loadIdentity();
     if (identity) void session.start(identity);
   }, []);
@@ -30,7 +33,7 @@ const App = () => {
   }, []);
 
   let screen = null;
-  if (!state.identity && !loadIdentity()) {
+  if (!state.identity && !storedIdentity) {
     screen = (
       <Onboarding
         onDone={(identity) => {

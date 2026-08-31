@@ -1,6 +1,7 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { useI18n } from "../i18n/use-i18n";
 import type { ChatMessage } from "../lib/types";
+import { MAX_CHAT_TEXT } from "../lib/wire-guard";
 import { Button } from "./Button";
 import { ChatMessages } from "./ChatMessages";
 import { CloseIcon, PaperclipIcon } from "./Icons";
@@ -23,9 +24,33 @@ export const ChatPanel = ({
   const { t } = useI18n();
   const [text, setText] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const pinnedToBottom = useRef(true);
+
+  // Só acompanha o fim da conversa se o usuário já estiver lá. Quem rolou para
+  // cima para reler algo não é arrastado de volta a cada mensagem nova.
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const onScroll = () => {
+      const distance = list.scrollHeight - list.scrollTop - list.clientHeight;
+      pinnedToBottom.current = distance < 80;
+    };
+    list.addEventListener("scroll", onScroll, { passive: true });
+    return () => list.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list || !pinnedToBottom.current) return;
+    list.scrollTop = list.scrollHeight;
+    // A contagem é gatilho, não insumo: o efeito roda quando chega mensagem.
+    // oxlint-disable-next-line exhaustive-effect-dependencies
+  }, [messages.length]);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    pinnedToBottom.current = true;
     onSend(text);
     setText("");
   };
@@ -43,7 +68,10 @@ export const ChatPanel = ({
           <CloseIcon />
         </Button>
       </div>
-      <div className="flex-1 space-y-3 overflow-y-auto p-4 text-sm">
+      <div
+        ref={listRef}
+        className="flex-1 space-y-3 overflow-y-auto p-4 text-sm"
+      >
         {messages.length === 0 && (
           <p className="text-zinc-500">{t("chat.empty")}</p>
         )}
@@ -70,6 +98,7 @@ export const ChatPanel = ({
         </Button>
         <input
           value={text}
+          maxLength={MAX_CHAT_TEXT}
           onChange={(e) => setText(e.target.value)}
           placeholder={t("chat.placeholder")}
           className="flex-1 rounded-xl bg-zinc-900 border border-line px-3 py-2 text-sm outline-none focus:border-accent"

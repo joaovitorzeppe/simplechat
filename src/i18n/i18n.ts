@@ -3,7 +3,7 @@ import { dictionaries, type MessageKey } from "./locales";
 export type Locale = "pt" | "en" | "es";
 
 const KEY = "simplechat.locale";
-const LOCALES: Locale[] = ["pt", "en", "es"];
+const LOCALES = new Set<string>(["pt", "en", "es"]);
 
 export const localeNames: Record<Locale, MessageKey> = {
   pt: "language.pt",
@@ -18,7 +18,7 @@ export const localeTags: Record<Locale, string> = {
 };
 
 const isLocale = (value: string): value is Locale => {
-  return LOCALES.includes(value as Locale);
+  return LOCALES.has(value);
 };
 
 export const detectLocale = (): Locale => {

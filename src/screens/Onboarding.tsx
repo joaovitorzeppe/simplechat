@@ -7,6 +7,7 @@ import {
   persistIdentity,
 } from "../lib/identity";
 import type { Identity } from "../lib/types";
+import { MAX_DISPLAY_NAME } from "../lib/wire-guard";
 import { useI18n } from "../i18n/use-i18n";
 
 type Props = {
@@ -49,6 +50,7 @@ export const Onboarding = ({ onDone }: Props) => {
           <input
             autoFocus
             value={name}
+            maxLength={MAX_DISPLAY_NAME}
             onChange={(e) => setName(e.target.value)}
             className="mt-2 w-full rounded-xl border border-line bg-zinc-900 px-4 py-3 text-base text-zinc-100 outline-none focus:border-accent"
             placeholder={t("onboarding.namePlaceholder")}

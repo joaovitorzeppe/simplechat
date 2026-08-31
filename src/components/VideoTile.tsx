@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import { useI18n } from "../i18n/use-i18n";
 import { cn } from "../lib/cn";
-import { ExpandIcon } from "./Icons";
+import { firstGrapheme } from "../lib/text";
+import { ExpandIcon, UserRemoveIcon } from "./Icons";
 
 type Props = {
   stream: MediaStream | null;
@@ -12,9 +13,10 @@ type Props = {
   sharingScreen?: boolean;
   className?: string;
   onPin?: () => void;
+  onRemove?: () => void;
 };
 
-export const VideoTile = ({
+export const VideoTile = memo(function VideoTile({
   stream,
   name,
   local,
@@ -23,7 +25,8 @@ export const VideoTile = ({
   sharingScreen,
   className,
   onPin,
-}: Props) => {
+  onRemove,
+}: Props) {
   const ref = useRef<HTMLVideoElement>(null);
   const { t } = useI18n();
 
@@ -60,20 +63,33 @@ export const VideoTile = ({
       {blank && (
         <div className="absolute inset-0 grid place-items-center">
           <div className="size-16 rounded-full bg-zinc-800 grid place-items-center text-xl font-semibold text-zinc-300">
-            {name.slice(0, 1).toUpperCase()}
+            {firstGrapheme(name).toUpperCase()}
           </div>
         </div>
       )}
-      {onPin && (
-        <button
-          type="button"
-          title={t("call.pinScreen")}
-          onClick={onPin}
-          className="absolute top-2 right-2 grid size-8 place-items-center rounded-full border border-line bg-black/60 text-zinc-100 hover:bg-zinc-800 cursor-pointer"
-        >
-          <ExpandIcon width={16} height={16} />
-        </button>
-      )}
+      <div className="absolute top-2 right-2 flex gap-1">
+        {onRemove && (
+          <button
+            type="button"
+            title={t("call.remove")}
+            aria-label={`${t("call.remove")}: ${name}`}
+            onClick={onRemove}
+            className="grid size-8 place-items-center rounded-full border border-line bg-black/60 text-zinc-100 hover:bg-red-500/80 cursor-pointer"
+          >
+            <UserRemoveIcon width={16} height={16} />
+          </button>
+        )}
+        {onPin && (
+          <button
+            type="button"
+            title={t("call.pinScreen")}
+            onClick={onPin}
+            className="grid size-8 place-items-center rounded-full border border-line bg-black/60 text-zinc-100 hover:bg-zinc-800 cursor-pointer"
+          >
+            <ExpandIcon width={16} height={16} />
+          </button>
+        )}
+      </div>
       <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-linear-to-t from-black/70 to-transparent px-3 py-2 text-xs">
         <span className="font-medium truncate">
           {name}
@@ -85,4 +101,4 @@ export const VideoTile = ({
       </div>
     </div>
   );
-};
+});

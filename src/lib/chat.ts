@@ -1,4 +1,5 @@
 import { localeTags, type Locale } from "../i18n/i18n";
+import { truncateText } from "./text";
 import type { ChatMessage } from "./types";
 
 export const CHAT_GROUP_MS = 60_000;
@@ -97,7 +98,16 @@ const peelTrail = (raw: string) => {
 };
 
 export const hrefForLabel = (label: string) => {
-  const candidate = /^https?:\/\//i.test(label) ? label : `https://${label}`;
+  const hierarchical = /^([a-z][a-z0-9+.-]*):\/\//i.exec(label);
+  if (hierarchical) {
+    const scheme = hierarchical[1].toLowerCase();
+    if (scheme !== "http" && scheme !== "https") return null;
+  } else if (/^[a-z][a-z0-9+.-]*:(?!\d)/i.test(label)) {
+    // javascript:, data:, mailto: e afins nunca viram link clicável. O que vem
+    // depois de dois-pontos com dígito é porta, como em exemplo.com:8080.
+    return null;
+  }
+  const candidate = hierarchical ? label : `https://${label}`;
   try {
     const parsed = new URL(candidate);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:")
@@ -132,8 +142,18 @@ export const splitMessageText = (text: string): MessagePart[] => {
 };
 
 export const safeFileName = (name: string) => {
-  const base = name.replace(/[\\/]/g, "_").replace(/^\.+/, "").trim();
-  return base.slice(0, 180) || "file";
+  const base = name
+    // Controles e marcas de direção deixam renomear "nota.txt" em algo que se
+    // exibe como imagem mas salva como executável.
+    .replace(
+      // oxlint-disable-next-line no-control-regex
+      /[\u0000-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g,
+      "",
+    )
+    .replace(/[\\/]/g, "_")
+    .replace(/^\.+/, "")
+    .trim();
+  return truncateText(base, 180) || "file";
 };
 
 export const isPreviewableImage = (mime: string) => {

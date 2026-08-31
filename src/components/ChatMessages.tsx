@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useI18n } from "../i18n/use-i18n";
 import {
   formatFileSize,
@@ -8,6 +8,7 @@ import {
   splitMessageText,
 } from "../lib/chat";
 import type { ChatFile, ChatMessage } from "../lib/types";
+import { useFileProgress } from "../lib/file-progress";
 import { cn } from "../lib/cn";
 import { DownloadIcon } from "./Icons";
 import { Button } from "./Button";
@@ -28,6 +29,9 @@ const MessageBody = ({
   const parts = splitMessageText(text);
   return (
     <span className="whitespace-pre-wrap wrap-break-word">
+      {/* Os trechos são posicionais e imutáveis: derivam de um texto fixo e
+          nunca são reordenados, então o índice é a chave certa. */}
+      {/* oxlint-disable no-array-index-key */}
       {parts.map((part, index) =>
         part.type === "text" ? (
           <span key={index}>{part.value}</span>
@@ -42,6 +46,7 @@ const MessageBody = ({
           </button>
         ),
       )}
+      {/* oxlint-enable no-array-index-key */}
     </span>
   );
 };
@@ -59,6 +64,7 @@ const saveFile = (file: ChatFile) => {
 
 const FileCard = ({ file }: { file: ChatFile }) => {
   const { locale, t } = useI18n();
+  const progress = useFileProgress(file.id);
   const ready = file.status === "ready" && file.blobUrl;
   const statusLabel =
     file.status === "sending"
@@ -100,7 +106,7 @@ const FileCard = ({ file }: { file: ChatFile }) => {
         <div className="h-1 overflow-hidden rounded-full bg-zinc-700">
           <div
             className="h-full bg-accent"
-            style={{ width: `${Math.round(file.progress * 100)}%` }}
+            style={{ width: `${Math.round(progress * 100)}%` }}
           />
         </div>
       )}
@@ -110,7 +116,7 @@ const FileCard = ({ file }: { file: ChatFile }) => {
 
 export const ChatMessages = ({ messages, selfId }: Props) => {
   const { locale, t } = useI18n();
-  const groups = groupChatMessages(messages);
+  const groups = useMemo(() => groupChatMessages(messages), [messages]);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   const openPending = () => {
@@ -127,7 +133,7 @@ export const ChatMessages = ({ messages, selfId }: Props) => {
           return (
             <p
               key={group.messages[0].id}
-              className="py-1 text-center text-[11px] text-zinc-500"
+              className="py-1 text-center text-[11px] text-zinc-500 wrap-break-word"
             >
               {t("toast.peerLeft", { name: group.fromName })}
             </p>
@@ -136,7 +142,10 @@ export const ChatMessages = ({ messages, selfId }: Props) => {
         return (
           <div key={group.messages[0].id} className="space-y-1">
             <div
-              className={cn("text-[11px] text-zinc-500", mine && "text-right")}
+              className={cn(
+                "text-[11px] text-zinc-500 wrap-break-word",
+                mine && "text-right",
+              )}
             >
               {group.fromName}
               <span className="text-zinc-600">

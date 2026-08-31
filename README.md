@@ -8,7 +8,9 @@ Vite 8, React 19, TypeScript ~7, Tailwind CSS v4 e PeerJS.
 
 ```bash
 npm i
-npm run dev
+npm run dev      # sem service worker
+npm run lint
+npm test         # Vitest; os testes ficam em tests/
 ```
 
 Para testar duas pessoas no mesmo computador, abra uma janela anônima (o mesmo origin compartilha `localStorage` e a chave).
@@ -22,8 +24,10 @@ Toda chamada é uma sala em mesh. Quem inicia é o **host**; quem entra é convi
 - **Identidade:** no onboarding você informa o nome. O app gera um `peerId` no formato `{nome}-{uuid}-{timestamp}` e, se você pedir para lembrar, grava `{ displayName, peerId }` no `localStorage`. Sem isso, a chave é nova a cada visita. A chave é o ID PeerJS.
 - **Iniciar:** você abre a chamada sozinho e compartilha o link `/?room=<sua-chave>`. Links antigos `?call=` ainda funcionam.
 - **Ligar:** cola a chave (ou o link) da outra pessoa. Você vira host e convoca ela.
-- **Entrar:** junta você à chamada que a outra pessoa já começou. O cliente conecta no host por data channel; o host envia a lista de peers; cada um monta mesh de mídia (quem tem o ID menor inicia, para evitar glare).
-- **Sair:** convidado só sai da sala. Se o host sair, a chamada encerra para todos (`room-ended`).
+- **Entrar:** junta você à chamada que a outra pessoa já começou. O cliente conecta no host por data channel e fica na **sala de espera** até o host aprovar; então o host envia a lista de peers e cada um monta mesh de mídia (quem tem o ID menor inicia, para evitar glare). Quem o host discou entra direto, sem passar pela espera.
+- **Moderação:** o host aprova ou recusa cada entrada e pode remover alguém da chamada. Recusado e removido ficam bloqueados enquanto a sala existir.
+- **Sair:** convidado só sai da sala. O host escolhe entre passar o papel adiante (`host-transfer`) ou encerrar para todos (`room-ended`).
+- **Queda do host:** se ele some sem avisar, quem ficou elege o substituto sozinho — o menor `peerId` entre os membros. Como a lista veio do host e é a mesma em todos, todos chegam ao mesmo nome sem negociar. Sobrando uma pessoa só, a chamada encerra.
 - **Câmera:** desligar a câmera para o track (`replaceTrack(null)` + `stop()`). Não envia frames pretos; o LED deve apagar. Os outros veem o avatar. Compartilhamento de tela segue em conexão separada.
 - **Arquivo:** clipe no chat. Vai P2P no data channel, em pedaços. Imagens (jpeg/png/gif/webp) têm prévia; o resto só baixa. Some ao sair da chamada.
 
@@ -50,9 +54,35 @@ WebRTC sempre precisa de sinalização, STUN e, em alguns NATs, TURN.
 
 - Sinalização: broker gratuito `0.peerjs.com` (PeerJS).
 - STUN: `stun.l.google.com` (e `stun1`).
-- Sem TURN no MVP. Firewalls corporativos rígidos podem não conectar.
-- Áudio/vídeo não passam pelo nosso servidor: vão P2P (ou por TURN, se um dia existir).
+- TURN é opcional e vem do ambiente. Sem ele, NAT simétrico e firewall corporativo não conectam.
+- Áudio/vídeo não passam pelo nosso servidor: vão P2P (ou por TURN, quando configurado).
 - Mesh em vídeo pesa no notebook. Grupo grande pediria SFU (LiveKit/mediasoup) e deixaria de ser P2P puro.
+
+Para ligar o TURN, defina as três variáveis (em `.env.local` ou no painel da Vercel). Faltando qualquer uma, o app segue só com STUN:
+
+```bash
+VITE_TURN_URL=turn:seu-servidor:3478
+VITE_TURN_USERNAME=usuario
+VITE_TURN_CREDENTIAL=senha
+```
+
+## Modelo de confiança
+
+O link chega a qualquer um, então **todo participante é tratado como potencialmente hostil**. Três regras sustentam isso:
+
+- **Nada que chega pelo data channel é confiável.** `parseWire` (`wire-guard.ts`) valida formato, tipo e tamanho de cada campo antes de a mensagem chegar à sessão. O que não bate com o contrato é descartado, não corrigido.
+- **A identidade vem da conexão, nunca do payload.** O remetente de um chat ou arquivo é sempre `conn.peer`. Encerrar a sala, anunciar a lista de peers ou transferir o papel de host só é aceito do host (ou, antes do host existir, do peer que você discou).
+- **A sala de espera não vaza nada.** Quem ainda não foi aprovado tem data channel aberto só para receber a decisão: não entra em broadcast de chat ou arquivo, não tem a mídia atendida e qualquer mensagem que mande além do `hello` é descartada.
+
+Arquivos recebidos são acumulados em pedaços conforme chegam — o tamanho anunciado não reserva memória — com teto global, limite de transferências simultâneas e cooldown por peer.
+
+O que continua fora do escopo: o `peerId` embute o primeiro nome e trafega pelo broker público do PeerJS, e o bloqueio de quem foi recusado ou removido vale por `peerId`, então não impede a volta com uma chave nova.
+
+## Texto e idiomas
+
+Nomes e mensagens são cortados por grafema (`text.ts`, via `Intl.Segmenter`), não por índice: emoji, hangul decomposto e clusters índicos ou tâmeis nunca são partidos ao meio. O teto é contado em unidades UTF-16, a mesma régua do `maxLength` do input e da validação do wire, então o que a interface deixa digitar é exatamente o que passa na outra ponta. O nome aceita até 100.
+
+As fontes embutidas (Outfit e IBM Plex Mono) cobrem só latino e latino estendido, e o `unicode-range` delas faz o navegador cair automaticamente na fonte do sistema para japonês, chinês, coreano, devanágari, árabe e afins — sem tofu e sem download extra.
 
 ## Fase 2 (fora deste MVP)
 

@@ -75,7 +75,7 @@ export const Home = () => {
             <p className="text-xs uppercase tracking-[0.25em] text-accent">
               SimpleChat
             </p>
-            <h1 className="mt-1 text-3xl font-semibold">
+            <h1 className="mt-1 text-3xl font-semibold wrap-break-word">
               {t("home.hello", { name: state.identity?.displayName ?? "" })}
             </h1>
             <p className="mt-1 text-sm text-zinc-400">

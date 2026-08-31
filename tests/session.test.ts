@@ -1,0 +1,462 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import { electHost, PeerSession, type SessionState } from "../src/lib/session";
+import type { PeerInfo, RemotePeer, WireMessage } from "../src/lib/types";
+
+type FakeConn = {
+  peer: string;
+  open: boolean;
+  sent: WireMessage[];
+  send: (message: WireMessage) => void;
+  close: () => void;
+};
+
+type Internals = {
+  state: SessionState;
+  patch: (partial: Partial<SessionState>) => void;
+  onWire: (conn: unknown, raw: unknown) => void;
+  onPeerLeft: (peerId: string) => void;
+  names: Map<string, string>;
+  roomMembers: PeerInfo[];
+  banned: Set<string>;
+  data: Map<string, FakeConn>;
+  dialedPeerId: string | null;
+  incomingFiles: Map<string, unknown>;
+};
+
+const internals = (session: PeerSession) => session as unknown as Internals;
+
+const conn = (peer: string): FakeConn => ({
+  peer,
+  open: true,
+  sent: [],
+  send(message: WireMessage) {
+    this.sent.push(message);
+  },
+  close: () => {},
+});
+
+const remote = (peerId: string, displayName: string): RemotePeer => ({
+  peerId,
+  displayName,
+  stream: null,
+  screenStream: null,
+  sharingScreen: false,
+  cameraOff: false,
+});
+
+const HOST = "host-1";
+const ME = "me-1";
+const INTRUDER = "intruso-1";
+/** Ordena depois de ME, então ME vence a eleição entre os dois. */
+const ZECA = "zeca-1";
+/** Ordena antes de ME, então vence a eleição contra ME. */
+const ANA = "ana-1";
+
+const hello = (peerId: string, displayName: string) => ({
+  type: "hello",
+  displayName,
+  peerId,
+  kind: "room-join",
+});
+
+let session: PeerSession;
+let core: Internals;
+
+/** Coloca a sessão no estado de convidado numa sala conduzida por HOST. */
+const asGuest = () => {
+  core.patch({
+    identity: { peerId: ME, displayName: "Eu" },
+    callStatus: "in-call",
+    view: "call",
+    isHost: false,
+    hostPeerId: HOST,
+  });
+  core.dialedPeerId = HOST;
+  core.roomMembers = [
+    { peerId: HOST, displayName: "Host" },
+    { peerId: ME, displayName: "Eu" },
+  ];
+};
+
+/** Coloca a sessão como host de uma sala já em andamento. */
+const asHost = () => {
+  core.patch({
+    identity: { peerId: ME, displayName: "Eu" },
+    callStatus: "in-call",
+    view: "call",
+    isHost: true,
+    hostPeerId: ME,
+  });
+  core.roomMembers = [{ peerId: ME, displayName: "Eu" }];
+};
+
+beforeEach(() => {
+  session = new PeerSession();
+  core = internals(session);
+});
+
+describe("autoridade das mensagens de sala", () => {
+  it("ignora room-ended vindo de quem não é o host", () => {
+    asGuest();
+    core.onWire(conn(INTRUDER), { type: "room-ended" });
+    expect(core.state.callStatus).toBe("in-call");
+  });
+
+  it("aceita room-ended vindo do host", () => {
+    asGuest();
+    core.onWire(conn(HOST), { type: "room-ended" });
+    expect(core.state.callStatus).toBe("idle");
+  });
+
+  it("ignora room-full vindo de quem não é o host", () => {
+    asGuest();
+    core.onWire(conn(INTRUDER), { type: "room-full" });
+    expect(core.state.callStatus).toBe("in-call");
+  });
+
+  it("ignora room-peers vindo de quem não é o host", () => {
+    asGuest();
+    core.onWire(conn(INTRUDER), {
+      type: "room-peers",
+      peers: [{ peerId: "plantado", displayName: "Plantado" }],
+    });
+    expect(core.state.remotes).toHaveLength(0);
+  });
+
+  it("ignora room-host vindo de quem não é o host", () => {
+    asGuest();
+    core.onWire(conn(INTRUDER), { type: "room-host", hostPeerId: INTRUDER });
+    expect(core.state.hostPeerId).toBe(HOST);
+  });
+
+  it("não deixa um convidado encerrar a sala do host", () => {
+    core.patch({
+      identity: { peerId: ME, displayName: "Eu" },
+      callStatus: "in-call",
+      view: "call",
+      isHost: true,
+      hostPeerId: ME,
+    });
+    core.onWire(conn(INTRUDER), { type: "room-ended" });
+    expect(core.state.callStatus).toBe("in-call");
+  });
+});
+
+describe("identidade das mensagens", () => {
+  it("usa a conexão como remetente, não o que a mensagem afirma", () => {
+    asGuest();
+    core.names.set("bruno-1", "Bruno");
+    core.onWire(conn("bruno-1"), {
+      type: "chat",
+      id: "qualquer",
+      text: "transfere o dinheiro",
+      fromPeerId: HOST,
+      fromName: "Host",
+      at: 1700000000000,
+    });
+    const message = core.state.messages.at(-1);
+    expect(message?.fromPeerId).toBe("bruno-1");
+    expect(message?.fromName).toBe("Bruno");
+    expect(message?.text).toBe("transfere o dinheiro");
+  });
+
+  it("não deixa forjar mensagem como se fosse do próprio usuário", () => {
+    asGuest();
+    core.onWire(conn(INTRUDER), {
+      type: "chat",
+      id: "qualquer",
+      text: "eu concordo",
+      fromPeerId: ME,
+      fromName: "Eu",
+      at: 1700000000000,
+    });
+    expect(core.state.messages.at(-1)?.fromPeerId).not.toBe(ME);
+  });
+
+  it("descarta chat malformado em vez de deixar quebrar o render", () => {
+    asGuest();
+    core.onWire(conn(HOST), {
+      type: "chat",
+      id: "x",
+      text: { toString: "nope" },
+      fromPeerId: HOST,
+      fromName: "Host",
+      at: 1,
+    });
+    expect(core.state.messages).toHaveLength(0);
+  });
+
+  it("ignora chat quando não há chamada em andamento", () => {
+    core.patch({ identity: { peerId: ME, displayName: "Eu" } });
+    core.onWire(conn(INTRUDER), {
+      type: "chat",
+      id: "x",
+      text: "oi",
+      fromPeerId: INTRUDER,
+      fromName: "Intruso",
+      at: 1700000000000,
+    });
+    expect(core.state.messages).toHaveLength(0);
+  });
+});
+
+describe("recepção de arquivos", () => {
+  const fileStart = {
+    type: "file-start",
+    id: "f1",
+    name: "foto.png",
+    mime: "image/png",
+    size: 1024,
+    fromPeerId: HOST,
+    fromName: "Host",
+    at: 1700000000000,
+  };
+
+  it("recusa file-start de peer que não está na sala", () => {
+    asGuest();
+    core.onWire(conn(INTRUDER), fileStart);
+    expect(core.incomingFiles.size).toBe(0);
+    expect(core.state.messages).toHaveLength(0);
+  });
+
+  it("aceita file-start de quem está na sala", () => {
+    asGuest();
+    core.onWire(conn(HOST), fileStart);
+    expect(core.incomingFiles.size).toBe(1);
+    expect(core.state.messages.at(-1)?.file?.name).toBe("foto.png");
+  });
+
+  it("aplica cooldown para não permitir enxurrada de file-start", () => {
+    asGuest();
+    core.onWire(conn(HOST), fileStart);
+    for (let i = 0; i < 50; i += 1) {
+      core.onWire(conn(HOST), { ...fileStart, id: `f${i}` });
+    }
+    expect(core.incomingFiles.size).toBe(1);
+  });
+
+  it("não confia no id do remetente para identificar a mensagem", () => {
+    asGuest();
+    core.onWire(conn(HOST), fileStart);
+    expect(core.state.messages.at(-1)?.id).not.toBe("f1");
+  });
+});
+
+describe("eleição de host", () => {
+  it("é determinística e igual para todos os peers", () => {
+    const pool = [ZECA, ME, ANA];
+    expect(electHost(pool)).toBe(ANA);
+    expect(electHost(pool.toReversed())).toBe(ANA);
+  });
+
+  it("devolve nulo quando não sobra ninguém", () => {
+    expect(electHost([])).toBeNull();
+  });
+});
+
+describe("transferência explícita de host", () => {
+  it("aceita host-transfer do host e assume o papel", () => {
+    asGuest();
+    core.onWire(conn(HOST), { type: "host-transfer", hostPeerId: ME });
+    expect(core.state.isHost).toBe(true);
+    expect(core.state.hostPeerId).toBe(ME);
+  });
+
+  it("aponta para o novo host quando o escolhido é outra pessoa", () => {
+    asGuest();
+    core.onWire(conn(HOST), { type: "host-transfer", hostPeerId: ZECA });
+    expect(core.state.isHost).toBe(false);
+    expect(core.state.hostPeerId).toBe(ZECA);
+  });
+
+  it("ignora host-transfer de quem não é o host", () => {
+    asGuest();
+    core.onWire(conn(INTRUDER), { type: "host-transfer", hostPeerId: INTRUDER });
+    expect(core.state.hostPeerId).toBe(HOST);
+    expect(core.state.isHost).toBe(false);
+  });
+
+  it("deixa de confiar no peer discado depois de virar host", () => {
+    asGuest();
+    core.onWire(conn(HOST), { type: "host-transfer", hostPeerId: ME });
+    core.onWire(conn(HOST), { type: "room-ended" });
+    expect(core.state.callStatus).toBe("in-call");
+  });
+});
+
+describe("queda do host sem aviso", () => {
+  it("elege o menor peerId entre quem sobrou", () => {
+    asGuest();
+    core.roomMembers = [
+      { peerId: HOST, displayName: "Host" },
+      { peerId: ME, displayName: "Eu" },
+      { peerId: ZECA, displayName: "Zeca" },
+    ];
+    core.patch({ remotes: [remote(HOST, "Host"), remote(ZECA, "Zeca")] });
+    core.onPeerLeft(HOST);
+    expect(core.state.isHost).toBe(true);
+    expect(core.state.hostPeerId).toBe(ME);
+    expect(core.state.callStatus).toBe("in-call");
+  });
+
+  it("segue como convidado quando outro peer vence a eleição", () => {
+    asGuest();
+    core.roomMembers = [
+      { peerId: HOST, displayName: "Host" },
+      { peerId: ME, displayName: "Eu" },
+      { peerId: ANA, displayName: "Ana" },
+    ];
+    core.patch({ remotes: [remote(HOST, "Host"), remote(ANA, "Ana")] });
+    core.onPeerLeft(HOST);
+    expect(core.state.isHost).toBe(false);
+    expect(core.state.hostPeerId).toBe(ANA);
+    expect(core.state.callStatus).toBe("in-call");
+  });
+
+  it("encerra a chamada quando ninguém mais resta", () => {
+    asGuest();
+    core.patch({ remotes: [remote(HOST, "Host")] });
+    core.onPeerLeft(HOST);
+    expect(core.state.callStatus).toBe("idle");
+  });
+
+  it("não promove ninguém se a entrada ainda nem foi aprovada", () => {
+    asGuest();
+    core.patch({ callStatus: "waiting", remotes: [remote(HOST, "Host")] });
+    core.onPeerLeft(HOST);
+    expect(core.state.callStatus).toBe("idle");
+    expect(core.state.isHost).toBe(false);
+  });
+});
+
+describe("sala de espera", () => {
+  it("põe desconhecido na espera em vez de admitir direto", () => {
+    asHost();
+    const c = conn(ZECA);
+    core.data.set(ZECA, c);
+    core.onWire(c, hello(ZECA, "Zeca"));
+    expect(core.state.pending).toEqual([{ peerId: ZECA, displayName: "Zeca" }]);
+    expect(core.state.remotes).toHaveLength(0);
+    expect(core.roomMembers).toHaveLength(1);
+    expect(c.sent).toContainEqual({ type: "room-waiting" });
+  });
+
+  it("ignora o que a pessoa na espera manda antes da decisão", () => {
+    asHost();
+    const c = conn(ZECA);
+    core.data.set(ZECA, c);
+    core.onWire(c, hello(ZECA, "Zeca"));
+    core.onWire(c, {
+      type: "chat",
+      id: "x",
+      text: "deixa eu entrar",
+      fromPeerId: ZECA,
+      fromName: "Zeca",
+      at: 1700000000000,
+    });
+    expect(core.state.messages).toHaveLength(0);
+  });
+
+  it("admite quem o host aprova", () => {
+    asHost();
+    const c = conn(ZECA);
+    core.data.set(ZECA, c);
+    core.onWire(c, hello(ZECA, "Zeca"));
+    session.admitPeer(ZECA);
+    expect(core.state.pending).toHaveLength(0);
+    expect(core.roomMembers).toContainEqual({
+      peerId: ZECA,
+      displayName: "Zeca",
+    });
+    expect(core.state.remotes.map((r) => r.peerId)).toContain(ZECA);
+  });
+
+  it("recusado não consegue bater na porta de novo", () => {
+    asHost();
+    const c = conn(ZECA);
+    core.data.set(ZECA, c);
+    core.onWire(c, hello(ZECA, "Zeca"));
+    session.denyPeer(ZECA);
+    expect(core.state.pending).toHaveLength(0);
+    expect(c.sent).toContainEqual({ type: "room-denied" });
+
+    const retry = conn(ZECA);
+    core.data.set(ZECA, retry);
+    core.onWire(retry, hello(ZECA, "Zeca"));
+    expect(core.state.pending).toHaveLength(0);
+    expect(retry.sent).toContainEqual({ type: "room-denied" });
+  });
+
+  it("quem nós discamos entra sem passar pela porta", () => {
+    asHost();
+    core.dialedPeerId = ZECA;
+    const c = conn(ZECA);
+    core.data.set(ZECA, c);
+    core.onWire(c, hello(ZECA, "Zeca"));
+    expect(core.state.pending).toHaveLength(0);
+    expect(core.roomMembers.map((p) => p.peerId)).toContain(ZECA);
+  });
+
+  it("convidado marca espera ao receber room-waiting do host", () => {
+    core.patch({
+      identity: { peerId: ME, displayName: "Eu" },
+      callStatus: "connecting",
+      view: "call",
+      isHost: false,
+      hostPeerId: HOST,
+    });
+    core.dialedPeerId = HOST;
+    core.onWire(conn(HOST), { type: "room-waiting" });
+    expect(core.state.callStatus).toBe("waiting");
+  });
+
+  it("convidado sai da chamada quando o host recusa", () => {
+    core.patch({
+      identity: { peerId: ME, displayName: "Eu" },
+      callStatus: "waiting",
+      view: "call",
+      isHost: false,
+      hostPeerId: HOST,
+    });
+    core.dialedPeerId = HOST;
+    core.onWire(conn(HOST), { type: "room-denied" });
+    expect(core.state.callStatus).toBe("idle");
+  });
+});
+
+describe("remoção de participante", () => {
+  it("host remove, bane e derruba a pessoa da lista", () => {
+    asHost();
+    core.roomMembers = [
+      { peerId: ME, displayName: "Eu" },
+      { peerId: ZECA, displayName: "Zeca" },
+    ];
+    const c = conn(ZECA);
+    core.data.set(ZECA, c);
+    core.patch({ remotes: [remote(ZECA, "Zeca")] });
+    session.kickPeer(ZECA);
+    expect(c.sent).toContainEqual({ type: "room-kicked" });
+    expect(core.roomMembers.map((p) => p.peerId)).not.toContain(ZECA);
+    expect(core.banned.has(ZECA)).toBe(true);
+  });
+
+  it("convidado não consegue remover ninguém", () => {
+    asGuest();
+    core.patch({ remotes: [remote(ZECA, "Zeca")] });
+    session.kickPeer(ZECA);
+    expect(core.banned.has(ZECA)).toBe(false);
+    expect(core.state.remotes).toHaveLength(1);
+  });
+
+  it("o removido encerra a chamada ao receber o aviso do host", () => {
+    asGuest();
+    core.onWire(conn(HOST), { type: "room-kicked" });
+    expect(core.state.callStatus).toBe("idle");
+  });
+
+  it("ignora room-kicked de quem não é o host", () => {
+    asGuest();
+    core.onWire(conn(INTRUDER), { type: "room-kicked" });
+    expect(core.state.callStatus).toBe("in-call");
+  });
+});

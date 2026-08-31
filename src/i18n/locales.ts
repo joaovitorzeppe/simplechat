@@ -28,7 +28,7 @@ export const pt = {
   "home.yourKey": "Sua chave",
   "home.inviteLink": "Link da sua chamada",
   "home.inviteBody":
-    "Inicie uma chamada e compartilhe o link. Você é o host: se sair, a chamada acaba para todos. Quem entra só sai da sala.",
+    "Inicie uma chamada e compartilhe o link. Você é o host: aprova quem entra, pode remover alguém e, ao sair, escolhe entre passar o host adiante ou encerrar para todos.",
   "home.startCall": "Iniciar chamada",
   "home.joinTitle": "Entrar ou ligar",
   "home.joinBody":
@@ -61,6 +61,20 @@ export const pt = {
   "call.shareScreen": "Compartilhar tela",
   "call.chat": "Chat",
   "call.pinScreen": "Centralizar esta tela",
+  "call.waiting": "Esperando o host aprovar sua entrada…",
+  "call.remove": "Remover da chamada",
+
+  "lobby.title": "Querem entrar",
+  "lobby.body": "Só entra quem você aprovar.",
+  "lobby.admit": "Aceitar",
+  "lobby.deny": "Recusar",
+
+  "hostLeave.title": "Você é o host desta chamada",
+  "hostLeave.body":
+    "Se encerrar, a chamada acaba para todos. Se preferir, passe o host para outra pessoa e a sala continua sem você.",
+  "hostLeave.transfer": "Passar o host e sair",
+  "hostLeave.end": "Encerrar para todos",
+  "hostLeave.cancel": "Continuar na chamada",
 
   "chat.title": "Chat",
   "chat.close": "Fechar chat",
@@ -91,6 +105,12 @@ export const pt = {
   "error.unavailableId":
     "Esta chave ainda está ocupada no broker. Recarregue em alguns segundos.",
   "error.peerjs": "Falha no PeerJS",
+  "error.crashTitle": "Algo quebrou por aqui",
+  "error.crashBody":
+    "A tela travou por um erro inesperado. Recarregar costuma resolver; sua chamada precisará ser refeita.",
+  "error.crashReload": "Recarregar",
+  "error.insecureContext":
+    "Abra por HTTPS ou localhost. Câmera e microfone não funcionam nesta origem.",
   "toast.peerUnavailable": "Pessoa não encontrada. Confira a chave.",
   "toast.mediaCall": "Permita câmera e microfone para ligar.",
   "toast.mediaRoom": "Permita câmera e microfone para criar a sala.",
@@ -106,6 +126,18 @@ export const pt = {
   "toast.fileTooBigPro": "Arquivo acima de 100 MB (plano Pro).",
   "toast.fileFailed": "Não foi possível enviar ou receber o arquivo.",
   "toast.fileBusy": "Espere o arquivo atual terminar de enviar.",
+  "toast.knock": "{name} quer entrar na chamada.",
+  "toast.joinDenied": "O host não aprovou sua entrada.",
+  "toast.kicked": "O host removeu você da chamada.",
+  "toast.removed": "{name} foi removido da chamada.",
+  "toast.hostHandedOver": "Você passou o host para {name}.",
+  "toast.hostLeftYouHost": "O host saiu. Agora você conduz a chamada.",
+  "toast.hostLeftNewHost": "O host saiu. Agora {name} conduz a chamada.",
+  "toast.hostDroppedYouHost":
+    "A conexão do host caiu. Agora você conduz a chamada.",
+  "toast.hostDroppedNewHost":
+    "A conexão do host caiu. Agora {name} conduz a chamada.",
+  "toast.hostDroppedAlone": "A conexão do host caiu e a chamada acabou.",
 } as const;
 
 export type MessageKey = keyof typeof pt;
@@ -140,7 +172,7 @@ export const en: Messages = {
   "home.yourKey": "Your key",
   "home.inviteLink": "Your call link",
   "home.inviteBody":
-    "Start a call and share the link. You are the host: if you leave, the call ends for everyone. Anyone else who hangs up just leaves the room.",
+    "Start a call and share the link. You are the host: you approve who joins, you can remove someone, and when you leave you choose between handing the host over or ending it for everyone.",
   "home.startCall": "Start call",
   "home.joinTitle": "Join or call",
   "home.joinBody":
@@ -172,6 +204,20 @@ export const en: Messages = {
   "call.shareScreen": "Share screen",
   "call.chat": "Chat",
   "call.pinScreen": "Focus this screen",
+  "call.waiting": "Waiting for the host to let you in…",
+  "call.remove": "Remove from call",
+
+  "lobby.title": "Waiting to join",
+  "lobby.body": "Only people you approve get in.",
+  "lobby.admit": "Admit",
+  "lobby.deny": "Decline",
+
+  "hostLeave.title": "You are the host of this call",
+  "hostLeave.body":
+    "Ending it closes the call for everyone. You can also hand the host over to someone else and the room keeps going without you.",
+  "hostLeave.transfer": "Hand over host and leave",
+  "hostLeave.end": "End for everyone",
+  "hostLeave.cancel": "Stay in the call",
 
   "chat.title": "Chat",
   "chat.close": "Close chat",
@@ -202,6 +248,12 @@ export const en: Messages = {
   "error.unavailableId":
     "This key is still taken on the broker. Reload in a few seconds.",
   "error.peerjs": "PeerJS failed",
+  "error.crashTitle": "Something broke here",
+  "error.crashBody":
+    "The screen crashed on an unexpected error. Reloading usually fixes it; you will need to start your call again.",
+  "error.crashReload": "Reload",
+  "error.insecureContext":
+    "Open this over HTTPS or localhost. Camera and microphone will not work on this origin.",
   "toast.peerUnavailable": "Person not found. Check the key.",
   "toast.mediaCall": "Allow camera and microphone to call.",
   "toast.mediaRoom": "Allow camera and microphone to create a room.",
@@ -217,6 +269,18 @@ export const en: Messages = {
   "toast.fileTooBigPro": "File is over 100 MB (Pro plan).",
   "toast.fileFailed": "Could not send or receive the file.",
   "toast.fileBusy": "Wait for the current file to finish sending.",
+  "toast.knock": "{name} wants to join the call.",
+  "toast.joinDenied": "The host did not let you in.",
+  "toast.kicked": "The host removed you from the call.",
+  "toast.removed": "{name} was removed from the call.",
+  "toast.hostHandedOver": "You handed the host over to {name}.",
+  "toast.hostLeftYouHost": "The host left. You are running the call now.",
+  "toast.hostLeftNewHost": "The host left. {name} is running the call now.",
+  "toast.hostDroppedYouHost":
+    "The host lost connection. You are running the call now.",
+  "toast.hostDroppedNewHost":
+    "The host lost connection. {name} is running the call now.",
+  "toast.hostDroppedAlone": "The host lost connection and the call ended.",
 };
 
 export const es: Messages = {
@@ -249,7 +313,7 @@ export const es: Messages = {
   "home.yourKey": "Tu clave",
   "home.inviteLink": "Enlace de tu llamada",
   "home.inviteBody":
-    "Inicia una llamada y comparte el enlace. Eres el anfitrión: si sales, la llamada termina para todos. Quien entra solo sale de la sala.",
+    "Inicia una llamada y comparte el enlace. Eres el anfitrión: apruebas quién entra, puedes quitar a alguien y, al salir, eliges entre pasar el anfitrión o terminar para todos.",
   "home.startCall": "Iniciar llamada",
   "home.joinTitle": "Entrar o llamar",
   "home.joinBody":
@@ -281,6 +345,20 @@ export const es: Messages = {
   "call.shareScreen": "Compartir pantalla",
   "call.chat": "Chat",
   "call.pinScreen": "Centrar esta pantalla",
+  "call.waiting": "Esperando que el anfitrión te deje entrar…",
+  "call.remove": "Quitar de la llamada",
+
+  "lobby.title": "Quieren entrar",
+  "lobby.body": "Solo entra quien tú apruebes.",
+  "lobby.admit": "Aceptar",
+  "lobby.deny": "Rechazar",
+
+  "hostLeave.title": "Eres el anfitrión de esta llamada",
+  "hostLeave.body":
+    "Si la terminas, se acaba para todos. También puedes pasar el rol de anfitrión a otra persona y la sala sigue sin ti.",
+  "hostLeave.transfer": "Pasar el anfitrión y salir",
+  "hostLeave.end": "Terminar para todos",
+  "hostLeave.cancel": "Seguir en la llamada",
 
   "chat.title": "Chat",
   "chat.close": "Cerrar chat",
@@ -311,6 +389,12 @@ export const es: Messages = {
   "error.unavailableId":
     "Esta clave sigue ocupada en el broker. Recarga en unos segundos.",
   "error.peerjs": "Fallo de PeerJS",
+  "error.crashTitle": "Algo se rompió por aquí",
+  "error.crashBody":
+    "La pantalla falló por un error inesperado. Recargar suele resolverlo; tendrás que rehacer tu llamada.",
+  "error.crashReload": "Recargar",
+  "error.insecureContext":
+    "Abre por HTTPS o localhost. La cámara y el micrófono no funcionan en este origen.",
   "toast.peerUnavailable": "Persona no encontrada. Revisa la clave.",
   "toast.mediaCall": "Permite la cámara y el micrófono para llamar.",
   "toast.mediaRoom": "Permite la cámara y el micrófono para crear la sala.",
@@ -326,6 +410,18 @@ export const es: Messages = {
   "toast.fileTooBigPro": "Archivo por encima de 100 MB (plan Pro).",
   "toast.fileFailed": "No se pudo enviar o recibir el archivo.",
   "toast.fileBusy": "Espera a que termine el envío actual.",
+  "toast.knock": "{name} quiere entrar a la llamada.",
+  "toast.joinDenied": "El anfitrión no aprobó tu entrada.",
+  "toast.kicked": "El anfitrión te quitó de la llamada.",
+  "toast.removed": "{name} fue quitado de la llamada.",
+  "toast.hostHandedOver": "Pasaste el anfitrión a {name}.",
+  "toast.hostLeftYouHost": "El anfitrión salió. Ahora tú diriges la llamada.",
+  "toast.hostLeftNewHost": "El anfitrión salió. Ahora {name} dirige la llamada.",
+  "toast.hostDroppedYouHost":
+    "El anfitrión perdió la conexión. Ahora tú diriges la llamada.",
+  "toast.hostDroppedNewHost":
+    "El anfitrión perdió la conexión. Ahora {name} dirige la llamada.",
+  "toast.hostDroppedAlone": "El anfitrión perdió la conexión y la llamada terminó.",
 };
 
 export const dictionaries: Record<"pt" | "en" | "es", Messages> = {

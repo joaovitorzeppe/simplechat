@@ -1,5 +1,5 @@
-import { useEffect } from "react";
 import { useI18n } from "../i18n/use-i18n";
+import { useDialogFocus } from "../lib/use-dialog-focus";
 import { Button } from "./Button";
 
 type Props = {
@@ -10,14 +10,7 @@ type Props = {
 
 export const LinkWarning = ({ href, onCancel, onOpen }: Props) => {
   const { t } = useI18n();
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onCancel();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel]);
+  const dialogRef = useDialogFocus<HTMLDivElement>(onCancel);
 
   return (
     <div
@@ -25,6 +18,7 @@ export const LinkWarning = ({ href, onCancel, onOpen }: Props) => {
       onClick={onCancel}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="link-warning-title"
