@@ -67,6 +67,12 @@ export const pt = {
   "chat.empty": "Mensagens desta chamada. Somem quando ela termina.",
   "chat.placeholder": "Escreva uma mensagem",
   "chat.send": "Enviar",
+  "chat.linkWarningKicker": "Link externo",
+  "chat.linkWarningTitle": "Este link pode ser perigoso",
+  "chat.linkWarningBody":
+    "Ele pode levar a um site falso ou malicioso. Confira o endereço antes de abrir.",
+  "chat.linkCancel": "Cancelar",
+  "chat.linkOpen": "Abrir mesmo assim",
 
   "incoming.title": "Chamada recebida",
   "incoming.body": "Áudio, vídeo e chat P2P.",
@@ -162,6 +168,12 @@ export const en: Messages = {
   "chat.empty": "Messages from this call. They disappear when it ends.",
   "chat.placeholder": "Write a message",
   "chat.send": "Send",
+  "chat.linkWarningKicker": "External link",
+  "chat.linkWarningTitle": "This link may be unsafe",
+  "chat.linkWarningBody":
+    "It could send you to a fake or malicious site. Check the address before opening.",
+  "chat.linkCancel": "Cancel",
+  "chat.linkOpen": "Open anyway",
 
   "incoming.title": "Incoming call",
   "incoming.body": "Audio, video and P2P chat.",
@@ -255,6 +267,12 @@ export const es: Messages = {
   "chat.empty": "Mensajes de esta llamada. Desaparecen al terminar.",
   "chat.placeholder": "Escribe un mensaje",
   "chat.send": "Enviar",
+  "chat.linkWarningKicker": "Enlace externo",
+  "chat.linkWarningTitle": "Este enlace puede ser peligroso",
+  "chat.linkWarningBody":
+    "Puede llevar a un sitio falso o malicioso. Revisa la dirección antes de abrir.",
+  "chat.linkCancel": "Cancelar",
+  "chat.linkOpen": "Abrir de todos modos",
 
   "incoming.title": "Llamada entrante",
   "incoming.body": "Audio, vídeo y chat P2P.",

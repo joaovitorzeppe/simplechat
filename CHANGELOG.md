@@ -10,6 +10,10 @@ O formato segue a ideia de [Keep a Changelog](https://keepachangelog.com/pt-BR/1
 
 - Histórico local: tela, Dexie/IndexedDB, opt-in no onboarding e gravação de chamadas/mensagens. O chat continua só enquanto a chamada está aberta.
 
+### Adicionado
+
+- Links no chat viram texto clicável. Antes de abrir, um aviso mostra o endereço com Cancelar ou Abrir em nova aba.
+
 ## [2026-08-31]
 
 Tudo abaixo entrou no mesmo dia, do MVP até a chamada unificada.
