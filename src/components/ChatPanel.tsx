@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useI18n } from "../i18n/use-i18n";
 import type { ChatMessage } from "../lib/types";
 import { Button } from "./Button";
+import { ChatMessages } from "./ChatMessages";
 
 type Props = {
   messages: ChatMessage[];
@@ -28,25 +29,7 @@ export function ChatPanel({ messages, selfId, onSend }: Props) {
         {messages.length === 0 && (
           <p className="text-zinc-500">{t("chat.empty")}</p>
         )}
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={msg.fromPeerId === selfId ? "text-right" : ""}
-          >
-            <div className="text-[11px] text-zinc-500 mb-0.5">
-              {msg.fromName}
-            </div>
-            <div
-              className={
-                msg.fromPeerId === selfId
-                  ? "inline-block rounded-2xl rounded-tr-sm bg-accent/15 px-3 py-2"
-                  : "inline-block rounded-2xl rounded-tl-sm bg-zinc-800 px-3 py-2"
-              }
-            >
-              {msg.text}
-            </div>
-          </div>
-        ))}
+        <ChatMessages messages={messages} selfId={selfId} />
       </div>
       <form onSubmit={submit} className="flex gap-2 border-t border-line p-3">
         <input

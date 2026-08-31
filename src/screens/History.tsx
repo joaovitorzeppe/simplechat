@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "../components/Button";
+import { ChatMessages } from "../components/ChatMessages";
 import { ArrowLeftIcon } from "../components/Icons";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { localeTags } from "../i18n/i18n";
@@ -116,16 +117,14 @@ export function History() {
                 </p>
               </button>
               {openId === call.id && (
-                <div className="mt-3 space-y-2 border-t border-line pt-3 text-sm">
+                <div className="mt-3 space-y-3 border-t border-line pt-3 text-sm">
                   {messages.length === 0 && (
                     <p className="text-zinc-500">{t("history.noMessages")}</p>
                   )}
-                  {messages.map((msg) => (
-                    <p key={msg.id}>
-                      <span className="text-zinc-500">{msg.fromName}: </span>
-                      {msg.text}
-                    </p>
-                  ))}
+                  <ChatMessages
+                    messages={messages}
+                    selfId={loadIdentity()?.peerId ?? ""}
+                  />
                 </div>
               )}
             </li>
