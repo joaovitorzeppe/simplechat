@@ -53,6 +53,7 @@ export const VideoTile = ({
         className={cn(
           "h-full w-full",
           sharingScreen ? "object-contain bg-black" : "object-cover",
+          local && !sharingScreen && "-scale-x-100",
           blank && "opacity-0",
         )}
       />
