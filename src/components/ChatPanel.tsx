@@ -1,14 +1,36 @@
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type SubmitEvent,
+} from "react";
 import { useI18n } from "../i18n/use-i18n";
+import {
+  ALL_MENTION,
+  filterMentionPeople,
+  insertMention,
+  matchAllOption,
+  mentionQueryAt,
+  type MentionPerson,
+} from "../lib/mentions";
 import type { ChatMessage } from "../lib/types";
 import { MAX_CHAT_TEXT } from "../lib/wire-guard";
 import { Button } from "./Button";
 import { ChatMessages } from "./ChatMessages";
 import { CloseIcon, PaperclipIcon } from "./Icons";
+import { MentionPicker } from "./MentionPicker";
+
+type PickerItem =
+  | { kind: "all"; label: string }
+  | { kind: "peer"; person: MentionPerson };
 
 type Props = {
   messages: ChatMessage[];
   selfId: string;
+  people: MentionPerson[];
   onSend: (text: string) => void;
   onSendFile: (file: File) => void;
   onClose: () => void;
@@ -17,18 +39,41 @@ type Props = {
 export const ChatPanel = ({
   messages,
   selfId,
+  people,
   onSend,
   onSendFile,
   onClose,
 }: Props) => {
   const { t } = useI18n();
   const [text, setText] = useState("");
+  const [caret, setCaret] = useState(0);
+  const [active, setActive] = useState(0);
+  const [dismissedAt, setDismissedAt] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const pinnedToBottom = useRef(true);
 
-  // Só acompanha o fim da conversa se o usuário já estiver lá. Quem rolou para
-  // cima para reler algo não é arrastado de volta a cada mensagem nova.
+  const query = mentionQueryAt(text, caret);
+  const others = useMemo(
+    () => people.filter((person) => person.peerId !== selfId),
+    [people, selfId],
+  );
+  const filtered = useMemo(
+    () => (query ? filterMentionPeople(people, query.query, selfId) : []),
+    [people, query, selfId],
+  );
+  const showAll = Boolean(
+    query && matchAllOption(query.query, others.length > 0),
+  );
+  const items: PickerItem[] = useMemo(() => {
+    if (!query) return [];
+    const next: PickerItem[] = [];
+    if (showAll) next.push({ kind: "all", label: ALL_MENTION });
+    for (const person of filtered) next.push({ kind: "peer", person });
+    return next;
+  }, [filtered, query, showAll]);
+
   useEffect(() => {
     const list = listRef.current;
     if (!list) return;
@@ -44,16 +89,57 @@ export const ChatPanel = ({
     const list = listRef.current;
     if (!list || !pinnedToBottom.current) return;
     list.scrollTop = list.scrollHeight;
-    // A contagem é gatilho, não insumo: o efeito roda quando chega mensagem.
     // oxlint-disable-next-line exhaustive-effect-dependencies
   }, [messages.length]);
 
-  const submit = (event: FormEvent) => {
+  const applyMention = (item: PickerItem) => {
+    const label = item.kind === "all" ? ALL_MENTION : item.person.displayName;
+    const next = insertMention(text, caret, label);
+    setText(next.text);
+    setCaret(next.caret);
+    requestAnimationFrame(() => {
+      const input = inputRef.current;
+      if (!input) return;
+      input.focus();
+      input.setSelectionRange(next.caret, next.caret);
+    });
+  };
+
+  const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     pinnedToBottom.current = true;
     onSend(text);
     setText("");
+    setCaret(0);
+    setDismissedAt(null);
   };
+
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (!items.length) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActive((index) => (index + 1) % items.length);
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActive((index) => (index - 1 + items.length) % items.length);
+      return;
+    }
+    if (event.key === "Enter" || event.key === "Tab") {
+      event.preventDefault();
+      const item = items[active] ?? items[0];
+      if (item) applyMention(item);
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setDismissedAt(query?.start ?? null);
+    }
+  };
+
+  const pickerOpen =
+    items.length > 0 && query !== null && dismissedAt !== query.start;
 
   return (
     <aside className="flex h-full w-full max-w-sm flex-col border-l border-line bg-panel">
@@ -75,9 +161,12 @@ export const ChatPanel = ({
         {messages.length === 0 && (
           <p className="text-zinc-500">{t("chat.empty")}</p>
         )}
-        <ChatMessages messages={messages} selfId={selfId} />
+        <ChatMessages messages={messages} selfId={selfId} people={people} />
       </div>
-      <form onSubmit={submit} className="flex gap-2 border-t border-line p-3">
+      <form
+        onSubmit={submit}
+        className="relative flex gap-2 border-t border-line p-3"
+      >
         <input
           ref={fileRef}
           type="file"
@@ -96,14 +185,38 @@ export const ChatPanel = ({
         >
           <PaperclipIcon />
         </Button>
-        <input
-          value={text}
-          maxLength={MAX_CHAT_TEXT}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={t("chat.placeholder")}
-          aria-label={t("chat.placeholder")}
-          className="flex-1 rounded-xl bg-zinc-900 border border-line px-3 py-2 text-sm outline-none focus:border-accent"
-        />
+        <div className="relative min-w-0 flex-1">
+          {pickerOpen && (
+            <MentionPicker
+              items={items}
+              active={Math.min(active, items.length - 1)}
+              label={t("chat.mentionPicker")}
+              allLabel={t("chat.mentionAll")}
+              onPick={applyMention}
+              onActive={setActive}
+            />
+          )}
+          <input
+            ref={inputRef}
+            value={text}
+            maxLength={MAX_CHAT_TEXT}
+            onChange={(e) => {
+              setText(e.target.value);
+              setCaret(e.target.selectionStart ?? e.target.value.length);
+              setActive(0);
+            }}
+            onKeyUp={(e) => setCaret(e.currentTarget.selectionStart ?? caret)}
+            onClick={(e) =>
+              setCaret(e.currentTarget.selectionStart ?? text.length)
+            }
+            onKeyDown={onKeyDown}
+            placeholder={t("chat.placeholder")}
+            aria-label={t("chat.placeholder")}
+            aria-autocomplete="list"
+            aria-expanded={pickerOpen}
+            className="w-full rounded-xl bg-zinc-900 border border-line px-3 py-2 text-sm outline-none focus:border-accent"
+          />
+        </div>
         <Button type="submit" disabled={!text.trim()}>
           {t("chat.send")}
         </Button>

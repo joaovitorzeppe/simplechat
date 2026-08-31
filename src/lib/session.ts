@@ -15,6 +15,7 @@ import { t } from "../i18n/i18n";
 import { playCallEnded } from "./sounds";
 import { showToast } from "./toast";
 import { safeFileName } from "./chat";
+import { ALL_MENTION, isPinged, resolveMentions } from "./mentions";
 import { FILE_CHUNK } from "./file-assembly";
 import {
   clearAllFileProgress,
@@ -508,12 +509,14 @@ export class PeerSession {
     const trimmed = clampChatText(text.trim());
     const me = this.state.identity;
     if (!trimmed || !me || !this.inRoom()) return;
+    const mentions = resolveMentions(trimmed, this.roomMembers);
     const message: ChatMessage = {
       id: crypto.randomUUID(),
       fromPeerId: me.peerId,
       fromName: me.displayName,
       text: trimmed,
       at: Date.now(),
+      ...(mentions.length ? { mentions } : {}),
     };
     this.appendMessage(message);
     this.broadcast({ type: "chat", ...message });
@@ -1076,13 +1079,28 @@ export class PeerSession {
 
     if (msg.type === "chat") {
       if (!this.inRoom()) return;
+      const mentions = (msg.mentions ?? []).filter(
+        (id) =>
+          id === ALL_MENTION ||
+          this.roomMembers.some((member) => member.peerId === id),
+      );
       this.appendMessage({
         id: crypto.randomUUID(),
         fromPeerId: from,
         fromName: this.names.get(from) ?? t("common.someone"),
         text: msg.text,
         at: Date.now(),
+        ...(mentions.length ? { mentions } : {}),
       });
+      const me = this.state.identity?.peerId;
+      if (me && isPinged(mentions, me, from)) {
+        showToast(
+          mentions.includes(ALL_MENTION)
+            ? "toast.mentionedAll"
+            : "toast.mentioned",
+          { name: this.names.get(from) ?? t("common.someone") },
+        );
+      }
       return;
     }
 

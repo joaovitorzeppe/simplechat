@@ -59,6 +59,15 @@ describe("parseWire", () => {
     expect(parseWire(chat())).toEqual(chat());
   });
 
+  it("aceita menções válidas e rejeita o resto", () => {
+    expect(
+      parseWire(chat({ mentions: ["all", "peer-1"] })),
+    ).toEqual(chat({ mentions: ["all", "peer-1"] }));
+    expect(parseWire(chat({ mentions: [] }))).toEqual(chat());
+    expect(parseWire(chat({ mentions: ["all", 1] }))).toBeNull();
+    expect(parseWire(chat({ mentions: "all" }))).toBeNull();
+  });
+
   it("rejeita chat com texto que não é string", () => {
     expect(parseWire(chat({ text: { toString: 1 } }))).toBeNull();
     expect(parseWire(chat({ text: 123 }))).toBeNull();

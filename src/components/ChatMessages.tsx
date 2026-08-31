@@ -7,6 +7,7 @@ import {
   isPreviewableImage,
   splitMessageText,
 } from "../lib/chat";
+import { isPinged, mentionMarks, type MentionPerson } from "../lib/mentions";
 import type { ChatFile, ChatMessage } from "../lib/types";
 import { useFileProgress } from "../lib/file-progress";
 import { cn } from "../lib/cn";
@@ -17,25 +18,44 @@ import { LinkWarning } from "./LinkWarning";
 type Props = {
   messages: ChatMessage[];
   selfId: string;
+  people: MentionPerson[];
 };
 
 const MessageBody = ({
   text,
+  marks,
   onOpenLink,
 }: {
   text: string;
+  marks: ReturnType<typeof mentionMarks>;
   onOpenLink: (href: string) => void;
 }) => {
-  const parts = splitMessageText(text);
+  const parts = splitMessageText(text, marks);
   return (
     <span className="whitespace-pre-wrap wrap-break-word">
       {/* Os trechos são posicionais e imutáveis: derivam de um texto fixo e
           nunca são reordenados, então o índice é a chave certa. */}
       {/* oxlint-disable no-array-index-key */}
-      {parts.map((part, index) =>
-        part.type === "text" ? (
-          <span key={index}>{part.value}</span>
-        ) : (
+      {parts.map((part, index) => {
+        if (part.type === "text") {
+          return <span key={index}>{part.value}</span>;
+        }
+        if (part.type === "mention") {
+          return (
+            <span
+              key={index}
+              className={cn(
+                "rounded-md px-1 py-0.5 font-medium",
+                part.mine
+                  ? "bg-amber-400/25 text-amber-100"
+                  : "bg-accent/20 text-accent",
+              )}
+            >
+              @{part.label}
+            </span>
+          );
+        }
+        return (
           <button
             key={index}
             type="button"
@@ -44,8 +64,8 @@ const MessageBody = ({
           >
             {part.label}
           </button>
-        ),
-      )}
+        );
+      })}
       {/* oxlint-enable no-array-index-key */}
     </span>
   );
@@ -114,7 +134,7 @@ const FileCard = ({ file }: { file: ChatFile }) => {
   );
 };
 
-export const ChatMessages = ({ messages, selfId }: Props) => {
+export const ChatMessages = ({ messages, selfId, people }: Props) => {
   const { locale, t } = useI18n();
   const groups = useMemo(() => groupChatMessages(messages), [messages]);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -153,21 +173,32 @@ export const ChatMessages = ({ messages, selfId }: Props) => {
                 {formatMessageTime(group.at, locale)}
               </span>
             </div>
-            {group.messages.map((msg) => (
-              <div key={msg.id} className={cn(mine && "flex justify-end")}>
-                <div
-                  className={cn(
-                    "inline-block max-w-[90%] rounded-2xl px-3 py-2",
-                    mine ? "bg-accent/15" : "bg-zinc-800",
-                  )}
-                >
-                  {msg.file && <FileCard file={msg.file} />}
-                  {msg.text ? (
-                    <MessageBody text={msg.text} onOpenLink={setPendingHref} />
-                  ) : null}
+            {group.messages.map((msg) => {
+              const pinged = isPinged(msg.mentions, selfId, msg.fromPeerId);
+              return (
+                <div key={msg.id} className={cn(mine && "flex justify-end")}>
+                  <div
+                    className={cn(
+                      "inline-block max-w-[90%] rounded-2xl px-3 py-2",
+                      pinged
+                        ? "bg-amber-400/20 ring-1 ring-amber-300/60"
+                        : mine
+                          ? "bg-accent/15"
+                          : "bg-zinc-800",
+                    )}
+                  >
+                    {msg.file && <FileCard file={msg.file} />}
+                    {msg.text ? (
+                      <MessageBody
+                        text={msg.text}
+                        marks={mentionMarks(msg.mentions, people, selfId)}
+                        onOpenLink={setPendingHref}
+                      />
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         );
       })}

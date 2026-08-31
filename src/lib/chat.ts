@@ -1,4 +1,5 @@
 import { localeTags, type Locale } from "../i18n/i18n";
+import type { MentionMark } from "./mentions";
 import { truncateText } from "./text";
 import type { ChatMessage } from "./types";
 
@@ -81,7 +82,8 @@ export const formatMessageTime = (
 
 export type MessagePart =
   | { type: "text"; value: string }
-  | { type: "link"; href: string; label: string };
+  | { type: "link"; href: string; label: string }
+  | { type: "mention"; label: string; mine: boolean };
 
 const LINK_RE = /\b(?:https?:\/\/|www\.)[^\s<>"]+/gi;
 
@@ -118,7 +120,7 @@ export const hrefForLabel = (label: string) => {
   }
 };
 
-export const splitMessageText = (text: string): MessagePart[] => {
+const splitLinks = (text: string): MessagePart[] => {
   const parts: MessagePart[] = [];
   let last = 0;
   for (const match of text.matchAll(LINK_RE)) {
@@ -139,6 +141,67 @@ export const splitMessageText = (text: string): MessagePart[] => {
     parts.push({ type: "text", value: text.slice(last) });
   }
   return parts;
+};
+
+const splitMentions = (text: string, marks: MentionMark[]): MessagePart[] => {
+  if (!marks.length || !text) return text ? [{ type: "text", value: text }] : [];
+  const labels = [...marks].toSorted(
+    (a, b) => b.label.length - a.label.length,
+  );
+  const parts: MessagePart[] = [];
+  let cursor = 0;
+  while (cursor < text.length) {
+    let nextAt = -1;
+    let hit: MentionMark | null = null;
+    let hitLen = 0;
+    const slice = text.slice(cursor);
+    const local = slice.search(/(^|\s)@/);
+    if (local < 0) {
+      parts.push({ type: "text", value: text.slice(cursor) });
+      break;
+    }
+    const at = cursor + local + (slice[local] === "@" ? 0 : 1);
+    for (const mark of labels) {
+      const token = `@${mark.label}`;
+      if (text.startsWith(token, at)) {
+        const after = at + token.length;
+        const next = text[after];
+        if (next && !/[\s.,!?;:…]/.test(next)) continue;
+        if (token.length > hitLen) {
+          nextAt = at;
+          hit = mark;
+          hitLen = token.length;
+        }
+      }
+    }
+    if (!hit) {
+      const skip = at + 1;
+      if (skip <= cursor) {
+        parts.push({ type: "text", value: text.slice(cursor) });
+        break;
+      }
+      parts.push({ type: "text", value: text.slice(cursor, skip) });
+      cursor = skip;
+      continue;
+    }
+    if (nextAt > cursor) {
+      parts.push({ type: "text", value: text.slice(cursor, nextAt) });
+    }
+    parts.push({ type: "mention", label: hit.label, mine: hit.mine });
+    cursor = nextAt + hitLen;
+  }
+  return parts.filter((part) => part.type !== "text" || part.value);
+};
+
+export const splitMessageText = (
+  text: string,
+  marks: MentionMark[] = [],
+): MessagePart[] => {
+  const withLinks = splitLinks(text);
+  if (!marks.length) return withLinks;
+  return withLinks.flatMap((part) =>
+    part.type === "text" ? splitMentions(part.value, marks) : [part],
+  );
 };
 
 export const safeFileName = (name: string) => {

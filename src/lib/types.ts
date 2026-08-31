@@ -38,6 +38,8 @@ export type ChatMessage = {
   at: number;
   file?: ChatFile;
   system?: "left";
+  /** peerIds marcados, ou `"all"`. Ausente = ninguém. */
+  mentions?: string[];
 };
 
 export type IncomingInvite = {
@@ -67,6 +69,7 @@ export type WireMessage =
       fromName: string;
       text: string;
       at: number;
+      mentions?: string[];
     }
   | { type: "room-ended" }
   | { type: "room-full" }

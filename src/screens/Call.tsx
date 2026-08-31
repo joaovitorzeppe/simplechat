@@ -60,6 +60,13 @@ export const Call = () => {
   const roomId = state.hostPeerId ?? me?.peerId ?? "";
   const invite = roomId ? inviteLink(roomId, state.roomSecret) : "";
 
+  const people = useMemo(() => {
+    if (!me) return [];
+    return [
+      { peerId: me.peerId, displayName: me.displayName },
+      ...state.remotes,
+    ];
+  }, [me, state.remotes]);
   const successorId = electHost(state.remotes.map((remote) => remote.peerId));
   const successorName =
     state.remotes.find((remote) => remote.peerId === successorId)
@@ -114,9 +121,9 @@ export const Call = () => {
         stream={state.localStream}
         name={me?.displayName ?? t("common.you")}
         local
-          cameraOff={state.cameraOff}
-          className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
-        />
+        cameraOff={state.cameraOff}
+        className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
+      />
       {state.remotes.map((remote) => (
         <VideoTile
           key={remote.peerId}
@@ -248,7 +255,9 @@ export const Call = () => {
           <Button
             variant="icon"
             className={
-              unread > 0 && !chatOpen ? "relative border-accent text-accent" : "relative"
+              unread > 0 && !chatOpen
+                ? "relative border-accent text-accent"
+                : "relative"
             }
             onClick={() => setChat(!chatOpen)}
             title={
@@ -297,6 +306,7 @@ export const Call = () => {
           <ChatPanel
             messages={state.messages}
             selfId={me.peerId}
+            people={people}
             onSend={(text) => session.sendChat(text)}
             onSendFile={(file) => void session.sendFile(file)}
             onClose={() => setChat(false)}
@@ -316,6 +326,7 @@ export const Call = () => {
             <ChatPanel
               messages={state.messages}
               selfId={me.peerId}
+              people={people}
               onSend={(text) => session.sendChat(text)}
               onSendFile={(file) => void session.sendFile(file)}
               onClose={() => setChat(false)}

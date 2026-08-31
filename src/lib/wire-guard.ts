@@ -1,4 +1,5 @@
 import { MAX_FILE_BYTES, MAX_PARTICIPANTS } from "./quality";
+import { ALL_MENTION } from "./mentions";
 import { truncateText } from "./text";
 import type { PeerInfo, WireMessage } from "./types";
 
@@ -39,6 +40,30 @@ const int = (value: unknown, min: number, max: number): number | null => {
 const timestamp = (value: unknown): number | null => {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;
   return value >= 0 ? value : null;
+};
+
+const parseMentions = (value: unknown): string[] | null | false => {
+  if (value === undefined) return null;
+  if (!Array.isArray(value)) return false;
+  if (value.length === 0) return null;
+  if (value.length > MAX_PEERS) return false;
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of value) {
+    if (entry === ALL_MENTION) {
+      if (!seen.has(ALL_MENTION)) {
+        seen.add(ALL_MENTION);
+        out.push(ALL_MENTION);
+      }
+      continue;
+    }
+    const id = str(entry, MAX_PEER_ID);
+    if (!id) return false;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out.length > 0 ? out : null;
 };
 
 const peerInfo = (value: unknown): PeerInfo | null => {
@@ -105,8 +130,18 @@ export const parseWire = (raw: unknown): WireMessage | null => {
       const fromPeerId = str(raw.fromPeerId, MAX_PEER_ID);
       const fromName = str(raw.fromName, MAX_DISPLAY_NAME);
       const at = timestamp(raw.at);
+      const mentions = parseMentions(raw.mentions);
       if (!id || !text || !fromPeerId || !fromName || at === null) return null;
-      return { type: "chat", id, text, fromPeerId, fromName, at };
+      if (mentions === false) return null;
+      return {
+        type: "chat",
+        id,
+        text,
+        fromPeerId,
+        fromName,
+        at,
+        ...(mentions ? { mentions } : {}),
+      };
     }
 
     case "room-ended":

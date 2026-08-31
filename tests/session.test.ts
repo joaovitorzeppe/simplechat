@@ -174,6 +174,26 @@ describe("identidade das mensagens", () => {
     expect(message?.text).toBe("transfere o dinheiro");
   });
 
+  it("guarda menções e ignora ids que não estão na sala", () => {
+    asGuest();
+    core.names.set("bruno-1", "Bruno");
+    core.roomMembers = [
+      ...core.roomMembers,
+      { peerId: "bruno-1", displayName: "Bruno" },
+    ];
+    core.onWire(conn("bruno-1"), {
+      type: "chat",
+      id: "m1",
+      text: "oi @Eu",
+      fromPeerId: "bruno-1",
+      fromName: "Bruno",
+      at: 1700000000000,
+      mentions: ["me-1", "intruso-1", "all"],
+    });
+    const message = core.state.messages.at(-1);
+    expect(message?.mentions).toEqual(["me-1", "all"]);
+  });
+
   it("não deixa forjar mensagem como se fosse do próprio usuário", () => {
     asGuest();
     core.onWire(conn(INTRUDER), {
