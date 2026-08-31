@@ -18,7 +18,7 @@ Commits: `845b1ee`, `01ca868`, `a56b288`.
 - Host que sai escolhe passar o papel (`host-transfer`) ou encerrar para todos. Se o host some sem avisar, o menor `peerId` entre quem ficou assume; sobrando uma pessoa, a chamada acaba.
 - Ligar no link de uma chamada já aberta entra como convidado. Não rouba o host nem encerra a sala ao sair.
 
-### Chat, arquivos e recents
+### Chat, arquivos, menções e recents
 
 Commits: `872b2f8`, `395ac4c`, `2732ee2`, `1f4e155`.
 
@@ -27,6 +27,18 @@ Commits: `872b2f8`, `395ac4c`, `2732ee2`, `1f4e155`.
 - Leitura e montagem das fatias no worker (fallback na UI). Com OPFS, os bytes recebidos vão para o disco do origin durante a transferência.
 - Recentes na home: quem já esteve numa chamada com você, para Ligar de novo (não reabre a sala antiga).
 - Quando alguém sai, os outros veem toast e uma linha no chat com o nome.
+- Menções no chat: `@` depois de espaço abre o seletor (roster + `@all`). O fio leva `peerId` (ou `"all"`), não o nome. E-mails não disparam o picker. Quem foi marcado vê a bolha em destaque e um toast; quem enviou, não.
+
+### Silenciar áudio e vídeo
+
+- Qualquer participante pode desligar o áudio ou o vídeo de outra pessoa **só para si** (não vai para o fio). O host não é alvo: não há controle no tile dele, e `room-mute` apontando para o host é ignorado.
+- O host pode silenciar para si ou para a **sala inteira**. Mute de sala chega por `room-mute` (só o host) e no snapshot de `room-peers` para quem entra depois. Quem foi silenciado na sala não religa mic/câmera até o host liberar; os outros também não reativam para si.
+- Ao liberar, mic e câmera da pessoa **não voltam sozinhos** — ela religa se quiser.
+
+### Entrada sem câmera ou microfone
+
+- Criar sala, entrar, ligar ou atender não exige mais os dois dispositivos. A cascata tenta áudio+vídeo, depois só áudio, só vídeo, e por fim entra só ouvindo (chat + receber mídia dos outros).
+- Toast avisa o fallback. Religar microfone ou câmera na barra pede o dispositivo de novo. A chamada de mídia atende mesmo com stream vazio, para quem entrou sem tracks ainda receber áudio/vídeo.
 
 ### Segurança e texto
 
@@ -40,7 +52,7 @@ Commits: `01ca868`, `190e4ac`.
 
 - Lobby na chamada, Error Boundary, fontes Outfit e IBM Plex Mono (latino; o resto cai na fonte do sistema).
 - TURN opcional por `VITE_TURN_URL`, `VITE_TURN_USERNAME` e `VITE_TURN_CREDENTIAL`. Sem as três, segue só STUN.
-- Vitest (`npm test`); testes em `tests/` (wire, convite, identidade, arquivo, recents, chat, sessão, texto).
+- Vitest (`npm test`); testes em `tests/` (wire, convite, identidade, arquivo, recents, chat, menções, mute, mídia, sessão, texto).
 - Removido `@vercel/speed-insights`.
 
 ### Removido
