@@ -91,6 +91,15 @@ export const Home = () => {
     else void session.joinRoom(roomKey);
   };
 
+  const brokerHint = state.peerReady
+    ? null
+    : state.peerError
+      ? t(state.peerError)
+      : t("home.disabledConnecting");
+  const callDisabled = !state.peerReady || !peerKey.trim();
+  const roomDisabled = !state.peerReady || !roomKey.trim();
+  const createDisabled = !state.peerReady;
+
   return (
     <main className="min-h-dvh px-4 py-8">
       <div className="mx-auto max-w-3xl space-y-6">
@@ -161,7 +170,15 @@ export const Home = () => {
             />
             <Button
               className="w-full"
-              disabled={!state.peerReady || !peerKey.trim()}
+              disabled={callDisabled}
+              title={
+                callDisabled
+                  ? (brokerHint ??
+                    (peerKind === "room"
+                      ? t("home.disabledNeedRoom")
+                      : t("home.disabledNeedCall")))
+                  : undefined
+              }
               onClick={startFromCallField}
             >
               {peerKind === "room" ? t("home.joinRoom") : t("home.call")}
@@ -173,7 +190,8 @@ export const Home = () => {
             <p className="text-sm text-zinc-400">{t("home.roomBody")}</p>
             <Button
               className="w-full"
-              disabled={!state.peerReady}
+              disabled={createDisabled}
+              title={createDisabled ? (brokerHint ?? undefined) : undefined}
               onClick={() => void session.createRoom()}
             >
               {t("home.createRoom")}
@@ -188,7 +206,15 @@ export const Home = () => {
             <Button
               variant={roomKind === "call" ? "primary" : "secondary"}
               className="w-full"
-              disabled={!state.peerReady || !roomKey.trim()}
+              disabled={roomDisabled}
+              title={
+                roomDisabled
+                  ? (brokerHint ??
+                    (roomKind === "call"
+                      ? t("home.disabledNeedCall")
+                      : t("home.disabledNeedRoom")))
+                  : undefined
+              }
               onClick={startFromRoomField}
             >
               {roomKind === "call" ? t("home.call") : t("home.joinRoom")}

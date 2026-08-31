@@ -43,6 +43,10 @@ export const pt = {
   "home.roomLink": "Link da sua sala",
   "home.hostPlaceholder": "chave ou link (?room=)",
   "home.joinRoom": "Entrar em sala",
+  "home.disabledConnecting":
+    "Ainda conectando ao broker. Espere alguns segundos.",
+  "home.disabledNeedCall": "Cole a chave ou o link da pessoa.",
+  "home.disabledNeedRoom": "Cole a chave ou o link da sala.",
   "home.install": "Instalar app",
   "home.installIos":
     "No Safari: toque em Compartilhar e depois em Adicionar à Tela de Início.",
@@ -153,6 +157,10 @@ export const en: Messages = {
   "home.roomLink": "Your room link",
   "home.hostPlaceholder": "key or link (?room=)",
   "home.joinRoom": "Join room",
+  "home.disabledConnecting":
+    "Still connecting to the broker. Wait a few seconds.",
+  "home.disabledNeedCall": "Paste the person’s key or link.",
+  "home.disabledNeedRoom": "Paste the room key or link.",
   "home.install": "Install app",
   "home.installIos":
     "In Safari: tap Share, then Add to Home Screen.",
@@ -262,6 +270,10 @@ export const es: Messages = {
   "home.roomLink": "Enlace de tu sala",
   "home.hostPlaceholder": "clave o enlace (?room=)",
   "home.joinRoom": "Entrar a la sala",
+  "home.disabledConnecting":
+    "Aún conectando al broker. Espera unos segundos.",
+  "home.disabledNeedCall": "Pega la clave o el enlace de la persona.",
+  "home.disabledNeedRoom": "Pega la clave o el enlace de la sala.",
   "home.install": "Instalar app",
   "home.installIos":
     "En Safari: toca Compartir y luego Añadir a pantalla de inicio.",
