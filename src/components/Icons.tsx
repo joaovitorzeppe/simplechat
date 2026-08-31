@@ -104,15 +104,6 @@ export const CheckIcon = (props: IconProps) => {
   );
 }
 
-export const HistoryIcon = (props: IconProps) => {
-  return (
-    <svg {...base(props)}>
-      <circle cx="12" cy="12" r="8" />
-      <path d="M12 8v4l3 2" />
-    </svg>
-  );
-}
-
 export const ExpandIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>
@@ -120,14 +111,6 @@ export const ExpandIcon = (props: IconProps) => {
       <path d="M15 3h5v5" />
       <path d="M21 15v5h-5" />
       <path d="M3 15v5h5" />
-    </svg>
-  );
-}
-
-export const ArrowLeftIcon = (props: IconProps) => {
-  return (
-    <svg {...base(props)}>
-      <path d="M15 5 8 12l7 7" />
     </svg>
   );
 }

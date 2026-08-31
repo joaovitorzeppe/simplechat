@@ -4,6 +4,12 @@ Histórico do SimpleChat, agrupado a partir dos commits do git. O mais recente v
 
 O formato segue a ideia de [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [Não publicado]
+
+### Removido
+
+- Histórico local: tela, Dexie/IndexedDB, opt-in no onboarding e gravação de chamadas/mensagens. O chat continua só enquanto a chamada está aberta.
+
 ## [2026-08-31]
 
 Tudo abaixo entrou no mesmo dia, do MVP até a chamada unificada.
@@ -27,7 +33,7 @@ Commits: `5adfeab`, `0da6f4f`, `301199c`, `525ff4f`, `66c11df`, `2fa69fa`, `f842
 
 - PWA: manifest, ícones, service worker em produção, botão Instalar e dica no iOS.
 - Toasts independentes para eventos da chamada (pessoa não encontrada, sala cheia, host encerrou, etc.).
-- Chat com botão de fechar, badge de não lidas e mensagens agrupadas por remetente (também no histórico).
+- Chat com botão de fechar, badge de não lidas e mensagens agrupadas por remetente.
 - Prévia local da câmera espelhada; compartilhamento de tela não espelha.
 - Sons de toque e de chamada encerrada (com unlock na primeira interação).
 - Botões da home com estado desabilitado e tooltip (broker ainda conectando, falta chave).
@@ -38,7 +44,7 @@ Commits: `5adfeab`, `0da6f4f`, `301199c`, `525ff4f`, `66c11df`, `2fa69fa`, `f842
 Commits: `2db48ec`, `3ec626e`, `ab3249e`.
 
 - Português, inglês e espanhol, com seletor de idioma.
-- Identidade: `peerId` `{primeiroNome}-{uuid}-{timestamp}`. Opt-in separado para lembrar quem é e para gravar histórico.
+- Identidade: `peerId` `{primeiroNome}-{uuid}-{timestamp}`. Opt-in para lembrar quem é neste navegador.
 
 ### Infra
 
@@ -52,4 +58,4 @@ Commits: `cad373c`, `0d7e722`, `a7eac26`, `1729043`.
 
 Commit: `06b3e81`.
 
-- Onboarding com nome e chave, chamada P2P (áudio/vídeo + chat), compartilhamento de tela, mesh, histórico local com opt-in, tiers de qualidade e UI “Pro em breve”.
+- Onboarding com nome e chave, chamada P2P (áudio/vídeo + chat), compartilhamento de tela, mesh, tiers de qualidade e UI “Pro em breve”.

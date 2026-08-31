@@ -1,6 +1,6 @@
 export type QualityTier = "free" | "pro";
 export type CallMode = "direct" | "room";
-export type View = "home" | "call" | "history";
+export type View = "home" | "call";
 
 export type Identity = {
   displayName: string;
@@ -52,15 +52,3 @@ export type WireMessage =
   | { type: "room-full" }
   | { type: "hangup" }
   | { type: "media-meta"; sharingScreen?: boolean; cameraOff?: boolean };
-
-export type HistoryCall = {
-  id: string;
-  mode: CallMode;
-  startedAt: number;
-  endedAt: number | null;
-  participants: PeerInfo[];
-};
-
-export type HistoryMessage = ChatMessage & {
-  callId: string;
-};

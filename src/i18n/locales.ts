@@ -19,15 +19,11 @@ export const pt = {
   "onboarding.rememberTitle": "Lembrar quem eu sou",
   "onboarding.rememberBody":
     "Guardamos seu nome e a chave neste navegador para a próxima visita. Sem isso, uma nova chave é gerada ao entrar.",
-  "onboarding.historyTitle": "Salvar histórico neste navegador",
-  "onboarding.historyBody":
-    "O histórico fica só aqui, não sincroniza e some se limpar os dados do site. Só pode ser ligado se você lembrar quem é, porque ele fica atrelado a esta identidade.",
   "onboarding.enter": "Entrar",
 
   "home.hello": "Olá, {name}",
   "home.ready": "Pronto para ligar.",
   "home.connecting": "Conectando ao broker PeerJS…",
-  "home.history": "Histórico",
   "home.switchIdentity": "Trocar identidade",
   "home.yourKey": "Sua chave",
   "home.inviteLink": "Link da sua chamada",
@@ -47,18 +43,6 @@ export const pt = {
   "home.installIos":
     "No Safari: toque em Compartilhar e depois em Adicionar à Tela de Início.",
   "home.simulatePro": "Simular Pro (só neste navegador)",
-
-  "history.title": "Histórico",
-  "history.back": "Voltar",
-  "history.saveTitle": "Salvar histórico neste navegador",
-  "history.saveBody":
-    "O histórico fica só neste navegador. Não sincroniza com a nuvem, some se você limpar os dados do site e não aparece em outro dispositivo. Sem este opt-in, o SimpleChat não grava mensagens nem chamadas.",
-  "history.saveNeedRemember":
-    " Para ligar, volte e entre com “Lembrar quem eu sou” marcado.",
-  "history.clear": "Apagar histórico local",
-  "history.empty": "Nenhuma chamada salva neste navegador.",
-  "history.call": "Chamada",
-  "history.noMessages": "Sem mensagens.",
 
   "call.host": "Chamada · você é o host",
   "call.guest": "Chamada",
@@ -80,7 +64,7 @@ export const pt = {
 
   "chat.title": "Chat",
   "chat.close": "Fechar chat",
-  "chat.empty": "Mensagens desta chamada. Sem opt-in, nada é gravado.",
+  "chat.empty": "Mensagens desta chamada. Somem quando ela termina.",
   "chat.placeholder": "Escreva uma mensagem",
   "chat.send": "Enviar",
 
@@ -131,15 +115,11 @@ export const en: Messages = {
   "onboarding.rememberTitle": "Remember who I am",
   "onboarding.rememberBody":
     "We store your name and key in this browser for the next visit. Otherwise, a new key is generated when you enter.",
-  "onboarding.historyTitle": "Save history in this browser",
-  "onboarding.historyBody":
-    "History stays only here, does not sync, and is gone if you clear site data. It can only be enabled if you remember who you are, because it is tied to this identity.",
   "onboarding.enter": "Enter",
 
   "home.hello": "Hi, {name}",
   "home.ready": "Ready to call.",
   "home.connecting": "Connecting to the PeerJS broker…",
-  "home.history": "History",
   "home.switchIdentity": "Switch identity",
   "home.yourKey": "Your key",
   "home.inviteLink": "Your call link",
@@ -158,18 +138,6 @@ export const en: Messages = {
   "home.install": "Install app",
   "home.installIos": "In Safari: tap Share, then Add to Home Screen.",
   "home.simulatePro": "Simulate Pro (this browser only)",
-
-  "history.title": "History",
-  "history.back": "Back",
-  "history.saveTitle": "Save history in this browser",
-  "history.saveBody":
-    "History stays only in this browser. It does not sync to the cloud, disappears if you clear site data, and will not show up on another device. Without this opt-in, SimpleChat does not save messages or calls.",
-  "history.saveNeedRemember":
-    " To enable it, go back and enter with “Remember who I am” checked.",
-  "history.clear": "Delete local history",
-  "history.empty": "No calls saved in this browser.",
-  "history.call": "Call",
-  "history.noMessages": "No messages.",
 
   "call.host": "Call · you are the host",
   "call.guest": "Call",
@@ -191,7 +159,7 @@ export const en: Messages = {
 
   "chat.title": "Chat",
   "chat.close": "Close chat",
-  "chat.empty": "Messages from this call. Without opt-in, nothing is saved.",
+  "chat.empty": "Messages from this call. They disappear when it ends.",
   "chat.placeholder": "Write a message",
   "chat.send": "Send",
 
@@ -240,15 +208,11 @@ export const es: Messages = {
   "onboarding.rememberTitle": "Recordar quién soy",
   "onboarding.rememberBody":
     "Guardamos tu nombre y la clave en este navegador para la próxima visita. Si no, se genera una clave nueva al entrar.",
-  "onboarding.historyTitle": "Guardar historial en este navegador",
-  "onboarding.historyBody":
-    "El historial queda solo aquí, no se sincroniza y desaparece si se borran los datos del sitio. Solo se puede activar si recuerdas quién eres, porque va ligado a esta identidad.",
   "onboarding.enter": "Entrar",
 
   "home.hello": "Hola, {name}",
   "home.ready": "Listo para llamar.",
   "home.connecting": "Conectando al broker de PeerJS…",
-  "home.history": "Historial",
   "home.switchIdentity": "Cambiar identidad",
   "home.yourKey": "Tu clave",
   "home.inviteLink": "Enlace de tu llamada",
@@ -267,18 +231,6 @@ export const es: Messages = {
   "home.installIos":
     "En Safari: toca Compartir y luego Añadir a pantalla de inicio.",
   "home.simulatePro": "Simular Pro (solo en este navegador)",
-
-  "history.title": "Historial",
-  "history.back": "Volver",
-  "history.saveTitle": "Guardar historial en este navegador",
-  "history.saveBody":
-    "El historial queda solo en este navegador. No se sincroniza con la nube, desaparece si borras los datos del sitio y no aparece en otro dispositivo. Sin esta opción, SimpleChat no guarda mensajes ni llamadas.",
-  "history.saveNeedRemember":
-    " Para activarlo, vuelve y entra con “Recordar quién soy” marcado.",
-  "history.clear": "Borrar historial local",
-  "history.empty": "No hay llamadas guardadas en este navegador.",
-  "history.call": "Llamada",
-  "history.noMessages": "Sin mensajes.",
 
   "call.host": "Llamada · eres el anfitrión",
   "call.guest": "Llamada",
@@ -300,7 +252,7 @@ export const es: Messages = {
 
   "chat.title": "Chat",
   "chat.close": "Cerrar chat",
-  "chat.empty": "Mensajes de esta llamada. Sin la opción, no se guarda nada.",
+  "chat.empty": "Mensajes de esta llamada. Desaparecen al terminar.",
   "chat.placeholder": "Escribe un mensaje",
   "chat.send": "Enviar",
 

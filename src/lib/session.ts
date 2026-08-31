@@ -1,10 +1,4 @@
 import { Peer, type DataConnection, type MediaConnection } from "peerjs";
-import {
-  appendHistoryMessage,
-  endHistoryCall,
-  startHistoryCall,
-  touchHistoryParticipants,
-} from "./db";
 import { invitePeerId } from "./invite";
 import {
   applySenderLimits,
@@ -47,7 +41,6 @@ export type SessionState = {
   hostPeerId: string | null;
   callStatus: "idle" | "connecting" | "in-call";
   incoming: IncomingInvite | null;
-  activeCallId: string | null;
 };
 
 const STUN = {
@@ -75,7 +68,6 @@ const initialState: SessionState = {
   hostPeerId: null,
   callStatus: "idle",
   incoming: null,
-  activeCallId: null,
 };
 
 type Listener = () => void;
@@ -147,7 +139,7 @@ export class PeerSession {
       }
       if (type === "peer-unavailable") {
         this.toast("toast.peerUnavailable");
-        if (this.state.callStatus === "connecting") this.resetCall(false);
+        if (this.state.callStatus === "connecting") this.resetCall();
         return;
       }
       this.patch({ peerError: "error.peerjs" });
@@ -268,7 +260,7 @@ export class PeerSession {
     if (hostLeaving) this.broadcast({ type: "room-ended" });
     window.setTimeout(() => {
       this.ending = false;
-      this.resetCall(true);
+      this.resetCall();
     }, 80);
   }
 
@@ -285,12 +277,6 @@ export class PeerSession {
     };
     this.patch({ messages: [...this.state.messages, message] });
     this.broadcast({ type: "chat", ...message });
-    if (this.state.activeCallId) {
-      void appendHistoryMessage({
-        ...message,
-        callId: this.state.activeCallId,
-      });
-    }
   }
 
   toggleMute() {
@@ -378,8 +364,6 @@ export class PeerSession {
   }
 
   private beginCall(isHost: boolean, hostPeerId: string) {
-    const callId = crypto.randomUUID();
-    const me = this.selfInfo();
     this.patch({
       view: "call",
       callMode: "room",
@@ -388,17 +372,7 @@ export class PeerSession {
       callStatus: "connecting",
       messages: [],
       remotes: [],
-      activeCallId: callId,
     });
-    if (me) {
-      void startHistoryCall({
-        id: callId,
-        mode: "room",
-        startedAt: Date.now(),
-        endedAt: null,
-        participants: [me],
-      });
-    }
   }
 
   private async ensureLocalStream() {
@@ -695,7 +669,6 @@ export class PeerSession {
         this.upsertRemote(msg.peerId, { displayName: msg.displayName });
       }
       this.maybeCall(msg.peerId);
-      this.syncHistoryPeers();
       return;
     }
 
@@ -710,7 +683,6 @@ export class PeerSession {
       }
       if (this.state.callStatus !== "in-call")
         this.patch({ callStatus: "in-call" });
-      this.syncHistoryPeers();
       return;
     }
 
@@ -723,12 +695,6 @@ export class PeerSession {
         at: msg.at,
       };
       this.patch({ messages: [...this.state.messages, message] });
-      if (this.state.activeCallId) {
-        void appendHistoryMessage({
-          ...message,
-          callId: this.state.activeCallId,
-        });
-      }
       return;
     }
 
@@ -738,12 +704,12 @@ export class PeerSession {
     }
 
     if (msg.type === "room-ended") {
-      this.resetCall(true, "toast.roomEndedByHost");
+      this.resetCall("toast.roomEndedByHost");
       return;
     }
 
     if (msg.type === "room-full") {
-      this.resetCall(true, "toast.roomFull");
+      this.resetCall("toast.roomFull");
       return;
     }
 
@@ -872,7 +838,7 @@ export class PeerSession {
       (this.state.callStatus === "in-call" ||
         this.state.callStatus === "connecting")
     ) {
-      this.resetCall(true, "toast.roomEndedByHost");
+      this.resetCall("toast.roomEndedByHost");
     }
   }
 
@@ -900,26 +866,9 @@ export class PeerSession {
     }
   }
 
-  private syncHistoryPeers() {
-    const callId = this.state.activeCallId;
-    const me = this.selfInfo();
-    if (!callId || !me) return;
-    const participants = [
-      me,
-      ...this.state.remotes.map((r) => ({
-        peerId: r.peerId,
-        displayName: r.displayName,
-      })),
-    ];
-    void touchHistoryParticipants(callId, participants);
-  }
-
-  private resetCall(endHistory: boolean, endedReason?: MessageKey) {
+  private resetCall(endedReason?: MessageKey) {
     if (this.ending) return;
     this.ending = true;
-    if (endHistory && this.state.activeCallId) {
-      void endHistoryCall(this.state.activeCallId);
-    }
     for (const conn of this.data.values()) conn.close();
     for (const call of this.media.values()) call.close();
     for (const call of this.screenOut.values()) call.close();
@@ -952,7 +901,6 @@ export class PeerSession {
       hostPeerId: null,
       callStatus: "idle",
       incoming: null,
-      activeCallId: null,
     });
     window.setTimeout(() => {
       this.ending = false;

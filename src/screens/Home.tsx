@@ -1,15 +1,9 @@
 import { useState } from "react";
 import { Button } from "../components/Button";
-import {
-  CheckIcon,
-  CopyIcon,
-  DownloadIcon,
-  HistoryIcon,
-} from "../components/Icons";
+import { CheckIcon, CopyIcon, DownloadIcon } from "../components/Icons";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { QualityBadge } from "../components/QualityBadge";
 import { useI18n } from "../i18n/use-i18n";
-import { setHistoryOptIn } from "../lib/db";
 import { clearIdentity } from "../lib/identity";
 import { parseInvite } from "../lib/invite";
 import { useInstallPrompt } from "../lib/pwa";
@@ -108,16 +102,9 @@ export const Home = () => {
               </Button>
             )}
             <Button
-              variant="secondary"
-              onClick={() => session.setView("history")}
-            >
-              <HistoryIcon /> {t("home.history")}
-            </Button>
-            <Button
               variant="ghost"
               onClick={() => {
                 clearIdentity();
-                setHistoryOptIn(false);
                 window.location.reload();
               }}
             >

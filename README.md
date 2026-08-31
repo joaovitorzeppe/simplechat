@@ -4,7 +4,7 @@ Chat P2P 100% frontend: áudio, vídeo, tela e texto no navegador. Sem API próp
 
 ## Stack e como rodar
 
-Vite 8, React 19, TypeScript ~7, Tailwind CSS v4, PeerJS e Dexie (IndexedDB).
+Vite 8, React 19, TypeScript ~7, Tailwind CSS v4 e PeerJS.
 
 ```bash
 npm i
@@ -52,13 +52,9 @@ WebRTC sempre precisa de sinalização, STUN e, em alguns NATs, TURN.
 - Áudio/vídeo não passam pelo nosso servidor: vão P2P (ou por TURN, se um dia existir).
 - Mesh em vídeo pesa no notebook. Grupo grande pediria SFU (LiveKit/mediasoup) e deixaria de ser P2P puro.
 
-## Histórico local
-
-Dexie/IndexedDB, só neste navegador, com opt-in. Só liga se você marcar “lembrar quem eu sou”, porque o histórico fica atrelado à identidade. Não sincroniza e some se limpar os dados do site.
-
 ## Fase 2 (fora deste MVP)
 
-- Firebase Auth (Google) + Firestore para histórico na nuvem; IndexedDB continua como modo anônimo.
+- Recentes para religar (lista curta de `peerId` + nome), ou histórico na nuvem com conta.
 - Stripe/Lemon Squeezy + custom claim para liberar o tier Pro de verdade.
 - TURN (Metered, Open Relay ou coturn) para NAT difícil.
 - SFU se salas passarem do que o mesh aguenta.
