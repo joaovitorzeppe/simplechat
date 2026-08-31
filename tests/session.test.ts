@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { electHost, PeerSession, type SessionState } from "../src/lib/session";
+import { getToast } from "../src/lib/toast";
 import type { PeerInfo, RemotePeer, WireMessage } from "../src/lib/types";
 
 type FakeConn = {
@@ -741,5 +742,87 @@ describe("silenciar áudio e vídeo", () => {
     expect(core.state.roomMutes).toEqual({
       [ZECA]: { audio: false, video: true },
     });
+  });
+});
+
+const mockGum = (
+  impl: (constraints: MediaStreamConstraints) => Promise<MediaStream>,
+) => {
+  Object.defineProperty(navigator, "mediaDevices", {
+    configurable: true,
+    value: { getUserMedia: impl },
+  });
+};
+
+const gumTrack = (kind: "audio" | "video") =>
+  ({
+    kind,
+    enabled: true,
+    readyState: "live",
+    stop: vi.fn(),
+  }) as unknown as MediaStreamTrack;
+
+const gumStream = (...kinds: ("audio" | "video")[]) => {
+  const tracks = kinds.map(gumTrack);
+  return {
+    getTracks: () => tracks,
+    getAudioTracks: () => tracks.filter((item) => item.kind === "audio"),
+    getVideoTracks: () => tracks.filter((item) => item.kind === "video"),
+  } as unknown as MediaStream;
+};
+
+describe("entrada sem câmera ou microfone", () => {
+  it("cria a sala só com áudio se a câmera falhar", async () => {
+    mockGum(async (constraints) => {
+      if (constraints.video) throw new Error("sem camera");
+      return gumStream("audio");
+    });
+    core.patch({ identity: { peerId: ME, displayName: "Eu" } });
+    await session.createRoom();
+    expect(core.state.view).toBe("call");
+    expect(core.state.callStatus).toBe("in-call");
+    expect(core.state.cameraOff).toBe(true);
+    expect(core.state.muted).toBe(false);
+    expect(getToast()?.key).toBe("toast.mediaAudioOnly");
+  });
+
+  it("cria a sala só ouvindo quando nada é permitido", async () => {
+    mockGum(async () => {
+      throw new Error("negado");
+    });
+    core.patch({ identity: { peerId: ME, displayName: "Eu" } });
+    await session.createRoom();
+    expect(core.state.view).toBe("call");
+    expect(core.state.cameraOff).toBe(true);
+    expect(core.state.muted).toBe(true);
+    expect(getToast()?.key).toBe("toast.mediaListenOnly");
+  });
+
+  it("cria a sala com câmera se só o microfone falhar", async () => {
+    mockGum(async (constraints) => {
+      if (constraints.audio) throw new Error("sem mic");
+      return gumStream("video");
+    });
+    core.patch({ identity: { peerId: ME, displayName: "Eu" } });
+    await session.createRoom();
+    expect(core.state.view).toBe("call");
+    expect(core.state.cameraOff).toBe(false);
+    expect(core.state.muted).toBe(true);
+    expect(getToast()?.key).toBe("toast.mediaVideoOnly");
+  });
+
+  it("religar o microfone pede o dispositivo de novo", async () => {
+    mockGum(async () => gumStream("audio"));
+    core.patch({
+      identity: { peerId: ME, displayName: "Eu" },
+      callStatus: "in-call",
+      view: "call",
+      muted: true,
+      cameraOff: true,
+      localStream: gumStream(),
+    });
+    await session.toggleMute();
+    expect(core.state.muted).toBe(false);
+    expect(core.state.localStream?.getAudioTracks().length).toBeGreaterThan(0);
   });
 });

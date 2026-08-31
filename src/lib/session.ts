@@ -23,6 +23,7 @@ import {
   setFileProgress,
 } from "./file-progress";
 import { FileBridge } from "./file-transfer";
+import { acquireLocalMedia, mediaStreamOf } from "./media-access";
 import { rememberPeer } from "./recents";
 import {
   dropMute,
@@ -325,8 +326,11 @@ export class PeerSession {
     try {
       await this.ensureLocalStream();
     } catch {
-      this.toast("toast.mediaCall");
-      return;
+      this.patch({
+        localStream: this.state.localStream ?? mediaStreamOf([]),
+        cameraOff: true,
+        muted: true,
+      });
     }
     const me = this.selfInfo();
     this.roomMembers = me ? [me] : [];
@@ -346,8 +350,11 @@ export class PeerSession {
     try {
       await this.ensureLocalStream();
     } catch {
-      this.toast("toast.mediaRoom");
-      return;
+      this.patch({
+        localStream: this.state.localStream ?? mediaStreamOf([]),
+        cameraOff: true,
+        muted: true,
+      });
     }
     const me = this.selfInfo();
     this.roomMembers = me ? [me] : [];
@@ -363,8 +370,11 @@ export class PeerSession {
     try {
       await this.ensureLocalStream();
     } catch {
-      this.toast("toast.mediaJoin");
-      return;
+      this.patch({
+        localStream: this.state.localStream ?? mediaStreamOf([]),
+        cameraOff: true,
+        muted: true,
+      });
     }
     this.joinSecret = invite?.secret ?? null;
     this.dialedPeerId = id;
@@ -383,13 +393,16 @@ export class PeerSession {
     try {
       await this.ensureLocalStream();
     } catch {
-      this.toast("toast.mediaAccept");
-      return;
+      this.patch({
+        localStream: this.state.localStream ?? mediaStreamOf([]),
+        cameraOff: true,
+        muted: true,
+      });
     }
     this.dialedPeerId = incoming.peerId;
     this.beginCall(false, incoming.peerId);
     const queued = this.media.get(incoming.peerId);
-    if (queued && this.state.localStream) queued.answer(this.outboundStream());
+    if (queued) queued.answer(this.outboundStream());
     const conn = this.data.get(incoming.peerId);
     if (conn?.open) {
       conn.send({
@@ -429,7 +442,7 @@ export class PeerSession {
     this.addRoomMember(info);
     // A chamada de mídia dele já chegou e ficou parada esperando esta decisão.
     const queued = this.media.get(peerId);
-    if (queued && this.state.localStream) queued.answer(this.outboundStream());
+    if (queued) queued.answer(this.outboundStream());
     const conn = this.data.get(peerId);
     if (conn) this.offerExistingHost(conn);
     this.broadcastRoom();
@@ -618,10 +631,18 @@ export class PeerSession {
     }
   }
 
-  toggleMute() {
+  async toggleMute() {
     const next = !this.state.muted;
     if (!next && this.selfLocked("audio")) return;
-    this.state.localStream?.getAudioTracks().forEach((track) => {
+    const live =
+      this.state.localStream
+        ?.getAudioTracks()
+        .filter((track) => track.readyState === "live") ?? [];
+    if (!next && live.length === 0) {
+      await this.enableMic();
+      return;
+    }
+    live.forEach((track) => {
       track.enabled = !next;
     });
     this.patch({ muted: next });
@@ -740,39 +761,32 @@ export class PeerSession {
   }
 
   private async ensureLocalStream() {
-    if (this.state.localStream && this.state.localStream.active)
-      return this.state.localStream;
+    if (this.state.localStream) return this.state.localStream;
     const tier = currentTier();
-    let stream: MediaStream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia(
-        getCameraConstraints(tier),
-      );
-    } catch {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: true,
+    const gum = navigator.mediaDevices?.getUserMedia?.bind(
+      navigator.mediaDevices,
+    );
+    const media = await acquireLocalMedia(gum, getCameraConstraints(tier));
+    await applyTrackConstraints(media.stream, "camera", tier);
+    if (!media.muted) {
+      media.stream.getAudioTracks().forEach((track) => {
+        track.enabled = !this.state.muted;
       });
     }
-    await applyTrackConstraints(stream, "camera", tier);
-    stream.getAudioTracks().forEach((track) => {
-      track.enabled = !this.state.muted;
-    });
-    if (this.state.cameraOff) {
-      stream.getVideoTracks().forEach((track) => track.stop());
-      const audioOnly = new MediaStream(stream.getAudioTracks());
-      this.patch({ localStream: audioOnly });
-      return audioOnly;
-    }
-    this.patch({ localStream: stream });
-    return stream;
+    const cameraOff = media.cameraOff || this.state.cameraOff;
+    const muted = media.muted || this.state.muted;
+    this.patch({ localStream: media.stream, cameraOff, muted });
+    if (media.fallback === "audio") this.toast("toast.mediaAudioOnly");
+    else if (media.fallback === "video") this.toast("toast.mediaVideoOnly");
+    else if (media.fallback === "listen") this.toast("toast.mediaListenOnly");
+    return media.stream;
   }
 
   private disableCamera() {
-    this.syncOutgoingVideo(null);
+    this.syncOutgoingTrack("video", null);
     const audio = this.state.localStream?.getAudioTracks() ?? [];
     this.state.localStream?.getVideoTracks().forEach((track) => track.stop());
-    this.patch({ cameraOff: true, localStream: new MediaStream(audio) });
+    this.patch({ cameraOff: true, localStream: mediaStreamOf(audio) });
     this.broadcast({ type: "media-meta", cameraOff: true });
   }
 
@@ -794,23 +808,53 @@ export class PeerSession {
     await applyTrackConstraints(new MediaStream([video]), "camera", tier);
     const audio = this.state.localStream?.getAudioTracks() ?? [];
     this.state.localStream?.getVideoTracks().forEach((track) => track.stop());
-    const stream = new MediaStream([...audio, video]);
-    this.syncOutgoingVideo(video);
+    const stream = mediaStreamOf([...audio, video]);
+    this.syncOutgoingTrack("video", video);
     this.patch({ cameraOff: false, localStream: stream });
     this.broadcast({ type: "media-meta", cameraOff: false });
     this.applyLimitsToAll();
     window.setTimeout(() => this.applyLimitsToAll(), 400);
   }
 
-  private syncOutgoingVideo(track: MediaStreamTrack | null) {
+  private async enableMic() {
+    if (this.selfLocked("audio")) return;
+    let fresh: MediaStream;
+    try {
+      fresh = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+        video: false,
+      });
+    } catch {
+      this.toast("toast.mediaMic");
+      return;
+    }
+    const audio = fresh.getAudioTracks()[0];
+    if (!audio) {
+      this.toast("toast.mediaMic");
+      return;
+    }
+    this.state.localStream?.getAudioTracks().forEach((track) => track.stop());
+    const video = this.state.localStream?.getVideoTracks() ?? [];
+    const stream = mediaStreamOf([audio, ...video]);
+    this.syncOutgoingTrack("audio", audio);
+    this.patch({ muted: false, localStream: stream });
+  }
+
+  private syncOutgoingTrack(
+    kind: "audio" | "video",
+    track: MediaStreamTrack | null,
+  ) {
     for (const call of this.media.values()) {
       const pc = call.peerConnection;
       if (!pc) continue;
       const sender =
-        pc.getSenders().find((s) => s.track?.kind === "video") ??
+        pc.getSenders().find((s) => s.track?.kind === kind) ??
         pc.getTransceivers().find((tr) => {
-          const kind = tr.sender.track?.kind ?? tr.receiver.track?.kind;
-          return kind === "video";
+          const found = tr.sender.track?.kind ?? tr.receiver.track?.kind;
+          return found === kind;
         })?.sender;
       if (sender) {
         void sender.replaceTrack(track);
@@ -818,10 +862,10 @@ export class PeerSession {
         try {
           pc.addTrack(
             track,
-            this.state.localStream ?? new MediaStream([track]),
+            this.state.localStream ?? mediaStreamOf([track]),
           );
         } catch {
-          // a linha de vídeo já existe nesta conexão
+          // a linha já existe nesta conexão
         }
       }
     }
@@ -848,7 +892,7 @@ export class PeerSession {
   }
 
   private openMedia(peerId: string) {
-    if (!this.peer || this.media.has(peerId) || !this.state.localStream) return;
+    if (!this.peer || this.media.has(peerId)) return;
     const call = this.peer.call(peerId, this.outboundStream(), {
       metadata: { ...this.helloPayload(), kind: "camera" },
     });
@@ -979,7 +1023,7 @@ export class PeerSession {
         return;
       }
       this.attachMedia(call);
-      if (this.state.localStream) call.answer(this.outboundStream());
+      call.answer(this.outboundStream());
       if (this.state.sharingScreen) this.openScreen(call.peer);
       return;
     }
@@ -1519,7 +1563,7 @@ export class PeerSession {
 
   private maybeCall(peerId: string) {
     const me = this.state.identity?.peerId;
-    if (!me || peerId === me || !this.state.localStream) return;
+    if (!me || peerId === me) return;
     if (!this.media.has(peerId) && me < peerId) this.openMedia(peerId);
     else if (this.state.sharingScreen) this.openScreen(peerId);
   }

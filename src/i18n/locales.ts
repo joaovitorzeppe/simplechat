@@ -147,6 +147,13 @@ export const pt = {
   "toast.callEnded": "Chamada encerrada.",
   "toast.roomFull": "Esta chamada está cheia.",
   "toast.mediaCamera": "Permita a câmera para ligá-la.",
+  "toast.mediaMic": "Permita o microfone para ativá-lo.",
+  "toast.mediaAudioOnly":
+    "Entrou só com áudio. A câmera pode ser ligada depois.",
+  "toast.mediaVideoOnly":
+    "Entrou sem microfone. Você pode ativá-lo depois.",
+  "toast.mediaListenOnly":
+    "Entrou sem câmera e microfone. Você ouve e usa o chat.",
   "toast.fileTooBigFree": "Arquivo acima de 50 MB (plano gratuito).",
   "toast.fileTooBigPro": "Arquivo acima de 100 MB (plano Pro).",
   "toast.fileFailed": "Não foi possível enviar ou receber o arquivo.",
@@ -320,6 +327,11 @@ export const en: Messages = {
   "toast.callEnded": "Call ended.",
   "toast.roomFull": "This call is full.",
   "toast.mediaCamera": "Allow the camera to turn it on.",
+  "toast.mediaMic": "Allow the microphone to turn it on.",
+  "toast.mediaAudioOnly": "Joined with audio only. You can turn the camera on later.",
+  "toast.mediaVideoOnly": "Joined without a microphone. You can turn it on later.",
+  "toast.mediaListenOnly":
+    "Joined without camera or microphone. You can listen and use chat.",
   "toast.fileTooBigFree": "File is over 50 MB (free plan).",
   "toast.fileTooBigPro": "File is over 100 MB (Pro plan).",
   "toast.fileFailed": "Could not send or receive the file.",
@@ -491,6 +503,13 @@ export const es: Messages = {
   "toast.callEnded": "Llamada finalizada.",
   "toast.roomFull": "Esta llamada está llena.",
   "toast.mediaCamera": "Permite la cámara para encenderla.",
+  "toast.mediaMic": "Permite el micrófono para encenderlo.",
+  "toast.mediaAudioOnly":
+    "Entraste solo con audio. Puedes encender la cámara después.",
+  "toast.mediaVideoOnly":
+    "Entraste sin micrófono. Puedes encenderlo después.",
+  "toast.mediaListenOnly":
+    "Entraste sin cámara ni micrófono. Puedes escuchar y usar el chat.",
   "toast.fileTooBigFree": "Archivo por encima de 50 MB (plan gratuito).",
   "toast.fileTooBigPro": "Archivo por encima de 100 MB (plan Pro).",
   "toast.fileFailed": "No se pudo enviar o recibir el archivo.",

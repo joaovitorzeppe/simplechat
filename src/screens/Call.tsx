@@ -255,7 +255,7 @@ export const Call = () => {
         <div className="flex flex-wrap items-center justify-center gap-2 px-4 py-4">
           <Button
             variant="icon"
-            onClick={() => session.toggleMute()}
+            onClick={() => void session.toggleMute()}
             disabled={!!selfRoom?.audio}
             title={
               selfRoom?.audio
