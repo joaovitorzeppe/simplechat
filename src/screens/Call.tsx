@@ -16,8 +16,9 @@ import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { QualityBadge } from "../components/QualityBadge";
 import { VideoTile } from "../components/VideoTile";
 import { useI18n } from "../i18n/use-i18n";
-import { useSession } from "../lib/use-session";
 import { cn } from "../lib/cn";
+import { maxParticipants } from "../lib/quality";
+import { useSession } from "../lib/use-session";
 
 type ScreenItem = {
   id: string;
@@ -49,12 +50,7 @@ export const Call = () => {
     setSeenCount(state.messages.length);
   };
 
-  const invite =
-    state.callMode === "room" && me
-      ? `${window.location.origin}/?room=${me.peerId}`
-      : me
-        ? `${window.location.origin}/?call=${me.peerId}`
-        : "";
+  const invite = me ? `${window.location.origin}/?room=${me.peerId}` : "";
 
   const screens = useMemo(() => {
     const items: ScreenItem[] = [];
@@ -105,14 +101,15 @@ export const Call = () => {
         stream={state.localStream}
         name={me?.displayName ?? t("common.you")}
         local
-        cameraOff={state.cameraOff}
-        className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
-      />
+          cameraOff={state.cameraOff}
+          className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
+        />
       {state.remotes.map((remote) => (
         <VideoTile
           key={remote.peerId}
           stream={remote.stream}
           name={remote.displayName}
+          cameraOff={remote.cameraOff}
           className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
         />
       ))}
@@ -125,16 +122,15 @@ export const Call = () => {
         <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-line">
           <div>
             <p className="text-xs text-zinc-500">
-              {state.callMode === "room"
-                ? state.isHost
-                  ? t("call.roomHost")
-                  : t("call.room")
-                : t("call.direct")}
+              {state.isHost ? t("call.host") : t("call.guest")}
             </p>
             <p className="text-sm text-zinc-300">
               {state.callStatus === "connecting"
                 ? t("call.connecting")
-                : t("call.inCall", { count: state.remotes.length + 1 })}
+                : t("call.inCall", {
+                    count: state.remotes.length + 1,
+                    max: maxParticipants(),
+                  })}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -150,9 +146,7 @@ export const Call = () => {
                 }}
               >
                 {copied ? <CheckIcon /> : <CopyIcon />}
-                {state.callMode === "room"
-                  ? t("call.copyRoomInvite")
-                  : t("call.copyInvite")}
+                {t("call.copyInvite")}
               </Button>
             )}
             {screens.length >= 2 && (
@@ -220,7 +214,7 @@ export const Call = () => {
           </Button>
           <Button
             variant="icon"
-            onClick={() => session.toggleCamera()}
+            onClick={() => void session.toggleCamera()}
             title={state.cameraOff ? t("call.cameraOn") : t("call.cameraOff")}
           >
             {state.cameraOff ? <CameraOffIcon /> : <CameraIcon />}
@@ -256,6 +250,7 @@ export const Call = () => {
             variant="icon"
             className="bg-red-500 hover:bg-red-400 border-red-400"
             onClick={() => session.hangUp()}
+            title={state.isHost ? t("call.endForEveryone") : t("call.leave")}
           >
             <PhoneOffIcon />
           </Button>

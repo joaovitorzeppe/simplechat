@@ -22,6 +22,11 @@ export const TIERS: Record<QualityTier, Record<MediaKind, TierLimits>> = {
   },
 };
 
+export const MAX_PARTICIPANTS: Record<QualityTier, number> = {
+  free: 5,
+  pro: 12,
+};
+
 export const currentTier = (): QualityTier => {
   return localStorage.getItem(DEMO_KEY) === "pro" ? "pro" : "free";
 };
@@ -29,6 +34,8 @@ export const currentTier = (): QualityTier => {
 export const setDemoTier = (tier: QualityTier) => {
   localStorage.setItem(DEMO_KEY, tier);
 };
+
+export const maxParticipants = () => MAX_PARTICIPANTS[currentTier()];
 
 export const getCameraConstraints = (
   tier: QualityTier,

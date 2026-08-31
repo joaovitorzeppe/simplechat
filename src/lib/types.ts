@@ -16,6 +16,7 @@ export type RemotePeer = PeerInfo & {
   stream: MediaStream | null;
   screenStream: MediaStream | null;
   sharingScreen: boolean;
+  cameraOff: boolean;
 };
 
 export type ChatMessage = {
@@ -29,7 +30,6 @@ export type ChatMessage = {
 export type IncomingInvite = {
   peerId: string;
   displayName: string;
-  kind: "direct" | "room";
 };
 
 export type WireMessage =
@@ -49,8 +49,9 @@ export type WireMessage =
       at: number;
     }
   | { type: "room-ended" }
+  | { type: "room-full" }
   | { type: "hangup" }
-  | { type: "media-meta"; sharingScreen: boolean };
+  | { type: "media-meta"; sharingScreen?: boolean; cameraOff?: boolean };
 
 export type HistoryCall = {
   id: string;

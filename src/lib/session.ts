@@ -12,6 +12,7 @@ import {
   currentTier,
   getCameraConstraints,
   getDisplayConstraints,
+  maxParticipants,
 } from "./quality";
 import type { MessageKey } from "../i18n/locales";
 import { t } from "../i18n/i18n";
@@ -43,6 +44,7 @@ export type SessionState = {
   screenShareOrder: string[];
   callMode: CallMode | null;
   isHost: boolean;
+  hostPeerId: string | null;
   callStatus: "idle" | "connecting" | "in-call";
   incoming: IncomingInvite | null;
   activeCallId: string | null;
@@ -70,6 +72,7 @@ const initialState: SessionState = {
   screenShareOrder: [],
   callMode: null,
   isHost: false,
+  hostPeerId: null,
   callStatus: "idle",
   incoming: null,
   activeCallId: null,
@@ -169,7 +172,7 @@ export class PeerSession {
     this.patch({ view });
   }
 
-  async startDirect(remoteId: string) {
+  async callPeer(remoteId: string) {
     const id = invitePeerId(remoteId);
     if (!id || !this.peer || id === this.state.identity?.peerId) return;
     try {
@@ -178,11 +181,13 @@ export class PeerSession {
       this.toast("toast.mediaCall");
       return;
     }
-    this.beginCall("direct", false);
+    const me = this.selfInfo();
+    this.roomMembers = me ? [me] : [];
+    this.beginCall(true, me?.peerId ?? id);
     this.openData(id, {
       type: "hello",
       ...this.helloPayload(),
-      kind: "direct",
+      kind: "room-join",
     });
     this.openMedia(id);
     this.patch({ callStatus: "connecting" });
@@ -195,8 +200,9 @@ export class PeerSession {
       this.toast("toast.mediaRoom");
       return;
     }
-    this.roomMembers = this.selfInfo() ? [this.selfInfo()!] : [];
-    this.beginCall("room", true);
+    const me = this.selfInfo();
+    this.roomMembers = me ? [me] : [];
+    this.beginCall(true, me?.peerId ?? "");
     this.patch({ callStatus: "in-call" });
   }
 
@@ -209,7 +215,7 @@ export class PeerSession {
       this.toast("toast.mediaJoin");
       return;
     }
-    this.beginCall("room", false);
+    this.beginCall(false, id);
     this.openData(id, {
       type: "hello",
       ...this.helloPayload(),
@@ -227,10 +233,7 @@ export class PeerSession {
       this.toast("toast.mediaAccept");
       return;
     }
-    this.beginCall(
-      incoming.kind === "room" ? "room" : "direct",
-      incoming.kind === "room",
-    );
+    this.beginCall(false, incoming.peerId);
     const queued = this.media.get(incoming.peerId);
     if (queued && this.state.localStream) queued.answer(this.outboundStream());
     const conn = this.data.get(incoming.peerId);
@@ -238,7 +241,7 @@ export class PeerSession {
       conn.send({
         type: "hello",
         ...this.helloPayload(),
-        kind: incoming.kind === "room" ? "room-join" : "direct",
+        kind: "room-join",
       });
     }
     this.patch({ incoming: null, callStatus: "in-call" });
@@ -259,13 +262,10 @@ export class PeerSession {
     if (this.ending) return;
     if (this.state.callStatus === "idle" && this.state.view !== "call") return;
     this.ending = true;
+    const hostLeaving = this.state.isHost;
     playCallEnded();
-    showToast("toast.callEnded");
-    if (this.state.isHost && this.state.callMode === "room") {
-      this.broadcast({ type: "room-ended" });
-    } else if (this.state.callMode === "direct") {
-      this.broadcast({ type: "hangup" });
-    }
+    showToast(hostLeaving ? "toast.callEnded" : "toast.leftCall");
+    if (hostLeaving) this.broadcast({ type: "room-ended" });
     window.setTimeout(() => {
       this.ending = false;
       this.resetCall(true);
@@ -301,12 +301,9 @@ export class PeerSession {
     this.patch({ muted: next });
   }
 
-  toggleCamera() {
-    const next = !this.state.cameraOff;
-    this.state.localStream?.getVideoTracks().forEach((track) => {
-      track.enabled = !next;
-    });
-    this.patch({ cameraOff: next });
+  async toggleCamera() {
+    if (this.state.cameraOff) await this.enableCamera();
+    else this.disableCamera();
   }
 
   async shareScreen() {
@@ -380,13 +377,14 @@ export class PeerSession {
     return me ? { peerId: me.peerId, displayName: me.displayName } : null;
   }
 
-  private beginCall(mode: CallMode, isHost: boolean) {
+  private beginCall(isHost: boolean, hostPeerId: string) {
     const callId = crypto.randomUUID();
     const me = this.selfInfo();
     this.patch({
       view: "call",
-      callMode: mode,
+      callMode: "room",
       isHost,
+      hostPeerId,
       callStatus: "connecting",
       messages: [],
       remotes: [],
@@ -395,7 +393,7 @@ export class PeerSession {
     if (me) {
       void startHistoryCall({
         id: callId,
-        mode,
+        mode: "room",
         startedAt: Date.now(),
         endedAt: null,
         participants: [me],
@@ -422,19 +420,81 @@ export class PeerSession {
     stream.getAudioTracks().forEach((track) => {
       track.enabled = !this.state.muted;
     });
-    stream.getVideoTracks().forEach((track) => {
-      track.enabled = !this.state.cameraOff;
-    });
+    if (this.state.cameraOff) {
+      stream.getVideoTracks().forEach((track) => track.stop());
+      const audioOnly = new MediaStream(stream.getAudioTracks());
+      this.patch({ localStream: audioOnly });
+      return audioOnly;
+    }
     this.patch({ localStream: stream });
     return stream;
+  }
+
+  private disableCamera() {
+    this.syncOutgoingVideo(null);
+    const audio = this.state.localStream?.getAudioTracks() ?? [];
+    this.state.localStream?.getVideoTracks().forEach((track) => track.stop());
+    this.patch({ cameraOff: true, localStream: new MediaStream(audio) });
+    this.broadcast({ type: "media-meta", cameraOff: true });
+  }
+
+  private async enableCamera() {
+    const tier = currentTier();
+    let fresh: MediaStream;
+    try {
+      fresh = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: getCameraConstraints(tier).video,
+      });
+    } catch {
+      this.toast("toast.mediaCamera");
+      return;
+    }
+    const video = fresh.getVideoTracks()[0];
+    if (!video) return;
+    await applyTrackConstraints(new MediaStream([video]), "camera", tier);
+    const audio = this.state.localStream?.getAudioTracks() ?? [];
+    this.state.localStream?.getVideoTracks().forEach((track) => track.stop());
+    const stream = new MediaStream([...audio, video]);
+    this.syncOutgoingVideo(video);
+    this.patch({ cameraOff: false, localStream: stream });
+    this.broadcast({ type: "media-meta", cameraOff: false });
+    this.applyLimitsToAll();
+    window.setTimeout(() => this.applyLimitsToAll(), 400);
+  }
+
+  private syncOutgoingVideo(track: MediaStreamTrack | null) {
+    for (const call of this.media.values()) {
+      const pc = call.peerConnection;
+      if (!pc) continue;
+      const sender =
+        pc.getSenders().find((s) => s.track?.kind === "video") ??
+        pc
+          .getTransceivers()
+          .find((tr) => {
+            const kind = tr.sender.track?.kind ?? tr.receiver.track?.kind;
+            return kind === "video";
+          })?.sender;
+      if (sender) {
+        void sender.replaceTrack(track);
+      } else if (track) {
+        try {
+          pc.addTrack(track, this.state.localStream ?? new MediaStream([track]));
+        } catch {
+          // a linha de vídeo já existe nesta conexão
+        }
+      }
+    }
   }
 
   private outboundStream() {
     const local = this.state.localStream;
     const mixed = new MediaStream();
     local?.getAudioTracks().forEach((track) => mixed.addTrack(track));
-    const video = local?.getVideoTracks()[0];
-    if (video) mixed.addTrack(video);
+    if (!this.state.cameraOff) {
+      const video = local?.getVideoTracks()[0];
+      if (video && video.readyState === "live") mixed.addTrack(video);
+    }
     return mixed;
   }
 
@@ -491,11 +551,13 @@ export class PeerSession {
         conn.send({
           type: "hello",
           ...this.helloPayload(),
-          kind: this.state.callMode === "room" ? "room-join" : "direct",
+          kind: "room-join",
         });
       }
       if (this.state.sharingScreen)
         conn.send({ type: "media-meta", sharingScreen: true });
+      if (this.state.cameraOff)
+        conn.send({ type: "media-meta", cameraOff: true });
     });
     conn.on("data", (raw) => {
       this.onWire(conn, raw);
@@ -507,7 +569,10 @@ export class PeerSession {
   private attachMedia(call: MediaConnection) {
     this.media.set(call.peer, call);
     call.on("stream", (stream) => {
-      this.upsertRemote(call.peer, { stream });
+      this.upsertRemote(call.peer, {
+        stream,
+        ...(stream.getVideoTracks().length === 0 ? { cameraOff: true } : {}),
+      });
       const onRemoteEnded = () => {
         if (stream.getTracks().some((track) => track.readyState === "live"))
           return;
@@ -543,20 +608,25 @@ export class PeerSession {
       return;
     }
 
-    this.media.set(call.peer, call);
     if (this.state.callStatus !== "idle") {
+      if (this.shouldRefusePeer(call.peer)) {
+        this.refuseJoin(call.peer);
+        call.close();
+        return;
+      }
+      this.media.set(call.peer, call);
       if (this.state.localStream) call.answer(this.outboundStream());
       this.attachMedia(call);
       if (this.state.sharingScreen) this.openScreen(call.peer);
       return;
     }
+    this.media.set(call.peer, call);
     this.attachMedia(call);
     this.patch({
       incoming: {
         peerId: call.peer,
         displayName:
           meta?.displayName || this.names.get(call.peer) || t("common.someone"),
-        kind: "direct",
       },
     });
   }
@@ -599,28 +669,30 @@ export class PeerSession {
 
     if (msg.type === "hello") {
       this.names.set(msg.peerId, msg.displayName);
-      this.upsertRemote(msg.peerId, { displayName: msg.displayName });
       if (this.state.callStatus === "idle") {
+        this.upsertRemote(msg.peerId, { displayName: msg.displayName });
         this.patch({
           incoming: {
             peerId: msg.peerId,
             displayName: msg.displayName,
-            kind: msg.kind === "room-join" ? "room" : "direct",
           },
         });
         return;
       }
-      if (
-        this.state.callMode === "room" &&
-        this.state.isHost &&
-        msg.kind === "room-join"
-      ) {
+      if (this.state.isHost) {
+        const already = this.roomMembers.some((p) => p.peerId === msg.peerId);
+        if (!already && this.isRoomFull()) {
+          this.refuseJoin(msg.peerId);
+          return;
+        }
+        this.upsertRemote(msg.peerId, { displayName: msg.displayName });
         this.addRoomMember({
           peerId: msg.peerId,
           displayName: msg.displayName,
         });
         this.broadcast({ type: "room-peers", peers: this.roomMembers });
-        this.maybeCall(msg.peerId);
+      } else {
+        this.upsertRemote(msg.peerId, { displayName: msg.displayName });
       }
       this.maybeCall(msg.peerId);
       this.syncHistoryPeers();
@@ -661,9 +733,7 @@ export class PeerSession {
     }
 
     if (msg.type === "hangup") {
-      if (this.state.callStatus !== "idle") {
-        this.resetCall(true, "toast.peerLeft");
-      }
+      this.onPeerLeft(conn.peer);
       return;
     }
 
@@ -672,14 +742,40 @@ export class PeerSession {
       return;
     }
 
+    if (msg.type === "room-full") {
+      this.resetCall(true, "toast.roomFull");
+      return;
+    }
+
     if (msg.type === "media-meta") {
-      if (msg.sharingScreen) {
+      if (msg.cameraOff !== undefined) {
+        this.upsertRemote(conn.peer, { cameraOff: msg.cameraOff });
+      }
+      if (msg.sharingScreen === true) {
         this.upsertRemote(conn.peer, { sharingScreen: true });
         this.rememberShare(conn.peer);
-      } else {
+      } else if (msg.sharingScreen === false) {
         this.clearRemoteScreen(conn.peer);
       }
     }
+  }
+
+  private isRoomFull() {
+    return this.roomMembers.length >= maxParticipants();
+  }
+
+  private shouldRefusePeer(peerId: string) {
+    if (!this.state.isHost || !this.isRoomFull()) return false;
+    return !this.roomMembers.some((p) => p.peerId === peerId);
+  }
+
+  private refuseJoin(peerId: string) {
+    const conn = this.data.get(peerId);
+    if (conn?.open) conn.send({ type: "room-full" });
+    conn?.close();
+    this.media.get(peerId)?.close();
+    this.data.delete(peerId);
+    this.media.delete(peerId);
   }
 
   private addRoomMember(info: PeerInfo) {
@@ -717,6 +813,7 @@ export class PeerSession {
           ? (current?.screenStream ?? null)
           : patch.screenStream,
       sharingScreen: patch.sharingScreen ?? current?.sharingScreen ?? false,
+      cameraOff: patch.cameraOff ?? current?.cameraOff ?? false,
     };
     const remotes = current
       ? this.state.remotes.map((r) => (r.peerId === peerId ? next : r))
@@ -765,26 +862,17 @@ export class PeerSession {
       incoming:
         this.state.incoming?.peerId === peerId ? null : this.state.incoming,
     });
-    if (this.state.isHost && this.state.callMode === "room") {
+    if (this.state.isHost) {
       this.roomMembers = this.roomMembers.filter((p) => p.peerId !== peerId);
       this.broadcast({ type: "room-peers", peers: this.roomMembers });
+      return;
     }
     if (
-      this.state.callMode === "direct" &&
-      remotes.length === 0 &&
+      peerId === this.state.hostPeerId &&
       (this.state.callStatus === "in-call" ||
         this.state.callStatus === "connecting")
     ) {
-      this.resetCall(true, "toast.peerLeft");
-    }
-    if (
-      this.state.callMode === "room" &&
-      !this.state.isHost &&
-      remotes.length === 0 &&
-      (this.state.callStatus === "in-call" ||
-        this.state.callStatus === "connecting")
-    ) {
-      this.resetCall(true, "toast.roomEnded");
+      this.resetCall(true, "toast.roomEndedByHost");
     }
   }
 
@@ -861,6 +949,7 @@ export class PeerSession {
       cameraOff: false,
       callMode: null,
       isHost: false,
+      hostPeerId: null,
       callStatus: "idle",
       incoming: null,
       activeCallId: null,

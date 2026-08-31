@@ -11,7 +11,7 @@ import { QualityBadge } from "../components/QualityBadge";
 import { useI18n } from "../i18n/use-i18n";
 import { setHistoryOptIn } from "../lib/db";
 import { clearIdentity } from "../lib/identity";
-import { parseInvite, type InviteKind } from "../lib/invite";
+import { parseInvite } from "../lib/invite";
 import { useInstallPrompt } from "../lib/pwa";
 import { currentTier, setDemoTier } from "../lib/quality";
 import { showToast } from "../lib/toast";
@@ -52,43 +52,17 @@ export const Home = () => {
   const { state, session } = useSession();
   const { canInstall, showIosHelp, install } = useInstallPrompt();
   const params = new URLSearchParams(window.location.search);
-  const [peerKey, setPeerKey] = useState(params.get("call") ?? "");
-  const [roomKey, setRoomKey] = useState(params.get("room") ?? "");
-  const [peerKind, setPeerKind] = useState<InviteKind | null>(
-    params.get("call") ? "call" : null,
-  );
-  const [roomKind, setRoomKind] = useState<InviteKind | null>(
-    params.get("room") ? "room" : null,
+  const [inviteKey, setInviteKey] = useState(
+    params.get("room") ?? params.get("call") ?? "",
   );
   const [tier, setTier] = useState(currentTier());
 
   const myId = state.identity?.peerId ?? "";
-  const callLink = `${window.location.origin}/?call=${myId}`;
-  const roomLink = `${window.location.origin}/?room=${myId}`;
+  const inviteLink = `${window.location.origin}/?room=${myId}`;
 
-  const applyInvite = (
-    raw: string,
-    setValue: (value: string) => void,
-    setKind: (kind: InviteKind | null) => void,
-  ) => {
+  const applyInvite = (raw: string) => {
     const invite = parseInvite(raw);
-    if (invite) {
-      setValue(invite.peerId);
-      setKind(invite.kind);
-      return;
-    }
-    setValue(raw);
-    setKind(null);
-  };
-
-  const startFromCallField = () => {
-    if (peerKind === "room") void session.joinRoom(peerKey);
-    else void session.startDirect(peerKey);
-  };
-
-  const startFromRoomField = () => {
-    if (roomKind === "call") void session.startDirect(roomKey);
-    else void session.joinRoom(roomKey);
+    setInviteKey(invite ? invite.peerId : raw);
   };
 
   const brokerHint = state.peerReady
@@ -96,9 +70,8 @@ export const Home = () => {
     : state.peerError
       ? t(state.peerError)
       : t("home.disabledConnecting");
-  const callDisabled = !state.peerReady || !peerKey.trim();
-  const roomDisabled = !state.peerReady || !roomKey.trim();
-  const createDisabled = !state.peerReady;
+  const inviteDisabled = !state.peerReady || !inviteKey.trim();
+  const startDisabled = !state.peerReady;
 
   return (
     <main className="min-h-dvh px-4 py-8">
@@ -155,72 +128,55 @@ export const Home = () => {
 
         <section className="rounded-3xl border border-line bg-panel p-6 space-y-4">
           <CopyField label={t("home.yourKey")} value={myId} />
-          <CopyField label={t("home.callLink")} value={callLink} />
+          <CopyField label={t("home.inviteLink")} value={inviteLink} />
+          <p className="text-sm text-zinc-400">{t("home.inviteBody")}</p>
+          <Button
+            className="w-full"
+            disabled={startDisabled}
+            title={startDisabled ? (brokerHint ?? undefined) : undefined}
+            onClick={() => void session.createRoom()}
+          >
+            {t("home.startCall")}
+          </Button>
         </section>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <section className="rounded-3xl border border-line bg-panel p-6 space-y-4">
-            <h2 className="text-lg font-medium">{t("home.directTitle")}</h2>
-            <p className="text-sm text-zinc-400">{t("home.directBody")}</p>
-            <input
-              value={peerKey}
-              onChange={(e) => applyInvite(e.target.value, setPeerKey, setPeerKind)}
-              placeholder={t("home.peerPlaceholder")}
-              className="w-full rounded-xl border border-line bg-zinc-900 px-3 py-2.5 font-mono text-sm outline-none focus:border-accent"
-            />
+        <section className="rounded-3xl border border-line bg-panel p-6 space-y-4">
+          <h2 className="text-lg font-medium">{t("home.joinTitle")}</h2>
+          <p className="text-sm text-zinc-400">{t("home.joinBody")}</p>
+          <input
+            value={inviteKey}
+            onChange={(e) => applyInvite(e.target.value)}
+            placeholder={t("home.invitePlaceholder")}
+            className="w-full rounded-xl border border-line bg-zinc-900 px-3 py-2.5 font-mono text-sm outline-none focus:border-accent"
+          />
+          <div className="grid gap-2 sm:grid-cols-2">
             <Button
               className="w-full"
-              disabled={callDisabled}
+              disabled={inviteDisabled}
               title={
-                callDisabled
-                  ? (brokerHint ??
-                    (peerKind === "room"
-                      ? t("home.disabledNeedRoom")
-                      : t("home.disabledNeedCall")))
+                inviteDisabled
+                  ? (brokerHint ?? t("home.disabledNeedInvite"))
                   : undefined
               }
-              onClick={startFromCallField}
+              onClick={() => void session.callPeer(inviteKey)}
             >
-              {peerKind === "room" ? t("home.joinRoom") : t("home.call")}
+              {t("home.call")}
             </Button>
-          </section>
-
-          <section className="rounded-3xl border border-line bg-panel p-6 space-y-4">
-            <h2 className="text-lg font-medium">{t("home.roomTitle")}</h2>
-            <p className="text-sm text-zinc-400">{t("home.roomBody")}</p>
             <Button
+              variant="secondary"
               className="w-full"
-              disabled={createDisabled}
-              title={createDisabled ? (brokerHint ?? undefined) : undefined}
-              onClick={() => void session.createRoom()}
-            >
-              {t("home.createRoom")}
-            </Button>
-            <CopyField label={t("home.roomLink")} value={roomLink} />
-            <input
-              value={roomKey}
-              onChange={(e) => applyInvite(e.target.value, setRoomKey, setRoomKind)}
-              placeholder={t("home.hostPlaceholder")}
-              className="w-full rounded-xl border border-line bg-zinc-900 px-3 py-2.5 font-mono text-sm outline-none focus:border-accent"
-            />
-            <Button
-              variant={roomKind === "call" ? "primary" : "secondary"}
-              className="w-full"
-              disabled={roomDisabled}
+              disabled={inviteDisabled}
               title={
-                roomDisabled
-                  ? (brokerHint ??
-                    (roomKind === "call"
-                      ? t("home.disabledNeedCall")
-                      : t("home.disabledNeedRoom")))
+                inviteDisabled
+                  ? (brokerHint ?? t("home.disabledNeedInvite"))
                   : undefined
               }
-              onClick={startFromRoomField}
+              onClick={() => void session.joinRoom(inviteKey)}
             >
-              {roomKind === "call" ? t("home.call") : t("home.joinRoom")}
+              {t("home.join")}
             </Button>
-          </section>
-        </div>
+          </div>
+        </section>
 
         <section className="rounded-3xl border border-line bg-panel p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <QualityBadge />

@@ -106,10 +106,7 @@ export const History = () => {
                 onClick={() => void open(call.id)}
               >
                 <div className="text-sm font-medium">
-                  {call.mode === "room"
-                    ? t("history.room")
-                    : t("history.direct")}{" "}
-                  ·{" "}
+                  {t("history.call")} ·{" "}
                   {new Date(call.startedAt).toLocaleString(localeTags[locale])}
                 </div>
                 <p className="mt-1 text-xs text-zinc-400">
