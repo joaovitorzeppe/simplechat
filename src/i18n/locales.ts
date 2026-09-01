@@ -15,6 +15,8 @@ export const pt = {
   "onboarding.title": "Como você quer aparecer?",
   "onboarding.subtitle":
     "Sem conta e sem servidor nosso. Se você não pedir para lembrar, geramos uma chave nova a cada visita.",
+  "onboarding.inviteSubtitle":
+    "Você recebeu um convite. Depois do nome, entramos na chamada.",
   "onboarding.name": "Nome",
   "onboarding.namePlaceholder": "ex.: Ana",
   "onboarding.rememberTitle": "Lembrar quem eu sou",
@@ -202,6 +204,8 @@ export const en: Messages = {
   "onboarding.title": "How do you want to appear?",
   "onboarding.subtitle":
     "No account and no server of ours. If you don’t ask us to remember you, we generate a new key on every visit.",
+  "onboarding.inviteSubtitle":
+    "You have an invite. After your name, we take you into the call.",
   "onboarding.name": "Name",
   "onboarding.namePlaceholder": "e.g. Ana",
   "onboarding.rememberTitle": "Remember who I am",
@@ -384,6 +388,8 @@ export const es: Messages = {
   "onboarding.title": "¿Cómo quieres aparecer?",
   "onboarding.subtitle":
     "Sin cuenta y sin servidor nuestro. Si no pides que te recordemos, generamos una clave nueva en cada visita.",
+  "onboarding.inviteSubtitle":
+    "Tienes una invitación. Después del nombre, entramos a la llamada.",
   "onboarding.name": "Nombre",
   "onboarding.namePlaceholder": "ej.: Ana",
   "onboarding.rememberTitle": "Recordar quién soy",

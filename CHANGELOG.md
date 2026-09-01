@@ -13,6 +13,7 @@ Tudo o que entrou depois do primeiro CHANGELOG, ainda neste dia.
 Commits: `845b1ee`, `01ca868`, `a56b288`.
 
 - Convite com segredo no fragmento: `/?room=<chave>#k=<segredo>`. Sem o `#k=` certo, o pedido nem chega ao host. Recusar ou remover alguém gira o segredo; o link antigo deixa de valer.
+- Quem abre o convite sem identidade passa pelo onboarding e, com o broker pronto, entra na sala sozinho — não precisa clicar em Entrar na home.
 - Sala de espera: quem entra fica no lobby até o host aprovar. Quem o host discou (Ligar) entra direto.
 - Host pode recusar a entrada e remover alguém da chamada. Recusado e removido ficam bloqueados por `peerId`.
 - Host que sai escolhe passar o papel (`host-transfer`) ou encerrar para todos. Se o host some sem avisar, o menor `peerId` entre quem ficou assume; sobrando uma pessoa, a chamada acaba.

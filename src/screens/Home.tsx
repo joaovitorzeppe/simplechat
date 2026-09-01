@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "../components/Button";
 import { CheckIcon, CloseIcon, CopyIcon, DownloadIcon } from "../components/Icons";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { QualityBadge } from "../components/QualityBadge";
 import { useI18n } from "../i18n/use-i18n";
 import { clearIdentity } from "../lib/identity";
-import { inviteLink, parseInvite } from "../lib/invite";
+import { deepLinkJoinArg, inviteJoinArg, inviteLink, parseInvite } from "../lib/invite";
 import { useInstallPrompt } from "../lib/pwa";
 import { currentTier, setDemoTier } from "../lib/quality";
 import { forgetPeer, loadRecents, type Recent } from "../lib/recents";
@@ -55,6 +55,9 @@ const CopyField = ({
   );
 };
 
+/** Deep link só dispara join uma vez por href (sobrevive ao Strict Mode). */
+let consumedJoinHref = "";
+
 export const Home = () => {
   const { t } = useI18n();
   const { state, session } = useSession();
@@ -62,14 +65,23 @@ export const Home = () => {
   // O segredo vem no fragmento, que some se lermos só a query string.
   const [inviteKey, setInviteKey] = useState(() => {
     const found = parseInvite(window.location.href);
-    if (!found) return "";
-    return found.secret ? `${found.peerId}#k=${found.secret}` : found.peerId;
+    return found ? inviteJoinArg(found) : "";
   });
   const [tier, setTier] = useState(currentTier());
   const [recents, setRecents] = useState<Recent[]>(loadRecents);
 
   const myId = state.identity?.peerId ?? "";
   const myLink = inviteLink(myId, state.roomSecret);
+
+  useEffect(() => {
+    if (!myId || !state.peerReady || state.callStatus !== "idle") return;
+    const href = window.location.href;
+    if (consumedJoinHref === href) return;
+    const arg = deepLinkJoinArg(href, myId);
+    if (!arg) return;
+    consumedJoinHref = href;
+    void session.joinRoom(arg);
+  }, [myId, session, state.callStatus, state.peerReady]);
 
   const applyInvite = (raw: string) => {
     // Colar o link inteiro é o caso comum; guardamos a forma curta mas sem
@@ -79,9 +91,7 @@ export const Home = () => {
       setInviteKey(raw);
       return;
     }
-    setInviteKey(
-      invite.secret ? `${invite.peerId}#k=${invite.secret}` : invite.peerId,
-    );
+    setInviteKey(inviteJoinArg(invite));
   };
 
   const brokerHint = state.peerReady

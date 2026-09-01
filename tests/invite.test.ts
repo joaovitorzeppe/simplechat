@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inviteLink, invitePeerId, parseInvite } from "../src/lib/invite";
+import { deepLinkJoinArg, inviteJoinArg, inviteLink, invitePeerId, parseInvite } from "../src/lib/invite";
 
 describe("parseInvite", () => {
   it("aceita a chave crua", () => {
@@ -83,5 +83,29 @@ describe("segredo da sala no fragmento", () => {
   it("fecha o ciclo: o que monta é o que o parser lê", () => {
     const parsed = parseInvite(inviteLink("ana-123", "abc123"));
     expect(parsed).toEqual({ peerId: "ana-123", secret: "abc123" });
+  });
+});
+
+describe("deep link para join automático", () => {
+  it("monta a forma curta com segredo", () => {
+    expect(inviteJoinArg({ peerId: "ana-123", secret: "abc" })).toBe(
+      "ana-123#k=abc",
+    );
+  });
+
+  it("ignora o próprio peerId", () => {
+    expect(
+      deepLinkJoinArg("https://simplechat.app/?room=me-1#k=abc", "me-1"),
+    ).toBeNull();
+  });
+
+  it("devolve o convite de outra pessoa", () => {
+    expect(
+      deepLinkJoinArg("https://simplechat.app/?room=host-1#k=abc", "me-1"),
+    ).toBe("host-1#k=abc");
+  });
+
+  it("devolve nulo sem room na URL", () => {
+    expect(deepLinkJoinArg("https://simplechat.app/", "me-1")).toBeNull();
   });
 });

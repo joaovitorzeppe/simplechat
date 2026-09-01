@@ -82,6 +82,23 @@ export const invitePeerId = (raw: string) => {
   return parseInvite(raw)?.peerId ?? "";
 };
 
+/** Forma que `joinRoom` / o campo da home entendem, com o segredo se houver. */
+export const inviteJoinArg = (invite: Invite) =>
+  invite.secret ? `${invite.peerId}#k=${invite.secret}` : invite.peerId;
+
+/**
+ * Convite na barra de endereço, se não for a própria chave. Quem nunca
+ * passou pelo onboarding cai na home com isso; o join automático usa o mesmo.
+ */
+export const deepLinkJoinArg = (
+  href: string,
+  myPeerId: string,
+): string | null => {
+  const invite = parseInvite(href);
+  if (!invite?.peerId || invite.peerId === myPeerId) return null;
+  return inviteJoinArg(invite);
+};
+
 /**
  * O segredo vai no fragmento de propósito: o navegador não o envia ao servidor
  * nem o repassa no Referer, então ele não aparece em log de acesso nenhum.

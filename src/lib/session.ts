@@ -446,6 +446,7 @@ export class PeerSession {
     const invite = parseInvite(hostId);
     const id = invite?.peerId ?? "";
     if (!id || !this.peer || id === this.state.identity?.peerId) return;
+    if (this.state.callStatus !== "idle") return;
     try {
       await this.ensureLocalStream();
     } catch {

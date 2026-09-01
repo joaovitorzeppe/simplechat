@@ -6,6 +6,7 @@ import {
   createIdentity,
   persistIdentity,
 } from "../lib/identity";
+import { parseInvite } from "../lib/invite";
 import type { Identity } from "../lib/types";
 import { MAX_DISPLAY_NAME } from "../lib/wire-guard";
 import { useI18n } from "../i18n/use-i18n";
@@ -18,6 +19,7 @@ export const Onboarding = ({ onDone }: Props) => {
   const { t } = useI18n();
   const [name, setName] = useState("");
   const [remember, setRemember] = useState(false);
+  const fromInvite = Boolean(parseInvite(window.location.href));
 
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -44,7 +46,9 @@ export const Onboarding = ({ onDone }: Props) => {
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">
           {t("onboarding.title")}
         </h1>
-        <p className="mt-2 text-sm text-zinc-400">{t("onboarding.subtitle")}</p>
+        <p className="mt-2 text-sm text-zinc-400">
+          {fromInvite ? t("onboarding.inviteSubtitle") : t("onboarding.subtitle")}
+        </p>
         <label htmlFor="onboarding-name" className="mt-8 block text-sm text-zinc-400">
           {t("onboarding.name")}
           <input
