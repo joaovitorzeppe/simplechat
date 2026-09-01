@@ -53,6 +53,8 @@ Commits: `872b2f8`, `395ac4c`, `2732ee2`, `1f4e155`.
 
 ### App
 
+- Protótipo de desfoque de fundo só no preview local (MediaPipe Selfie Segmenter). FPS no tile. O vídeo enviado aos peers continua cru.
+
 Commits: `01ca868`, `190e4ac`.
 
 - Lobby na chamada, Error Boundary, fontes Outfit e IBM Plex Mono (latino; o resto cai na fonte do sistema).

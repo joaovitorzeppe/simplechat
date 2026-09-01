@@ -70,6 +70,10 @@ export const pt = {
   "call.cameraOn": "Ligar câmera",
   "call.cameraOff": "Desligar câmera",
   "call.shareScreen": "Compartilhar tela",
+  "call.blurOn": "Desfocar fundo",
+  "call.blurOff": "Fundo nítido",
+  "call.blurLoading": "Carregando o efeito…",
+  "call.blurFps": "{fps} fps",
   "call.chat": "Chat",
   "call.pinScreen": "Centralizar esta tela",
   "call.waiting": "Esperando o host aprovar sua entrada…",
@@ -184,6 +188,7 @@ export const pt = {
   "toast.roomUnmutedAudio": "O host liberou seu microfone.",
   "toast.roomMutedVideo": "O host desligou sua câmera para a sala.",
   "toast.roomUnmutedVideo": "O host liberou sua câmera.",
+  "toast.blurFailed": "Não deu para desfocar o fundo neste dispositivo.",
 } as const;
 
 export type MessageKey = keyof typeof pt;
@@ -259,6 +264,10 @@ export const en: Messages = {
   "call.cameraOn": "Turn camera on",
   "call.cameraOff": "Turn camera off",
   "call.shareScreen": "Share screen",
+  "call.blurOn": "Blur background",
+  "call.blurOff": "Sharp background",
+  "call.blurLoading": "Loading the effect…",
+  "call.blurFps": "{fps} fps",
   "call.chat": "Chat",
   "call.pinScreen": "Focus this screen",
   "call.waiting": "Waiting for the host to let you in…",
@@ -371,6 +380,7 @@ export const en: Messages = {
   "toast.roomUnmutedAudio": "The host released your microphone.",
   "toast.roomMutedVideo": "The host turned off your camera for the room.",
   "toast.roomUnmutedVideo": "The host released your camera.",
+  "toast.blurFailed": "Could not blur the background on this device.",
 };
 
 export const es: Messages = {
@@ -444,6 +454,10 @@ export const es: Messages = {
   "call.cameraOn": "Encender cámara",
   "call.cameraOff": "Apagar cámara",
   "call.shareScreen": "Compartir pantalla",
+  "call.blurOn": "Desenfocar fondo",
+  "call.blurOff": "Fondo nítido",
+  "call.blurLoading": "Cargando el efecto…",
+  "call.blurFps": "{fps} fps",
   "call.chat": "Chat",
   "call.pinScreen": "Centrar esta pantalla",
   "call.waiting": "Esperando que el anfitrión te deje entrar…",
@@ -558,6 +572,7 @@ export const es: Messages = {
   "toast.roomUnmutedAudio": "El anfitrión liberó tu micrófono.",
   "toast.roomMutedVideo": "El anfitrión apagó tu cámara para la sala.",
   "toast.roomUnmutedVideo": "El anfitrión liberó tu cámara.",
+  "toast.blurFailed": "No se pudo desenfocar el fondo en este dispositivo.",
 };
 
 export const dictionaries: Record<"pt" | "en" | "es", Messages> = {

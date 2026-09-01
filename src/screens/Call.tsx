@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@components/Button";
 import { ChatPanel } from "@components/ChatPanel";
 import {
+  BlurIcon,
   CameraIcon,
   CameraOffIcon,
   ChatIcon,
@@ -23,6 +24,7 @@ import { inviteLink } from "@libs/invite";
 import { maxParticipants } from "@libs/quality";
 import { muteOf, type MuteKind } from "@libs/mutes";
 import { electHost } from "@libs/session";
+import { useBackgroundBlur } from "@libs/use-background-blur";
 import { useSession } from "@libs/use-session";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
@@ -44,7 +46,11 @@ export const Call = () => {
   const [copied, setCopied] = useState(false);
   const [pinnedId, setPinnedId] = useState<string | null>(null);
   const [showCameras, setShowCameras] = useState(false);
+  const [blurOn, setBlurOn] = useState(false);
   const me = state.identity;
+  const blurEnabled = blurOn && !state.cameraOff;
+  const blur = useBackgroundBlur(state.localStream, blurEnabled);
+  const localPreview = blur.stream ?? state.localStream;
   const selfId = me?.peerId;
   const unread = chatOpen
     ? 0
@@ -120,10 +126,15 @@ export const Call = () => {
     <>
       <VideoTile
         key="local"
-        stream={state.localStream}
+        stream={localPreview}
         name={me?.displayName ?? t("common.you")}
         local
         cameraOff={state.cameraOff}
+        badge={
+          blurEnabled && !blur.loading
+            ? t("call.blurFps", { fps: blur.fps || "…" })
+            : undefined
+        }
         className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
       />
       {state.remotes.map((remote) => {
@@ -296,6 +307,27 @@ export const Call = () => {
             title={t("call.shareScreen")}
           >
             <ScreenIcon />
+          </Button>
+          <Button
+            variant="icon"
+            className={
+              blurOn && !state.cameraOff && !blur.failed
+                ? "border-accent text-accent"
+                : ""
+            }
+            disabled={state.cameraOff || blur.loading}
+            onClick={() => setBlurOn((value) => !value)}
+            title={
+              state.cameraOff
+                ? t("call.cameraOn")
+                : blur.loading
+                  ? t("call.blurLoading")
+                  : blurOn
+                    ? t("call.blurOff")
+                    : t("call.blurOn")
+            }
+          >
+            <BlurIcon />
           </Button>
           <Button
             variant="icon"

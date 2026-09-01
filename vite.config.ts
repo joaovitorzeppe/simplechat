@@ -1,11 +1,67 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { dirname, resolve } from "node:path";
+import { copyFileSync, createReadStream, mkdirSync, statSync } from "node:fs";
+import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 
 const root = dirname(fileURLToPath(import.meta.url));
+
+const MEDIAPIPE_WASM = [
+  "vision_wasm_internal.js",
+  "vision_wasm_internal.wasm",
+  "vision_wasm_nosimd_internal.js",
+  "vision_wasm_nosimd_internal.wasm",
+] as const;
+
+const MEDIAPIPE_MIME: Record<string, string> = {
+  ".js": "text/javascript; charset=utf-8",
+  ".wasm": "application/wasm",
+};
+
+/** Serve/copia o WASM do MediaPipe sem meter 20+ MB no `public/` (nem no git). */
+const mediapipeWasm = (): Plugin => {
+  const srcDir = join(root, "node_modules/@mediapipe/tasks-vision/wasm");
+  const copyTo = (destDir: string) => {
+    mkdirSync(destDir, { recursive: true });
+    for (const name of MEDIAPIPE_WASM) {
+      copyFileSync(join(srcDir, name), join(destDir, name));
+    }
+  };
+  return {
+    name: "mediapipe-wasm",
+    configureServer(server) {
+      server.middlewares.use("/mediapipe/wasm", (req, res, next) => {
+        const raw = (req.url ?? "/").split("?")[0] ?? "";
+        const name = raw
+          .replace(/^\/mediapipe\/wasm\//, "")
+          .replace(/^\//, "");
+        if (!(MEDIAPIPE_WASM as readonly string[]).includes(name)) {
+          next();
+          return;
+        }
+        const file = join(srcDir, name);
+        try {
+          statSync(file);
+        } catch {
+          res.statusCode = 404;
+          res.end();
+          return;
+        }
+        res.setHeader(
+          "Content-Type",
+          MEDIAPIPE_MIME[extname(name)] ?? "application/octet-stream",
+        );
+        createReadStream(file).pipe(res);
+      });
+    },
+    writeBundle(options) {
+      const dir = options.dir ?? join(root, "dist");
+      copyTo(join(dir, "mediapipe/wasm"));
+    },
+  };
+};
 
 const escapeRegExp = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -51,7 +107,7 @@ const inlineCssAndPreloadFont = (): Plugin => ({
 });
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), inlineCssAndPreloadFont()],
+  plugins: [react(), tailwindcss(), inlineCssAndPreloadFont(), mediapipeWasm()],
   resolve: {
     alias: {
       "@i18n": resolve(root, "src/i18n"),
