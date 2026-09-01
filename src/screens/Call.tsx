@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@components/Button";
 import { ChatPanel } from "@components/ChatPanel";
 import {
@@ -21,7 +21,7 @@ import { VideoTile } from "@components/VideoTile";
 import { useI18n } from "@i18n/use-i18n";
 import { cn } from "@libs/cn";
 import { inviteLink } from "@libs/invite";
-import { maxParticipants } from "@libs/quality";
+import { canBlurBackground, maxParticipants } from "@libs/quality";
 import { muteOf, type MuteKind } from "@libs/mutes";
 import { electHost } from "@libs/session";
 import { useBackgroundBlur } from "@libs/use-background-blur";
@@ -48,9 +48,30 @@ export const Call = () => {
   const [showCameras, setShowCameras] = useState(false);
   const [blurOn, setBlurOn] = useState(false);
   const me = state.identity;
-  const blurEnabled = blurOn && !state.cameraOff;
+  const blurAllowed = canBlurBackground();
+  const blurEnabled = blurAllowed && blurOn && !state.cameraOff;
   const blur = useBackgroundBlur(state.localStream, blurEnabled);
   const localPreview = blur.stream ?? state.localStream;
+
+  useEffect(() => {
+    if (!blurEnabled || blur.loading || blur.failed) {
+      session.setOutgoingVideo(null);
+      return;
+    }
+    const processed = blur.stream?.getVideoTracks()[0];
+    const original = state.localStream?.getVideoTracks()[0];
+    if (!processed || processed === original) return;
+    session.setOutgoingVideo(processed);
+    return () => session.setOutgoingVideo(null);
+  }, [
+    blur.failed,
+    blur.loading,
+    blur.stream,
+    blurEnabled,
+    session,
+    state.localStream,
+  ]);
+
   const selfId = me?.peerId;
   const unread = chatOpen
     ? 0
@@ -131,7 +152,7 @@ export const Call = () => {
         local
         cameraOff={state.cameraOff}
         badge={
-          blurEnabled && !blur.loading
+          blurEnabled && !blur.loading && blur.mode === "canvas"
             ? t("call.blurFps", { fps: blur.fps || "…" })
             : undefined
         }
@@ -311,20 +332,22 @@ export const Call = () => {
           <Button
             variant="icon"
             className={
-              blurOn && !state.cameraOff && !blur.failed
+              blurAllowed && blurOn && !state.cameraOff && !blur.failed
                 ? "border-accent text-accent"
                 : ""
             }
-            disabled={state.cameraOff || blur.loading}
+            disabled={!blurAllowed || state.cameraOff || blur.loading}
             onClick={() => setBlurOn((value) => !value)}
             title={
-              state.cameraOff
-                ? t("call.cameraOn")
-                : blur.loading
-                  ? t("call.blurLoading")
-                  : blurOn
-                    ? t("call.blurOff")
-                    : t("call.blurOn")
+              !blurAllowed
+                ? t("call.blurPro")
+                : state.cameraOff
+                  ? t("call.cameraOn")
+                  : blur.loading
+                    ? t("call.blurLoading")
+                    : blurOn
+                      ? t("call.blurOff")
+                      : t("call.blurOn")
             }
           >
             <BlurIcon />

@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { startBackgroundBlur, type BlurPipeline } from "./background-blur";
+import {
+  startBackgroundBlur,
+  type BlurMode,
+  type BlurPipeline,
+} from "./background-blur";
 import { showToast } from "./toast";
 
 export const useBackgroundBlur = (
@@ -7,6 +11,7 @@ export const useBackgroundBlur = (
   enabled: boolean,
 ) => {
   const [processed, setProcessed] = useState<MediaStream | null>(null);
+  const [mode, setMode] = useState<BlurMode | null>(null);
   const [fps, setFps] = useState(0);
   const [failed, setFailed] = useState(false);
 
@@ -32,8 +37,11 @@ export const useBackgroundBlur = (
           return;
         }
         pipeline = next;
+        setMode(next.mode);
         setProcessed(next.stream);
-        timer = window.setInterval(() => setFps(next.getFps()), 400);
+        if (next.mode === "canvas") {
+          timer = window.setInterval(() => setFps(next.getFps()), 400);
+        }
       })
       .catch(() => {
         if (cancelled) return;
@@ -46,12 +54,14 @@ export const useBackgroundBlur = (
       window.clearInterval(timer);
       pipeline?.stop();
       setProcessed(null);
+      setMode(null);
       setFps(0);
     };
   }, [source, active]);
 
   return {
     stream: processed ?? source,
+    mode: processed ? mode : null,
     fps: processed ? fps : 0,
     loading,
     failed,
