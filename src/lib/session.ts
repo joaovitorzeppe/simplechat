@@ -1,9 +1,10 @@
 import type { DataConnection, MediaConnection, Peer } from "peerjs";
 import { loadRoomSecret, rotateRoomSecret } from "./identity";
 import { invitePeerId, parseInvite } from "./invite";
-import {
+  import {
   applySenderLimits,
   applyTrackConstraints,
+  canSendFiles,
   currentTier,
   getCameraConstraints,
   getDisplayConstraints,
@@ -638,13 +639,13 @@ export class PeerSession {
       this.toast("toast.fileBusy");
       return;
     }
+    if (!canSendFiles()) {
+      this.toast("toast.fileProOnly");
+      return;
+    }
     const max = maxFileBytes();
     if (file.size <= 0 || file.size > max) {
-      this.toast(
-        currentTier() === "pro"
-          ? "toast.fileTooBigPro"
-          : "toast.fileTooBigFree",
-      );
+      this.toast("toast.fileTooBigPro");
       return;
     }
     const id = crypto.randomUUID();

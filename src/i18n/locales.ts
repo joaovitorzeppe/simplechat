@@ -113,6 +113,7 @@ export const pt = {
   "chat.linkCancel": "Cancelar",
   "chat.linkOpen": "Abrir mesmo assim",
   "chat.attach": "Enviar arquivo",
+  "chat.attachPro": "Enviar arquivo é um recurso Pro",
   "chat.download": "Baixar",
   "chat.fileSending": "Enviando…",
   "chat.fileReceiving": "Recebendo…",
@@ -127,7 +128,7 @@ export const pt = {
 
   "quality.pro": "Qualidade Pro (demo)",
   "quality.free": "Qualidade gratuita",
-  "quality.proSoon": "Pro em breve — 720p e mais bitrate",
+  "quality.proSoon": "Pro em breve — 720p, arquivos no chat e mais bitrate",
 
   "error.unavailableId":
     "Esta chave ainda está ocupada no broker. Recarregue em alguns segundos.",
@@ -162,8 +163,8 @@ export const pt = {
     "Entrou sem microfone. Você pode ativá-lo depois.",
   "toast.mediaListenOnly":
     "Entrou sem câmera e microfone. Você ouve e usa o chat.",
-  "toast.fileTooBigFree": "Arquivo acima de 50 MB (plano gratuito).",
   "toast.fileTooBigPro": "Arquivo acima de 100 MB (plano Pro).",
+  "toast.fileProOnly": "Enviar arquivo é um recurso Pro.",
   "toast.fileFailed": "Não foi possível enviar ou receber o arquivo.",
   "toast.fileBusy": "Espere o arquivo atual terminar de enviar.",
   "toast.knock": "{name} quer entrar na chamada.",
@@ -301,6 +302,7 @@ export const en: Messages = {
   "chat.linkCancel": "Cancel",
   "chat.linkOpen": "Open anyway",
   "chat.attach": "Send file",
+  "chat.attachPro": "Sending files is a Pro feature",
   "chat.download": "Download",
   "chat.fileSending": "Sending…",
   "chat.fileReceiving": "Receiving…",
@@ -315,7 +317,7 @@ export const en: Messages = {
 
   "quality.pro": "Pro quality (demo)",
   "quality.free": "Free quality",
-  "quality.proSoon": "Pro coming soon — 720p and higher bitrate",
+  "quality.proSoon": "Pro coming soon — 720p, chat files and higher bitrate",
 
   "error.unavailableId":
     "This key is still taken on the broker. Reload in a few seconds.",
@@ -348,8 +350,8 @@ export const en: Messages = {
   "toast.mediaVideoOnly": "Joined without a microphone. You can turn it on later.",
   "toast.mediaListenOnly":
     "Joined without camera or microphone. You can listen and use chat.",
-  "toast.fileTooBigFree": "File is over 50 MB (free plan).",
   "toast.fileTooBigPro": "File is over 100 MB (Pro plan).",
+  "toast.fileProOnly": "Sending files is a Pro feature.",
   "toast.fileFailed": "Could not send or receive the file.",
   "toast.fileBusy": "Wait for the current file to finish sending.",
   "toast.knock": "{name} wants to join the call.",
@@ -485,6 +487,7 @@ export const es: Messages = {
   "chat.linkCancel": "Cancelar",
   "chat.linkOpen": "Abrir de todos modos",
   "chat.attach": "Enviar archivo",
+  "chat.attachPro": "Enviar archivos es un recurso Pro",
   "chat.download": "Descargar",
   "chat.fileSending": "Enviando…",
   "chat.fileReceiving": "Recibiendo…",
@@ -499,7 +502,7 @@ export const es: Messages = {
 
   "quality.pro": "Calidad Pro (demo)",
   "quality.free": "Calidad gratuita",
-  "quality.proSoon": "Pro pronto — 720p y más bitrate",
+  "quality.proSoon": "Pro pronto — 720p, archivos en el chat y más bitrate",
 
   "error.unavailableId":
     "Esta clave sigue ocupada en el broker. Recarga en unos segundos.",
@@ -534,8 +537,8 @@ export const es: Messages = {
     "Entraste sin micrófono. Puedes encenderlo después.",
   "toast.mediaListenOnly":
     "Entraste sin cámara ni micrófono. Puedes escuchar y usar el chat.",
-  "toast.fileTooBigFree": "Archivo por encima de 50 MB (plan gratuito).",
   "toast.fileTooBigPro": "Archivo por encima de 100 MB (plan Pro).",
+  "toast.fileProOnly": "Enviar archivos es un recurso Pro.",
   "toast.fileFailed": "No se pudo enviar o recibir el archivo.",
   "toast.fileBusy": "Espera a que termine el envío actual.",
   "toast.knock": "{name} quiere entrar a la llamada.",

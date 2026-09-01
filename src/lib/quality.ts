@@ -44,6 +44,8 @@ export const maxParticipants = () => MAX_PARTICIPANTS[currentTier()];
 
 export const maxFileBytes = () => MAX_FILE_BYTES[currentTier()];
 
+export const canSendFiles = () => currentTier() === "pro";
+
 export const getCameraConstraints = (
   tier: QualityTier,
 ): MediaStreamConstraints => {

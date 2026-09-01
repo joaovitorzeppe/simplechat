@@ -24,7 +24,7 @@ Commits: `845b1ee`, `01ca868`, `a56b288`.
 Commits: `872b2f8`, `395ac4c`, `2732ee2`, `1f4e155`.
 
 - Links no chat viram texto clicável. Antes de abrir, um aviso mostra o endereço com Cancelar ou Abrir em nova aba.
-- Arquivos no chat via data channel P2P. Teto de **50 MB no free** e **100 MB no Pro** só no envio. Preview de jpeg/png/gif/webp; o resto só baixa. Some ao sair da chamada.
+- Arquivos no chat via data channel P2P. **Só o plano Pro envia** (teto 100 MB). O free ainda recebe. Preview de jpeg/png/gif/webp; o resto só baixa. Some ao sair da chamada.
 - Leitura e montagem das fatias no worker (fallback na UI). Com OPFS, os bytes recebidos vão para o disco do origin durante a transferência.
 - Recentes na home: quem já esteve numa chamada com você, para Ligar de novo (não reabre a sala antiga).
 - Quando alguém sai, os outros veem toast e uma linha no chat com o nome.

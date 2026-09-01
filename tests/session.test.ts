@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { electHost, PeerSession, type SessionState } from "../src/lib/session";
+import { setDemoTier } from "../src/lib/quality";
 import { getToast } from "../src/lib/toast";
 import type { PeerInfo, RemotePeer, WireMessage } from "../src/lib/types";
 
@@ -863,5 +864,27 @@ describe("falha de caminho ICE", () => {
     core.handleIceGaveUp(ZECA);
     expect(core.state.pathHint).toBe(false);
     expect(getToast()?.key).toBe("toast.peerLeft");
+  });
+});
+
+describe("envio de arquivo", () => {
+  afterEach(() => {
+    setDemoTier("free");
+  });
+
+  it("recusa envio no plano gratuito", async () => {
+    setDemoTier("free");
+    asHost();
+    await session.sendFile(new File(["ok"], "a.txt", { type: "text/plain" }));
+    expect(getToast()?.key).toBe("toast.fileProOnly");
+    expect(core.state.messages).toHaveLength(0);
+  });
+
+  it("aceita envio no plano Pro", async () => {
+    setDemoTier("pro");
+    asHost();
+    await session.sendFile(new File(["ok"], "a.txt", { type: "text/plain" }));
+    expect(core.state.messages.at(-1)?.file?.name).toBe("a.txt");
+    expect(core.state.messages.at(-1)?.file?.status).toBe("ready");
   });
 });

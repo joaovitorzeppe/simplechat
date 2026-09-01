@@ -37,12 +37,12 @@ Toda chamada é uma sala em mesh. Quem inicia é o **host**; quem entra é convi
 
 ## Limites do plano
 
-O host aplica o teto de **pessoas** do plano dele. O teto de **arquivo** vale só para quem envia (`quality.ts`):
+O host aplica o teto de **pessoas** do plano dele. **Enviar arquivo no chat é só Pro**; o teto de tamanho vale para quem envia (`quality.ts`). O free continua recebendo:
 
 |                 | Free                         | Pro (demo)                   |
 | --------------- | ---------------------------- | ---------------------------- |
 | Pessoas         | 5                            | 12                           |
-| Arquivo no chat | 50 MB                        | 100 MB                       |
+| Arquivo no chat | — (só recebe)                | envia até 100 MB             |
 | Câmera          | 640×480 @ 15 fps, ~400 kbps  | 1280×720 @ 30 fps, ~2.5 Mbps |
 | Tela            | 1280×720 @ 15 fps, ~800 kbps | 1920×1080 @ 30 fps, ~4 Mbps  |
 
