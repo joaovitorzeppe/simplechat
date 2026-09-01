@@ -1,15 +1,15 @@
 import { useState, type SubmitEvent } from "react";
-import { Button } from "../components/Button";
-import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { Button } from "@components/Button";
+import { LanguageSwitcher } from "@components/LanguageSwitcher";
 import {
   clearIdentity,
   createIdentity,
   persistIdentity,
-} from "../lib/identity";
-import { parseInvite } from "../lib/invite";
-import type { Identity } from "../lib/types";
-import { MAX_DISPLAY_NAME } from "../lib/wire-guard";
-import { useI18n } from "../i18n/use-i18n";
+} from "@libs/identity";
+import { parseInvite } from "@libs/invite";
+import type { Identity } from "@libs/types";
+import { MAX_DISPLAY_NAME } from "@libs/wire-guard";
+import { useI18n } from "@i18n/use-i18n";
 
 type Props = {
   onDone: (identity: Identity) => void;

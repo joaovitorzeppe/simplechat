@@ -1,6 +1,6 @@
-import { useI18n } from "../i18n/use-i18n";
-import { currentTier } from "../lib/quality";
-import { cn } from "../lib/cn";
+import { useI18n } from "@i18n/use-i18n";
+import { currentTier } from "@libs/quality";
+import { cn } from "@libs/cn";
 
 export const QualityBadge = ({ compact }: { compact?: boolean }) => {
   const { t } = useI18n();

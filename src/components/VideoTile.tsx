@@ -1,8 +1,8 @@
 import { memo, useEffect, useRef } from "react";
-import { useI18n } from "../i18n/use-i18n";
-import { cn } from "../lib/cn";
-import type { MuteFlags, MuteKind } from "../lib/mutes";
-import { firstGrapheme } from "../lib/text";
+import { useI18n } from "@i18n/use-i18n";
+import { cn } from "@libs/cn";
+import type { MuteFlags, MuteKind } from "@libs/mutes";
+import { firstGrapheme } from "@libs/text";
 import { ExpandIcon, UserRemoveIcon } from "./Icons";
 import { TileMuteControls } from "./TileMuteControls";
 

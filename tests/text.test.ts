@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { firstGrapheme, graphemes, truncateText } from "../src/lib/text";
-import { safeFileName } from "../src/lib/chat";
+import { firstGrapheme, graphemes, truncateText } from "@libs/text";
+import { safeFileName } from "@libs/chat";
 import {
   clampChatText,
   clampDisplayName,
   MAX_CHAT_TEXT,
   MAX_DISPLAY_NAME,
   parseWire,
-} from "../src/lib/wire-guard";
+} from "@libs/wire-guard";
 
 const JAPANESE = "田中太郎";
 const HINDI = "अजय कुमार";

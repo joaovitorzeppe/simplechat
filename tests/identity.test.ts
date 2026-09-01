@@ -8,7 +8,7 @@ import {
   loadRoomSecret,
   persistIdentity,
   rotateRoomSecret,
-} from "../src/lib/identity";
+} from "@libs/identity";
 
 const KEY = "simplechat.identity";
 

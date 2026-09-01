@@ -6,7 +6,7 @@ import {
   roomMutesFromWire,
   roomMutesToWire,
   setMuteFlag,
-} from "../src/lib/mutes";
+} from "@libs/mutes";
 
 describe("mutes", () => {
   it("liga e desliga uma flag sem deixar entrada vazia", () => {

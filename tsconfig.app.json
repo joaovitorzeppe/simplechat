@@ -17,7 +17,13 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@i18n/*": ["./src/i18n/*"],
+      "@libs/*": ["./src/lib/*"],
+      "@components/*": ["./src/components/*"],
+      "@screens/*": ["./src/screens/*"]
+    }
   },
   "include": ["src"]
 }

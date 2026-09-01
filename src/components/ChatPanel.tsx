@@ -7,7 +7,7 @@ import {
   type KeyboardEvent,
   type SubmitEvent,
 } from "react";
-import { useI18n } from "../i18n/use-i18n";
+import { useI18n } from "@i18n/use-i18n";
 import {
   ALL_MENTION,
   filterMentionPeople,
@@ -15,10 +15,10 @@ import {
   matchAllOption,
   mentionQueryAt,
   type MentionPerson,
-} from "../lib/mentions";
-import type { ChatMessage } from "../lib/types";
-import { MAX_CHAT_TEXT } from "../lib/wire-guard";
-import { canSendFiles } from "../lib/quality";
+} from "@libs/mentions";
+import type { ChatMessage } from "@libs/types";
+import { MAX_CHAT_TEXT } from "@libs/wire-guard";
+import { canSendFiles } from "@libs/quality";
 import { Button } from "./Button";
 import { ChatMessages } from "./ChatMessages";
 import { CloseIcon, PaperclipIcon } from "./Icons";

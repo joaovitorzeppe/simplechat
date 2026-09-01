@@ -1,16 +1,16 @@
 import { useMemo, useState } from "react";
-import { useI18n } from "../i18n/use-i18n";
+import { useI18n } from "@i18n/use-i18n";
 import {
   formatFileSize,
   formatMessageTime,
   groupChatMessages,
   isPreviewableImage,
   splitMessageText,
-} from "../lib/chat";
-import { isPinged, mentionMarks, type MentionPerson } from "../lib/mentions";
-import type { ChatFile, ChatMessage } from "../lib/types";
-import { useFileProgress } from "../lib/file-progress";
-import { cn } from "../lib/cn";
+} from "@libs/chat";
+import { isPinged, mentionMarks, type MentionPerson } from "@libs/mentions";
+import type { ChatFile, ChatMessage } from "@libs/types";
+import { useFileProgress } from "@libs/file-progress";
+import { cn } from "@libs/cn";
 import { DownloadIcon } from "./Icons";
 import { Button } from "./Button";
 import { LinkWarning } from "./LinkWarning";

@@ -1,4 +1,4 @@
-import { localeTags, type Locale } from "../i18n/i18n";
+import { localeTags, type Locale } from "@i18n/i18n";
 import type { MentionMark } from "./mentions";
 import { truncateText } from "./text";
 import type { ChatMessage } from "./types";

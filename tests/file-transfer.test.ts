@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { IncomingBuffer, MAX_INCOMING_BYTES } from "../src/lib/file-assembly";
-import { FileBridge } from "../src/lib/file-transfer";
+import { IncomingBuffer, MAX_INCOMING_BYTES } from "@libs/file-assembly";
+import { FileBridge } from "@libs/file-transfer";
 
 const meta = (size: number, peerId = "peer-1") => ({
   peerId,

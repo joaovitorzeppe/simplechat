@@ -1,7 +1,7 @@
 import type { DataConnection, MediaConnection, Peer } from "peerjs";
 import { loadRoomSecret, rotateRoomSecret } from "./identity";
 import { invitePeerId, parseInvite } from "./invite";
-  import {
+import {
   applySenderLimits,
   applyTrackConstraints,
   canSendFiles,
@@ -11,8 +11,8 @@ import { invitePeerId, parseInvite } from "./invite";
   maxFileBytes,
   maxParticipants,
 } from "./quality";
-import type { MessageKey } from "../i18n/locales";
-import { t } from "../i18n/i18n";
+import type { MessageKey } from "@i18n/locales";
+import { t } from "@i18n/i18n";
 import { playCallEnded } from "./sounds";
 import { showToast } from "./toast";
 import { safeFileName } from "./chat";
@@ -24,11 +24,7 @@ import {
   setFileProgress,
 } from "./file-progress";
 import { FileBridge } from "./file-transfer";
-import {
-  CONNECT_GIVE_UP_MS,
-  CONNECT_HINT_MS,
-  iceGaveUpKind,
-} from "./ice-path";
+import { CONNECT_GIVE_UP_MS, CONNECT_HINT_MS, iceGaveUpKind } from "./ice-path";
 import { acquireLocalMedia, mediaStreamOf } from "./media-access";
 import { rememberPeer } from "./recents";
 import {
@@ -295,7 +291,10 @@ export class PeerSession {
 
   private scheduleReconnect(peer: Peer) {
     window.clearTimeout(this.reconnectTimer);
-    const delay = Math.min(RECONNECT_MAX_MS, 1000 * 2 ** this.reconnectAttempts);
+    const delay = Math.min(
+      RECONNECT_MAX_MS,
+      1000 * 2 ** this.reconnectAttempts,
+    );
     this.reconnectAttempts += 1;
     this.reconnectTimer = window.setTimeout(() => {
       if (peer.destroyed || peer.open) return;
@@ -315,11 +314,7 @@ export class PeerSession {
     const onState = () => {
       const ice = pc.iceConnectionState;
       const conn = pc.connectionState;
-      if (
-        ice === "connected" ||
-        ice === "completed" ||
-        conn === "connected"
-      ) {
+      if (ice === "connected" || ice === "completed" || conn === "connected") {
         this.iceRetries.delete(peerId);
         this.iceEverConnected.add(peerId);
         if (this.state.pathHint) this.patch({ pathHint: false });
@@ -339,7 +334,10 @@ export class PeerSession {
         // navegadores antigos não expõem restartIce
       }
       window.setTimeout(() => {
-        if (pc.iceConnectionState !== "failed" && pc.connectionState !== "failed")
+        if (
+          pc.iceConnectionState !== "failed" &&
+          pc.connectionState !== "failed"
+        )
           return;
         this.redialPeer(peerId);
       }, ICE_RECOVERY_MS);
@@ -700,7 +698,9 @@ export class PeerSession {
       };
 
       await Promise.all(
-        peers.map((conn) => this.streamFileTo(conn, id, file.size, sent, report)),
+        peers.map((conn) =>
+          this.streamFileTo(conn, id, file.size, sent, report),
+        ),
       );
       setFileProgress(id, 1);
       this.patchFile(id, { status: "ready" });
@@ -942,10 +942,7 @@ export class PeerSession {
         void sender.replaceTrack(track);
       } else if (track) {
         try {
-          pc.addTrack(
-            track,
-            this.state.localStream ?? mediaStreamOf([track]),
-          );
+          pc.addTrack(track, this.state.localStream ?? mediaStreamOf([track]));
         } catch {
           // a linha já existe nesta conexão
         }
@@ -1441,13 +1438,9 @@ export class PeerSession {
     if (peerId !== me) return;
     const next = muteOf(this.state.roomMutes, peerId);
     if (flags.audio !== undefined && prev.audio !== next.audio) {
-      showToast(
-        next.audio ? "toast.roomMutedAudio" : "toast.roomUnmutedAudio",
-      );
+      showToast(next.audio ? "toast.roomMutedAudio" : "toast.roomUnmutedAudio");
     } else if (flags.video !== undefined && prev.video !== next.video) {
-      showToast(
-        next.video ? "toast.roomMutedVideo" : "toast.roomUnmutedVideo",
-      );
+      showToast(next.video ? "toast.roomMutedVideo" : "toast.roomUnmutedVideo");
     }
   }
 
@@ -1758,9 +1751,12 @@ export class PeerSession {
       (this.state.callStatus === "in-call" ||
         this.state.callStatus === "connecting")
     ) {
-      showToast(this.removed.delete(peerId) ? "toast.removed" : "toast.peerLeft", {
-        name,
-      });
+      showToast(
+        this.removed.delete(peerId) ? "toast.removed" : "toast.peerLeft",
+        {
+          name,
+        },
+      );
       this.appendLeaveNotice(peerId, name);
     }
   }

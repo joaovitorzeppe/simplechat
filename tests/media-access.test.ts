@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { acquireLocalMedia } from "../src/lib/media-access";
+import { acquireLocalMedia } from "@libs/media-access";
 
 const track = (kind: "audio" | "video") =>
   ({

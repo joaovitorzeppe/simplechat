@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { iceGaveUpKind } from "../src/lib/ice-path";
+import { iceGaveUpKind } from "@libs/ice-path";
 
 describe("iceGaveUpKind", () => {
   it("trata falha sem nunca conectar como bloqueio de caminho", () => {

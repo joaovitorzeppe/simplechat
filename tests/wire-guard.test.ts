@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_FILE_BYTES } from "../src/lib/quality";
+import { MAX_FILE_BYTES } from "@libs/quality";
 import {
   MAX_CHAT_TEXT,
   MAX_DISPLAY_NAME,
@@ -7,7 +7,7 @@ import {
   clampChatText,
   clampDisplayName,
   parseWire,
-} from "../src/lib/wire-guard";
+} from "@libs/wire-guard";
 
 const chat = (overrides: Record<string, unknown> = {}) => ({
   type: "chat",

@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
-import type { MessageKey } from "../i18n/locales";
-import { useI18n } from "../i18n/use-i18n";
-import { cn } from "../lib/cn";
-import { MUTE_OFF, type MuteFlags, type MuteKind } from "../lib/mutes";
+import type { MessageKey } from "@i18n/locales";
+import { useI18n } from "@i18n/use-i18n";
+import { cn } from "@libs/cn";
+import { MUTE_OFF, type MuteFlags, type MuteKind } from "@libs/mutes";
 import { CameraIcon, CameraOffIcon, MicIcon, MicOffIcon } from "./Icons";
 
 type Props = {

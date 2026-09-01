@@ -8,8 +8,8 @@ import {
   mentionMarks,
   mentionQueryAt,
   resolveMentions,
-} from "../src/lib/mentions";
-import { splitMessageText } from "../src/lib/chat";
+} from "@libs/mentions";
+import { splitMessageText } from "@libs/chat";
 
 const people = [
   { peerId: "ana-1", displayName: "Ana" },

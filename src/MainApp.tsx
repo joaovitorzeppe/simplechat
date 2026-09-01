@@ -1,13 +1,13 @@
 import { lazy, Suspense, useEffect } from "react";
-import { IncomingCall } from "./components/IncomingCall";
-import { Toast } from "./components/Toast";
-import { session } from "./lib/session";
-import type { Identity } from "./lib/types";
-import { useSession } from "./lib/use-session";
-import { Home } from "./screens/Home";
+import { IncomingCall } from "@components/IncomingCall";
+import { Toast } from "@components/Toast";
+import { session } from "@libs/session";
+import type { Identity } from "@libs/types";
+import { useSession } from "@libs/use-session";
+import { Home } from "@screens/Home";
 
 const Call = lazy(() =>
-  import("./screens/Call").then((mod) => ({ default: mod.Call })),
+  import("@screens/Call").then((mod) => ({ default: mod.Call })),
 );
 
 export const MainApp = ({ identity }: { identity: Identity }) => {

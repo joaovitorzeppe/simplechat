@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import { useI18n } from "../i18n/use-i18n";
-import { playRingtone } from "../lib/sounds";
-import { useDialogFocus } from "../lib/use-dialog-focus";
+import { useI18n } from "@i18n/use-i18n";
+import { playRingtone } from "@libs/sounds";
+import { useDialogFocus } from "@libs/use-dialog-focus";
 import { Button } from "./Button";
 
 type Props = {

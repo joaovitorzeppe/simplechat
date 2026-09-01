@@ -1,7 +1,7 @@
 import { GlobeIcon } from "./Icons";
-import { localeNames, type Locale } from "../i18n/i18n";
-import { useI18n } from "../i18n/use-i18n";
-import { cn } from "../lib/cn";
+import { localeNames, type Locale } from "@i18n/i18n";
+import { useI18n } from "@i18n/use-i18n";
+import { cn } from "@libs/cn";
 
 const OPTIONS: Locale[] = ["pt", "en", "es"];
 

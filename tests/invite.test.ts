@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deepLinkJoinArg, inviteJoinArg, inviteLink, invitePeerId, parseInvite } from "../src/lib/invite";
+import { deepLinkJoinArg, inviteJoinArg, inviteLink, invitePeerId, parseInvite } from "@libs/invite";
 
 describe("parseInvite", () => {
   it("aceita a chave crua", () => {

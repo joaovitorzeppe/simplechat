@@ -1,7 +1,11 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
+
+const root = dirname(fileURLToPath(import.meta.url));
 
 const escapeRegExp = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -48,6 +52,14 @@ const inlineCssAndPreloadFont = (): Plugin => ({
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), inlineCssAndPreloadFont()],
+  resolve: {
+    alias: {
+      "@i18n": resolve(root, "src/i18n"),
+      "@libs": resolve(root, "src/lib"),
+      "@components": resolve(root, "src/components"),
+      "@screens": resolve(root, "src/screens"),
+    },
+  },
   server: {
     host: true,
   },

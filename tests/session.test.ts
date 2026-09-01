@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { electHost, PeerSession, type SessionState } from "../src/lib/session";
-import { setDemoTier } from "../src/lib/quality";
-import { getToast } from "../src/lib/toast";
-import type { PeerInfo, RemotePeer, WireMessage } from "../src/lib/types";
+import { electHost, PeerSession, type SessionState } from "@libs/session";
+import { setDemoTier } from "@libs/quality";
+import { getToast } from "@libs/toast";
+import type { PeerInfo, RemotePeer, WireMessage } from "@libs/types";
 
 type FakeConn = {
   peer: string;

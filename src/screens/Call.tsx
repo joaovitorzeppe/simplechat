@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Button } from "../components/Button";
-import { ChatPanel } from "../components/ChatPanel";
+import { Button } from "@components/Button";
+import { ChatPanel } from "@components/ChatPanel";
 import {
   CameraIcon,
   CameraOffIcon,
@@ -11,19 +11,19 @@ import {
   MicOffIcon,
   PhoneOffIcon,
   ScreenIcon,
-} from "../components/Icons";
-import { HostLeaveDialog } from "../components/HostLeaveDialog";
-import { LanguageSwitcher } from "../components/LanguageSwitcher";
-import { Lobby } from "../components/Lobby";
-import { QualityBadge } from "../components/QualityBadge";
-import { VideoTile } from "../components/VideoTile";
-import { useI18n } from "../i18n/use-i18n";
-import { cn } from "../lib/cn";
-import { inviteLink } from "../lib/invite";
-import { maxParticipants } from "../lib/quality";
-import { muteOf, type MuteKind } from "../lib/mutes";
-import { electHost } from "../lib/session";
-import { useSession } from "../lib/use-session";
+} from "@components/Icons";
+import { HostLeaveDialog } from "@components/HostLeaveDialog";
+import { LanguageSwitcher } from "@components/LanguageSwitcher";
+import { Lobby } from "@components/Lobby";
+import { QualityBadge } from "@components/QualityBadge";
+import { VideoTile } from "@components/VideoTile";
+import { useI18n } from "@i18n/use-i18n";
+import { cn } from "@libs/cn";
+import { inviteLink } from "@libs/invite";
+import { maxParticipants } from "@libs/quality";
+import { muteOf, type MuteKind } from "@libs/mutes";
+import { electHost } from "@libs/session";
+import { useSession } from "@libs/use-session";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 

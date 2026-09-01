@@ -1,5 +1,5 @@
-import type { MentionPerson } from "../lib/mentions";
-import { cn } from "../lib/cn";
+import type { MentionPerson } from "@libs/mentions";
+import { cn } from "@libs/cn";
 
 type Item =
   | { kind: "all"; label: string }

@@ -6,8 +6,8 @@ import {
   isPreviewableImage,
   safeFileName,
   splitMessageText,
-} from "../src/lib/chat";
-import type { ChatMessage } from "../src/lib/types";
+} from "@libs/chat";
+import type { ChatMessage } from "@libs/types";
 
 const message = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: crypto.randomUUID(),

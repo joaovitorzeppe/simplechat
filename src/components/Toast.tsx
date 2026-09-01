@@ -1,5 +1,5 @@
-import { useI18n } from "../i18n/use-i18n";
-import { useToast } from "../lib/toast";
+import { useI18n } from "@i18n/use-i18n";
+import { useToast } from "@libs/toast";
 
 export const Toast = () => {
   const { t } = useI18n();

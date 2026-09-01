@@ -56,6 +56,7 @@ Commits: `872b2f8`, `395ac4c`, `2732ee2`, `1f4e155`.
 Commits: `01ca868`, `190e4ac`.
 
 - Lobby na chamada, Error Boundary, fontes Outfit e IBM Plex Mono (latino; o resto cai na fonte do sistema).
+- Imports entre pastas usam alias: `@i18n/*`, `@libs/*`, `@components/*`, `@screens/*`.
 - TURN opcional por `VITE_TURN_URL`, `VITE_TURN_USERNAME` e `VITE_TURN_CREDENTIAL`. Sem as três, segue só STUN.
 - Vitest (`npm test`); testes em `tests/` (wire, convite, identidade, arquivo, recents, chat, menções, mute, mídia, sessão, texto).
 - Removido `@vercel/speed-insights`.

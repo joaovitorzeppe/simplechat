@@ -1,5 +1,5 @@
-import { useI18n } from "../i18n/use-i18n";
-import { useDialogFocus } from "../lib/use-dialog-focus";
+import { useI18n } from "@i18n/use-i18n";
+import { useDialogFocus } from "@libs/use-dialog-focus";
 import { Button } from "./Button";
 
 type Props = {

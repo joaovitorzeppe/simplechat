@@ -1,10 +1,10 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Toast } from "./components/Toast";
-import { t } from "./i18n/i18n";
-import { loadIdentity } from "./lib/identity";
-import { unlockAudio } from "./lib/sounds";
-import { showToast } from "./lib/toast";
-import { Onboarding } from "./screens/Onboarding";
+import { Toast } from "@components/Toast";
+import { t } from "@i18n/i18n";
+import { loadIdentity } from "@libs/identity";
+import { unlockAudio } from "@libs/sounds";
+import { showToast } from "@libs/toast";
+import { Onboarding } from "@screens/Onboarding";
 
 const MainApp = lazy(() =>
   import("./MainApp").then((mod) => ({ default: mod.MainApp })),

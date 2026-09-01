@@ -3,7 +3,7 @@ import {
   forgetPeer,
   loadRecents,
   rememberPeer,
-} from "../src/lib/recents";
+} from "@libs/recents";
 
 beforeEach(() => {
   localStorage.clear();

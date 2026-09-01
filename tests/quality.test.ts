@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { canSendFiles, currentTier, setDemoTier } from "../src/lib/quality";
+import { canSendFiles, currentTier, setDemoTier } from "@libs/quality";
 
 describe("canSendFiles", () => {
   afterEach(() => {

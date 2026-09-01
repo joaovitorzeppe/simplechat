@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { MessageKey } from "../i18n/locales";
+import type { MessageKey } from "@i18n/locales";
 
 export type ToastState = {
   key: MessageKey;

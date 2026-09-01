@@ -1,5 +1,5 @@
-import { useI18n } from "../i18n/use-i18n";
-import type { PeerInfo } from "../lib/types";
+import { useI18n } from "@i18n/use-i18n";
+import type { PeerInfo } from "@libs/types";
 import { Button } from "./Button";
 
 type Props = {
