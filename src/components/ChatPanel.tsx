@@ -167,7 +167,7 @@ export const ChatPanel = ({
       </div>
       <form
         onSubmit={submit}
-        className="relative flex gap-2 border-t border-line p-3"
+        className="safe-bottom relative flex gap-2 border-t border-line p-3"
       >
         <input
           ref={fileRef}
@@ -221,7 +221,7 @@ export const ChatPanel = ({
             className="w-full rounded-xl bg-zinc-900 border border-line px-3 py-2 text-sm outline-none focus:border-accent"
           />
         </div>
-        <Button type="submit" disabled={!text.trim()}>
+        <Button type="submit" disabled={!text.trim()} className="shrink-0">
           {t("chat.send")}
         </Button>
       </form>

@@ -2,14 +2,21 @@ import { useI18n } from "@i18n/use-i18n";
 import { currentTier } from "@libs/quality";
 import { cn } from "@libs/cn";
 
-export const QualityBadge = ({ compact }: { compact?: boolean }) => {
+export const QualityBadge = ({
+  compact,
+  className,
+}: {
+  compact?: boolean;
+  className?: string;
+}) => {
   const { t } = useI18n();
   const pro = currentTier() === "pro";
   return (
     <div
       className={cn(
         "flex items-center gap-2 text-xs",
-        compact && "flex-col items-start gap-1",
+        compact && "flex-row items-center gap-1 sm:flex-col sm:items-start sm:gap-1",
+        className,
       )}
     >
       <span
@@ -22,7 +29,11 @@ export const QualityBadge = ({ compact }: { compact?: boolean }) => {
       >
         {pro ? t("quality.pro") : t("quality.free")}
       </span>
-      {!pro && <span className="text-zinc-500">{t("quality.proSoon")}</span>}
+      {!pro && (
+        <span className={cn("text-zinc-500", compact && "hidden sm:inline")}>
+          {t("quality.proSoon")}
+        </span>
+      )}
     </div>
   );
 };

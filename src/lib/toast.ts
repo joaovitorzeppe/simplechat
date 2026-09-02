@@ -2,8 +2,9 @@ import { useSyncExternalStore } from "react";
 import type { MessageKey } from "@i18n/locales";
 
 export type ToastState = {
-  key: MessageKey;
+  key?: MessageKey;
   vars?: Record<string, string | number>;
+  message?: string;
 };
 
 let current: ToastState | null = null;
@@ -30,6 +31,16 @@ export const showToast = (
 ) => {
   window.clearTimeout(timer);
   current = { key, vars };
+  emit();
+  timer = window.setTimeout(() => {
+    current = null;
+    emit();
+  }, ms);
+};
+
+export const showPlainToast = (message: string, ms = 4500) => {
+  window.clearTimeout(timer);
+  current = { message };
   emit();
   timer = window.setTimeout(() => {
     current = null;

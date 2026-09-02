@@ -141,7 +141,7 @@ export const Call = () => {
       ? "grid-cols-1"
       : count === 2
         ? "grid-cols-1 md:grid-cols-2"
-        : "grid-cols-1 md:grid-cols-2";
+        : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
 
   const cameraTiles = (compact: boolean) => (
     <>
@@ -195,10 +195,10 @@ export const Call = () => {
   );
 
   return (
-    <main className="flex min-h-dvh">
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-line">
-          <div>
+    <main className="flex h-dvh overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-line px-4 py-3 sm:gap-3">
+          <div className="min-w-0">
             <p className="text-xs text-zinc-500">
               {state.isHost ? t("call.host") : t("call.guest")}
             </p>
@@ -213,12 +213,12 @@ export const Call = () => {
                   })}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <LanguageSwitcher className="hidden sm:inline-flex" />
             {invite && (
               <Button
                 variant="secondary"
-                className="hidden sm:inline-flex text-xs py-1.5"
+                className="hidden text-xs py-1.5 sm:inline-flex"
                 onClick={async () => {
                   await navigator.clipboard.writeText(invite);
                   setCopied(true);
@@ -232,17 +232,19 @@ export const Call = () => {
             {screens.length >= 2 && (
               <Button
                 variant="secondary"
-                className="text-xs py-1.5"
+                className="px-2.5 text-xs py-1.5 sm:px-4"
                 onClick={() => setShowCameras((v) => !v)}
                 title={
                   showCameras ? t("call.hideCameras") : t("call.showCameras")
                 }
               >
                 <CameraIcon width={16} height={16} />
-                {showCameras ? t("call.hideCameras") : t("call.cameras")}
+                <span className="hidden sm:inline">
+                  {showCameras ? t("call.hideCameras") : t("call.cameras")}
+                </span>
               </Button>
             )}
-            <QualityBadge compact />
+            <QualityBadge compact className="hidden sm:flex" />
           </div>
         </header>
         {state.pathHint && (
@@ -287,12 +289,12 @@ export const Call = () => {
             )}
           </div>
         ) : (
-          <div className={cn("flex-1 grid gap-3 p-3", grid)}>
+          <div className={cn("min-h-0 flex-1 grid gap-3 overflow-y-auto p-3", grid)}>
             {cameraTiles(false)}
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-center gap-2 px-4 py-4">
+        <div className="safe-bottom flex shrink-0 flex-wrap items-center justify-center gap-2 px-4 pt-4">
           <Button
             variant="icon"
             onClick={() => void session.toggleMute()}

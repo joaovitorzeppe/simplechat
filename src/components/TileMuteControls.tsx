@@ -4,6 +4,7 @@ import { useI18n } from "@i18n/use-i18n";
 import { cn } from "@libs/cn";
 import { MUTE_OFF, type MuteFlags, type MuteKind } from "@libs/mutes";
 import { CameraIcon, CameraOffIcon, MicIcon, MicOffIcon } from "./Icons";
+import { DisabledTouchHint } from "./DisabledTouchHint";
 
 type Props = {
   name: string;
@@ -152,15 +153,12 @@ const MuteButton = ({
   return (
     <div className="relative">
       {locked ? (
-        <span className="relative inline-flex group cursor-not-allowed">
+        <DisabledTouchHint
+          hint={label}
+          tooltipClassName="bottom-[calc(100%+0.4rem)] max-w-40 px-2 py-1 text-[10px]"
+        >
           {trigger}
-          <span
-            role="tooltip"
-            className="pointer-events-none absolute bottom-[calc(100%+0.4rem)] left-1/2 z-30 w-max max-w-40 -translate-x-1/2 rounded-lg border border-line bg-zinc-900 px-2 py-1 text-center text-[10px] font-medium text-zinc-200 opacity-0 shadow-xl group-hover:opacity-100 group-focus-within:opacity-100"
-          >
-            {label}
-          </span>
-        </span>
+        </DisabledTouchHint>
       ) : (
         trigger
       )}

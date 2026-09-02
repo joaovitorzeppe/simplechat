@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes } from "react";
+import { DisabledTouchHint } from "./DisabledTouchHint";
 import { cn } from "@libs/cn";
 
 type Variant = "primary" | "secondary" | "danger" | "ghost" | "icon";
@@ -44,19 +45,11 @@ export const Button = ({
   if (!disabled || !title) return button;
 
   return (
-    <span
-      className={cn(
-        "relative inline-flex group cursor-not-allowed",
-        /\bw-full\b/.test(className ?? "") && "w-full",
-      )}
+    <DisabledTouchHint
+      hint={title}
+      className={/\bw-full\b/.test(className ?? "") ? "w-full" : undefined}
     >
       {button}
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute bottom-[calc(100%+0.5rem)] left-1/2 z-30 w-max max-w-[min(18rem,90vw)] -translate-x-1/2 rounded-lg border border-line bg-zinc-900 px-3 py-2 text-center text-xs font-medium text-zinc-200 opacity-0 shadow-xl group-hover:opacity-100 group-focus-within:opacity-100"
-      >
-        {title}
-      </span>
-    </span>
+    </DisabledTouchHint>
   );
 };

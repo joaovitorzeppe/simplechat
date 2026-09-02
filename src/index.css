@@ -35,6 +35,17 @@ body {
   background: #2dd4bf33;
 }
 
+.safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+}
+
+@media (hover: hover) {
+  .touch-hint-group:hover .touch-hint,
+  .touch-hint-group:focus-within .touch-hint {
+    opacity: 1;
+  }
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
