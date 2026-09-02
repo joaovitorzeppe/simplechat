@@ -71,17 +71,6 @@ export const ScreenIcon = (props: IconProps) => {
   );
 }
 
-export const BlurIcon = (props: IconProps) => {
-  return (
-    <svg {...base(props)} width={CALL_ICONS_SIZE} height={CALL_ICONS_SIZE}>
-      <circle cx="12" cy="8" r="3" />
-      <path d="M6 19c0-3.2 2.5-5 6-5s6 1.8 6 5" />
-      <path d="M3 8h2M3 12h3M3 16h2" />
-      <path d="M19 8h2M18 12h3M19 16h2" />
-    </svg>
-  );
-}
-
 export const PhoneOffIcon = (props: IconProps) => {
   return (
     <svg {...base(props)} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" >

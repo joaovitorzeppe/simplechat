@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@components/Button";
 import { ChatPanel } from "@components/ChatPanel";
 import {
-  BlurIcon,
   CameraIcon,
   CameraOffIcon,
   ChatIcon,
@@ -21,10 +20,9 @@ import { VideoTile } from "@components/VideoTile";
 import { useI18n } from "@i18n/use-i18n";
 import { cn } from "@libs/cn";
 import { inviteLink } from "@libs/invite";
-import { canBlurBackground, maxParticipants } from "@libs/quality";
+import { maxParticipants } from "@libs/quality";
 import { muteOf, type MuteKind } from "@libs/mutes";
 import { electHost } from "@libs/session";
-import { useBackgroundBlur } from "@libs/use-background-blur";
 import { useSession } from "@libs/use-session";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
@@ -46,32 +44,8 @@ export const Call = () => {
   const [copied, setCopied] = useState(false);
   const [pinnedId, setPinnedId] = useState<string | null>(null);
   const [showCameras, setShowCameras] = useState(false);
-  const [blurOn, setBlurOn] = useState(false);
   const me = state.identity;
-  const blurAllowed = canBlurBackground();
-  const blurEnabled = blurAllowed && blurOn && !state.cameraOff;
-  const blur = useBackgroundBlur(state.localStream, blurEnabled);
-  const localPreview = blur.stream ?? state.localStream;
-
-  useEffect(() => {
-    if (!blurEnabled || blur.loading || blur.failed) {
-      session.setOutgoingVideo(null);
-      return;
-    }
-    const processed = blur.stream?.getVideoTracks()[0];
-    const original = state.localStream?.getVideoTracks()[0];
-    if (!processed || processed === original) return;
-    session.setOutgoingVideo(processed);
-    return () => session.setOutgoingVideo(null);
-  }, [
-    blur.failed,
-    blur.loading,
-    blur.stream,
-    blurEnabled,
-    session,
-    state.localStream,
-  ]);
-
+  const localPreview = state.localStream;
   const selfId = me?.peerId;
   const unread = chatOpen
     ? 0
@@ -151,11 +125,6 @@ export const Call = () => {
         name={me?.displayName ?? t("common.you")}
         local
         cameraOff={state.cameraOff}
-        badge={
-          blurEnabled && !blur.loading && blur.mode === "canvas"
-            ? t("call.blurFps", { fps: blur.fps || "…" })
-            : undefined
-        }
         className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
       />
       {state.remotes.map((remote) => {
@@ -330,29 +299,6 @@ export const Call = () => {
             title={t("call.shareScreen")}
           >
             <ScreenIcon />
-          </Button>
-          <Button
-            variant="icon"
-            className={
-              blurAllowed && blurOn && !state.cameraOff && !blur.failed
-                ? "border-accent text-accent"
-                : ""
-            }
-            disabled={!blurAllowed || state.cameraOff || blur.loading}
-            onClick={() => setBlurOn((value) => !value)}
-            title={
-              !blurAllowed
-                ? t("call.blurPro")
-                : state.cameraOff
-                  ? t("call.cameraOn")
-                  : blur.loading
-                    ? t("call.blurLoading")
-                    : blurOn
-                      ? t("call.blurOff")
-                      : t("call.blurOn")
-            }
-          >
-            <BlurIcon />
           </Button>
           <Button
             variant="icon"

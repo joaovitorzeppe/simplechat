@@ -164,8 +164,6 @@ export class PeerSession {
   /** Saídas provocadas por remoção, para o aviso não dizer que a pessoa saiu. */
   private removed = new Set<string>();
   private screenTrack: MediaStreamTrack | null = null;
-  /** Vídeo processado (blur) no lugar da câmera crua, se houver. */
-  private cameraOverride: MediaStreamTrack | null = null;
   private dialedPeerId: string | null = null;
   /** Nosso segredo quando somos host. Gira a cada recusa ou remoção. */
   private hostSecret: string | null = null;
@@ -737,23 +735,6 @@ export class PeerSession {
     else this.disableCamera();
   }
 
-  /** Troca o vídeo enviado aos peers; `null` volta para a câmera original. */
-  setOutgoingVideo(track: MediaStreamTrack | null) {
-    this.cameraOverride = track;
-    if (this.state.cameraOff) {
-      this.syncOutgoingTrack("video", null);
-      return;
-    }
-    const local = this.state.localStream?.getVideoTracks()[0] ?? null;
-    const live =
-      track?.readyState === "live"
-        ? track
-        : local?.readyState === "live"
-          ? local
-          : null;
-    this.syncOutgoingTrack("video", live);
-  }
-
   /** Silencia o áudio ou o vídeo de outra pessoa só neste cliente. */
   toggleLocalMute(peerId: string, kind: MuteKind) {
     if (!this.inRoom() || !this.canControlMute(peerId)) return;
@@ -884,7 +865,6 @@ export class PeerSession {
   }
 
   private disableCamera() {
-    this.cameraOverride = null;
     this.syncOutgoingTrack("video", null);
     const audio = this.state.localStream?.getAudioTracks() ?? [];
     this.state.localStream?.getVideoTracks().forEach((track) => track.stop());
@@ -975,10 +955,7 @@ export class PeerSession {
     const mixed = new MediaStream();
     local?.getAudioTracks().forEach((track) => mixed.addTrack(track));
     if (!this.state.cameraOff) {
-      const video =
-        this.cameraOverride?.readyState === "live"
-          ? this.cameraOverride
-          : local?.getVideoTracks()[0];
+      const video = local?.getVideoTracks()[0];
       if (video && video.readyState === "live") mixed.addTrack(video);
     }
     return mixed;
@@ -2068,7 +2045,6 @@ export class PeerSession {
     this.joinSecret = null;
     this.screenTrack?.stop();
     this.screenTrack = null;
-    this.cameraOverride = null;
     this.state.localStream?.getTracks().forEach((track) => track.stop());
     this.names.clear();
     if (endedReason) {

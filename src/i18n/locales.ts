@@ -70,11 +70,6 @@ export const pt = {
   "call.cameraOn": "Ligar câmera",
   "call.cameraOff": "Desligar câmera",
   "call.shareScreen": "Compartilhar tela",
-  "call.blurOn": "Desfocar fundo",
-  "call.blurOff": "Fundo nítido",
-  "call.blurLoading": "Carregando o efeito…",
-  "call.blurFps": "{fps} fps",
-  "call.blurPro": "Desfocar o fundo é um recurso Pro",
   "call.chat": "Chat",
   "call.pinScreen": "Centralizar esta tela",
   "call.waiting": "Esperando o host aprovar sua entrada…",
@@ -134,7 +129,7 @@ export const pt = {
   "quality.pro": "Qualidade Pro (demo)",
   "quality.free": "Qualidade gratuita",
   "quality.proSoon":
-    "Pro em breve — 720p, desfoque de fundo, arquivos no chat e mais bitrate",
+    "Pro em breve — 720p, arquivos no chat e mais bitrate",
 
   "error.unavailableId":
     "Esta chave ainda está ocupada no broker. Recarregue em alguns segundos.",
@@ -190,7 +185,6 @@ export const pt = {
   "toast.roomUnmutedAudio": "O host liberou seu microfone.",
   "toast.roomMutedVideo": "O host desligou sua câmera para a sala.",
   "toast.roomUnmutedVideo": "O host liberou sua câmera.",
-  "toast.blurFailed": "Não deu para desfocar o fundo neste dispositivo.",
 } as const;
 
 export type MessageKey = keyof typeof pt;
@@ -266,11 +260,6 @@ export const en: Messages = {
   "call.cameraOn": "Turn camera on",
   "call.cameraOff": "Turn camera off",
   "call.shareScreen": "Share screen",
-  "call.blurOn": "Blur background",
-  "call.blurOff": "Sharp background",
-  "call.blurLoading": "Loading the effect…",
-  "call.blurFps": "{fps} fps",
-  "call.blurPro": "Background blur is a Pro feature",
   "call.chat": "Chat",
   "call.pinScreen": "Focus this screen",
   "call.waiting": "Waiting for the host to let you in…",
@@ -330,7 +319,7 @@ export const en: Messages = {
   "quality.pro": "Pro quality (demo)",
   "quality.free": "Free quality",
   "quality.proSoon":
-    "Pro coming soon — 720p, background blur, chat files and higher bitrate",
+    "Pro coming soon — 720p, chat files and higher bitrate",
 
   "error.unavailableId":
     "This key is still taken on the broker. Reload in a few seconds.",
@@ -384,7 +373,6 @@ export const en: Messages = {
   "toast.roomUnmutedAudio": "The host released your microphone.",
   "toast.roomMutedVideo": "The host turned off your camera for the room.",
   "toast.roomUnmutedVideo": "The host released your camera.",
-  "toast.blurFailed": "Could not blur the background on this device.",
 };
 
 export const es: Messages = {
@@ -458,11 +446,6 @@ export const es: Messages = {
   "call.cameraOn": "Encender cámara",
   "call.cameraOff": "Apagar cámara",
   "call.shareScreen": "Compartir pantalla",
-  "call.blurOn": "Desenfocar fondo",
-  "call.blurOff": "Fondo nítido",
-  "call.blurLoading": "Cargando el efecto…",
-  "call.blurFps": "{fps} fps",
-  "call.blurPro": "Desenfocar el fondo es un recurso Pro",
   "call.chat": "Chat",
   "call.pinScreen": "Centrar esta pantalla",
   "call.waiting": "Esperando que el anfitrión te deje entrar…",
@@ -522,7 +505,7 @@ export const es: Messages = {
   "quality.pro": "Calidad Pro (demo)",
   "quality.free": "Calidad gratuita",
   "quality.proSoon":
-    "Pro pronto — 720p, desenfoque de fondo, archivos en el chat y más bitrate",
+    "Pro pronto — 720p, archivos en el chat y más bitrate",
 
   "error.unavailableId":
     "Esta clave sigue ocupada en el broker. Recarga en unos segundos.",
@@ -578,7 +561,6 @@ export const es: Messages = {
   "toast.roomUnmutedAudio": "El anfitrión liberó tu micrófono.",
   "toast.roomMutedVideo": "El anfitrión apagó tu cámara para la sala.",
   "toast.roomUnmutedVideo": "El anfitrión liberó tu cámara.",
-  "toast.blurFailed": "No se pudo desenfocar el fondo en este dispositivo.",
 };
 
 export const dictionaries: Record<"pt" | "en" | "es", Messages> = {
