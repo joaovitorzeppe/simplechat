@@ -14,7 +14,7 @@ const styles: Record<Variant, string> = {
     "bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-line disabled:bg-zinc-800 disabled:text-zinc-500",
   danger: "bg-red-500 text-white hover:bg-red-400",
   ghost: "bg-transparent text-zinc-300 hover:bg-zinc-800",
-  icon: "bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-line size-11 p-0 rounded-full",
+  icon: "bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-line size-24 p-0 rounded-full h-fit w-fit",
 };
 
 export const Button = ({

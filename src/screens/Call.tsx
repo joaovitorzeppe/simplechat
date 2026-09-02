@@ -76,8 +76,8 @@ export const Call = () => {
   const unread = chatOpen
     ? 0
     : state.messages
-        .slice(seenCount)
-        .filter((message) => message.fromPeerId !== selfId).length;
+      .slice(seenCount)
+      .filter((message) => message.fromPeerId !== selfId).length;
 
   const setChat = (open: boolean) => {
     setChatOpen(open);
@@ -179,12 +179,12 @@ export const Call = () => {
               isHostTile
                 ? undefined
                 : (kind: MuteKind) =>
-                    session.toggleLocalMute(remote.peerId, kind)
+                  session.toggleLocalMute(remote.peerId, kind)
             }
             onSetRoom={
               state.isHost && !isHostTile
                 ? (kind, muted) =>
-                    session.setRoomMute(remote.peerId, kind, muted)
+                  session.setRoomMute(remote.peerId, kind, muted)
                 : undefined
             }
             className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
@@ -208,9 +208,9 @@ export const Call = () => {
                 : state.callStatus === "connecting"
                   ? t("call.connecting")
                   : t("call.inCall", {
-                      count: state.remotes.length + 1,
-                      max: maxParticipants(),
-                    })}
+                    count: state.remotes.length + 1,
+                    max: maxParticipants(),
+                  })}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -375,7 +375,7 @@ export const Call = () => {
           </Button>
           <Button
             variant="icon"
-            className="bg-red-500 hover:bg-red-400 border-red-400"
+            className="bg-red-500! hover:bg-red-400! hover:border-red-400 border-red-500"
             onClick={() => session.hangUp()}
             title={t("call.leave")}
           >

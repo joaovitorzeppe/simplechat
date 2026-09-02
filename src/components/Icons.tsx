@@ -2,6 +2,8 @@ import type { SVGProps } from "react";
 
 type IconProps = SVGProps<SVGSVGElement>;
 
+const CALL_ICONS_SIZE = 24
+
 const base = (props: IconProps) => {
   return {
     viewBox: "0 0 24 24",
@@ -18,7 +20,7 @@ const base = (props: IconProps) => {
 
 export const MicIcon = (props: IconProps) => {
   return (
-    <svg {...base(props)}>
+    <svg {...base(props)} width={CALL_ICONS_SIZE} height={CALL_ICONS_SIZE}>
       <path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Z" />
       <path d="M19 11a7 7 0 0 1-14 0" />
       <path d="M12 18v3" />
@@ -28,7 +30,7 @@ export const MicIcon = (props: IconProps) => {
 
 export const MicOffIcon = (props: IconProps) => {
   return (
-    <svg {...base(props)}>
+    <svg {...base(props)} width={CALL_ICONS_SIZE} height={CALL_ICONS_SIZE}>
       <path d="M9 9v3a3 3 0 0 0 5.1 2.1" />
       <path d="M12 3a3 3 0 0 1 3 3v3" />
       <path d="M19 11a7 7 0 0 1-1.2 3.9" />
@@ -41,7 +43,7 @@ export const MicOffIcon = (props: IconProps) => {
 
 export const CameraIcon = (props: IconProps) => {
   return (
-    <svg {...base(props)}>
+    <svg {...base(props)} width={CALL_ICONS_SIZE} height={CALL_ICONS_SIZE}>
       <path d="M16 8H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2Z" />
       <path d="M18 11l4-2v7l-4-2" />
     </svg>
@@ -50,7 +52,7 @@ export const CameraIcon = (props: IconProps) => {
 
 export const CameraOffIcon = (props: IconProps) => {
   return (
-    <svg {...base(props)}>
+    <svg {...base(props)} width={CALL_ICONS_SIZE} height={CALL_ICONS_SIZE}>
       <path d="M16 8H8" />
       <path d="M3 8.5v8.5a2 2 0 0 0 2 2h10" />
       <path d="M18 11l4-2v7l-4-2" />
@@ -61,7 +63,7 @@ export const CameraOffIcon = (props: IconProps) => {
 
 export const ScreenIcon = (props: IconProps) => {
   return (
-    <svg {...base(props)}>
+    <svg {...base(props)} width={CALL_ICONS_SIZE} height={CALL_ICONS_SIZE}>
       <rect x="3" y="4" width="18" height="12" rx="2" />
       <path d="M8 20h8" />
       <path d="M12 16v4" />
@@ -71,7 +73,7 @@ export const ScreenIcon = (props: IconProps) => {
 
 export const BlurIcon = (props: IconProps) => {
   return (
-    <svg {...base(props)}>
+    <svg {...base(props)} width={CALL_ICONS_SIZE} height={CALL_ICONS_SIZE}>
       <circle cx="12" cy="8" r="3" />
       <path d="M6 19c0-3.2 2.5-5 6-5s6 1.8 6 5" />
       <path d="M3 8h2M3 12h3M3 16h2" />
@@ -82,17 +84,15 @@ export const BlurIcon = (props: IconProps) => {
 
 export const PhoneOffIcon = (props: IconProps) => {
   return (
-    <svg {...base(props)}>
-      <path d="M10.7 6.5c.7-.2 1.5-.3 2.3-.3 4.4 0 8 3.6 8 8 0 .8-.1 1.6-.3 2.3" />
-      <path d="M4 4l16 16" />
-      <path d="M6.5 10.7C5.3 13.2 5 16 6.2 18.2c.3.6 1 1 1.7 1h2c.6 0 1.1-.4 1.2-1l.4-1.5a1.3 1.3 0 0 0-.7-1.5l-1.3-.6a10 10 0 0 1-.4-1.3" />
+    <svg {...base(props)} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" >
+      <path d="M18.59 11.0903C19.64 11.6003 20.63 12.2403 21.55 13.0003L20.48 14.0703C19.9 13.6003 19.27 13.1803 18.6 12.8003V11.0903M5.4 11.0903V12.7903C4.75 13.1603 4.12 13.5803 3.53 14.0603L2.46 12.9903C3.37 12.2403 4.36 11.6103 5.4 11.0903ZM12 7.57031C7.46 7.57031 3.34 9.35031 0.29 12.2403C0.11 12.4203 0 12.6703 0 12.9503C0 13.2303 0.11 13.4803 0.29 13.6503L2.77 16.1303C2.95 16.3103 3.2 16.4203 3.48 16.4203C3.75 16.4203 4 16.3203 4.18 16.1403C4.97 15.4103 5.86 14.7803 6.84 14.2903C7.17 14.1303 7.4 13.7803 7.4 13.3903V10.2903C8.85 9.82031 10.4 9.57031 12 9.57031C13.6 9.57031 15.15 9.82031 16.59 10.3003V13.4003C16.59 13.8003 16.82 14.1403 17.15 14.3003C18.13 14.7903 19.03 15.4103 19.82 16.1503C20 16.3203 20.25 16.4303 20.52 16.4303C20.8 16.4303 21.05 16.3203 21.23 16.1403L23.71 13.6603C23.89 13.4803 24 13.2303 24 12.9503C24 12.6703 23.89 12.4203 23.71 12.2403C20.66 9.35031 16.54 7.57031 12 7.57031Z" fill="white" stroke="white" />
     </svg>
   );
 }
 
 export const ChatIcon = (props: IconProps) => {
   return (
-    <svg {...base(props)}>
+    <svg {...base(props)} width={CALL_ICONS_SIZE} height={CALL_ICONS_SIZE}>
       <path d="M5 6h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9l-4 3v-3H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" />
     </svg>
   );
