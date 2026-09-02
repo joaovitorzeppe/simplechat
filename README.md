@@ -8,9 +8,9 @@ Vite 8, React 19, TypeScript ~7, Tailwind CSS v4 e PeerJS.
 
 ```bash
 npm i
-npm run dev      # sem service worker
+npm run dev
 npm run lint
-npm test         # Vitest; os testes ficam em tests/
+npm test
 ```
 
 Para testar duas pessoas no mesmo computador, abra uma janela anônima (o mesmo origin compartilha `localStorage` e a chave).
@@ -81,7 +81,7 @@ O link chega a qualquer um, então **todo participante é tratado como potencial
 
 Arquivos recebidos são acumulados em pedaços conforme chegam — o tamanho anunciado não reserva memória — com teto global, limite de transferências simultâneas e cooldown por peer. A leitura das fatias no envio e a montagem na recepção saem da thread da UI via worker; o DataChannel em si fica na thread principal, porque o RTCDataChannel não é transferível. Sem Worker, o mesmo código roda in-process. Quando o OPFS existe, os bytes recebidos vão para o disco privado do origin durante a transferência, e só viram Blob no fim.
 
-**Recusar ou remover alguém gira o segredo.** Só o banimento por `peerId` não seguraria: bastaria limpar o `localStorage` para voltar com chave nova. Girando, todo link já distribuído morre junto, e os membros que ficaram recebem o segredo novo pelo `room-peers` — quem saiu, não. Para voltar, a pessoa precisaria de um convite novo *e* da aprovação do host.
+**Recusar ou remover alguém gira o segredo.** Só o banimento por `peerId` não seguraria: bastaria limpar o `localStorage` para voltar com chave nova. Girando, todo link já distribuído morre junto, e os membros que ficaram recebem o segredo novo pelo `room-peers` — quem saiu, não. Para voltar, a pessoa precisaria de um convite novo _e_ da aprovação do host.
 
 O `peerId` é opaco (128 bits em base36, sem nada do nome), porque ele trafega em claro pelo broker público do PeerJS. Chaves antigas, que embutiam o primeiro nome, são trocadas na primeira carga — links gerados antes disso param de funcionar.
 
