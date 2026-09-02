@@ -1706,15 +1706,13 @@ export class PeerSession {
 
   private onPeerLeft(peerId: string, opts?: { silent?: boolean }) {
     if (this.tearingDown) return;
+    const wasInCall = this.state.remotes.some((r) => r.peerId === peerId);
     this.iceRetries.delete(peerId);
     this.iceEverConnected.delete(peerId);
     const name =
       this.state.remotes.find((r) => r.peerId === peerId)?.displayName ??
       this.names.get(peerId) ??
       t("common.someone");
-    const wasPresent =
-      this.state.remotes.some((r) => r.peerId === peerId) ||
-      this.roomMembers.some((p) => p.peerId === peerId);
     const hostGone =
       peerId === this.state.hostPeerId && this.state.callStatus !== "idle";
     this.data.get(peerId)?.close();
@@ -1727,6 +1725,7 @@ export class PeerSession {
     this.screenIn.delete(peerId);
     this.failIncomingFile(peerId);
     const remotes = this.state.remotes.filter((r) => r.peerId !== peerId);
+    this.roomMembers = this.roomMembers.filter((p) => p.peerId !== peerId);
     this.patch({
       remotes,
       screenShareOrder: this.removeShare(peerId),
@@ -1737,15 +1736,14 @@ export class PeerSession {
       roomMutes: dropMute(this.state.roomMutes, peerId),
     });
     if (this.state.isHost) {
-      this.roomMembers = this.roomMembers.filter((p) => p.peerId !== peerId);
       this.broadcastRoom();
     } else if (hostGone) {
-      this.appendLeaveNotice(peerId, name);
+      if (wasInCall) this.appendLeaveNotice(peerId, name);
       this.handleHostGone(peerId);
       return;
     }
     if (
-      wasPresent &&
+      wasInCall &&
       !hostGone &&
       !opts?.silent &&
       (this.state.callStatus === "in-call" ||

@@ -865,6 +865,26 @@ describe("falha de caminho ICE", () => {
     expect(core.state.pathHint).toBe(false);
     expect(getToast()?.key).toBe("toast.peerLeft");
   });
+
+  it("anuncia saída no chat só uma vez mesmo com vários eventos", () => {
+    asGuest();
+    core.names.set(ZECA, "Zeca");
+    core.roomMembers = [
+      { peerId: HOST, displayName: "Host" },
+      { peerId: ME, displayName: "Eu" },
+      { peerId: ZECA, displayName: "Zeca" },
+    ];
+    core.patch({ remotes: [remote(ZECA, "Zeca")] });
+    core.onPeerLeft(ZECA);
+    core.onPeerLeft(ZECA);
+    core.onPeerLeft(ZECA);
+    const left = core.state.messages.filter((msg) => msg.system === "left");
+    expect(left).toHaveLength(1);
+    expect(left[0]?.fromPeerId).toBe(ZECA);
+    expect(core.roomMembers.some((member) => member.peerId === ZECA)).toBe(
+      false,
+    );
+  });
 });
 
 describe("envio de arquivo", () => {
