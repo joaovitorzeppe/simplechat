@@ -892,11 +892,20 @@ describe("envio de arquivo", () => {
     setDemoTier("free");
   });
 
-  it("recusa envio no plano gratuito", async () => {
+  it("aceita envio no plano gratuito até 10 MB", async () => {
     setDemoTier("free");
     asHost();
     await session.sendFile(new File(["ok"], "a.txt", { type: "text/plain" }));
-    expect(getToast()?.key).toBe("toast.fileProOnly");
+    expect(core.state.messages.at(-1)?.file?.name).toBe("a.txt");
+    expect(core.state.messages.at(-1)?.file?.status).toBe("ready");
+  });
+
+  it("recusa arquivo acima do limite gratuito", async () => {
+    setDemoTier("free");
+    asHost();
+    const big = new File([new Uint8Array(10 * 1024 * 1024 + 1)], "big.bin");
+    await session.sendFile(big);
+    expect(getToast()?.key).toBe("toast.fileTooBig");
     expect(core.state.messages).toHaveLength(0);
   });
 

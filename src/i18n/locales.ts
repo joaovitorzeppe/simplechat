@@ -164,6 +164,7 @@ export const pt = {
     "Entrou sem microfone. Você pode ativá-lo depois.",
   "toast.mediaListenOnly":
     "Entrou sem câmera e microfone. Você ouve e usa o chat.",
+  "toast.fileTooBig": "Arquivo acima de {max} MB.",
   "toast.fileTooBigPro": "Arquivo acima de 100 MB (plano Pro).",
   "toast.fileProOnly": "Enviar arquivo é um recurso Pro.",
   "toast.fileFailed": "Não foi possível enviar ou receber o arquivo.",
@@ -352,6 +353,7 @@ export const en: Messages = {
   "toast.mediaVideoOnly": "Joined without a microphone. You can turn it on later.",
   "toast.mediaListenOnly":
     "Joined without camera or microphone. You can listen and use chat.",
+  "toast.fileTooBig": "File is over {max} MB.",
   "toast.fileTooBigPro": "File is over 100 MB (Pro plan).",
   "toast.fileProOnly": "Sending files is a Pro feature.",
   "toast.fileFailed": "Could not send or receive the file.",
@@ -540,6 +542,7 @@ export const es: Messages = {
     "Entraste sin micrófono. Puedes encenderlo después.",
   "toast.mediaListenOnly":
     "Entraste sin cámara ni micrófono. Puedes escuchar y usar el chat.",
+  "toast.fileTooBig": "Archivo por encima de {max} MB.",
   "toast.fileTooBigPro": "Archivo por encima de 100 MB (plan Pro).",
   "toast.fileProOnly": "Enviar archivos es un recurso Pro.",
   "toast.fileFailed": "No se pudo enviar o recibir el archivo.",

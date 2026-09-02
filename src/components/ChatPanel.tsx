@@ -18,7 +18,6 @@ import {
 } from "@libs/mentions";
 import type { ChatMessage } from "@libs/types";
 import { MAX_CHAT_TEXT } from "@libs/wire-guard";
-import { canSendFiles } from "@libs/quality";
 import { Button } from "./Button";
 import { ChatMessages } from "./ChatMessages";
 import { CloseIcon, PaperclipIcon } from "./Icons";
@@ -141,7 +140,6 @@ export const ChatPanel = ({
 
   const pickerOpen =
     items.length > 0 && query !== null && dismissedAt !== query.start;
-  const attachEnabled = canSendFiles();
 
   return (
     <aside className="flex h-full w-full max-w-sm flex-col border-l border-line bg-panel">
@@ -182,9 +180,8 @@ export const ChatPanel = ({
         <Button
           variant="ghost"
           className="px-2.5"
-          disabled={!attachEnabled}
-          title={attachEnabled ? t("chat.attach") : t("chat.attachPro")}
-          aria-label={attachEnabled ? t("chat.attach") : t("chat.attachPro")}
+          title={t("chat.attach")}
+          aria-label={t("chat.attach")}
           onClick={() => fileRef.current?.click()}
         >
           <PaperclipIcon />

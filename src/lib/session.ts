@@ -4,7 +4,6 @@ import { invitePeerId, parseInvite } from "./invite";
 import {
   applySenderLimits,
   applyTrackConstraints,
-  canSendFiles,
   currentTier,
   getCameraConstraints,
   getDisplayConstraints,
@@ -637,13 +636,11 @@ export class PeerSession {
       this.toast("toast.fileBusy");
       return;
     }
-    if (!canSendFiles()) {
-      this.toast("toast.fileProOnly");
-      return;
-    }
     const max = maxFileBytes();
     if (file.size <= 0 || file.size > max) {
-      this.toast("toast.fileTooBigPro");
+      showToast("toast.fileTooBig", {
+        max: Math.round(max / (1024 * 1024)),
+      });
       return;
     }
     const id = crypto.randomUUID();

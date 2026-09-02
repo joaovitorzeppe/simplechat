@@ -21,6 +21,7 @@ import { useI18n } from "@i18n/use-i18n";
 import { cn } from "@libs/cn";
 import { inviteLink } from "@libs/invite";
 import { maxParticipants } from "@libs/quality";
+import { isDev } from "@libs/env";
 import { muteOf, type MuteKind } from "@libs/mutes";
 import { electHost } from "@libs/session";
 import { useSession } from "@libs/use-session";
@@ -213,7 +214,7 @@ export const Call = () => {
                 </span>
               </Button>
             )}
-            <QualityBadge compact className="hidden sm:flex" />
+            {isDev && <QualityBadge compact className="hidden sm:flex" />}
           </div>
         </header>
         {state.pathHint && (

@@ -8,6 +8,7 @@ import { clearIdentity } from "@libs/identity";
 import { deepLinkJoinArg, inviteJoinArg, inviteLink, parseInvite } from "@libs/invite";
 import { useInstallPrompt } from "@libs/pwa";
 import { currentTier, setDemoTier } from "@libs/quality";
+import { isDev } from "@libs/env";
 import { forgetPeer, loadRecents, type Recent } from "@libs/recents";
 import { firstGrapheme } from "@libs/text";
 import { showToast } from "@libs/toast";
@@ -254,22 +255,24 @@ export const Home = () => {
           </section>
         )}
 
-        <section className="rounded-3xl border border-line bg-panel p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <QualityBadge />
-          <label className="flex items-center gap-2 text-sm text-zinc-400">
-            <input
-              type="checkbox"
-              checked={tier === "pro"}
-              onChange={(e) => {
-                const next = e.target.checked ? "pro" : "free";
-                setDemoTier(next);
-                setTier(next);
-                void session.reapplyQuality();
-              }}
-            />
-            {t("home.simulatePro")}
-          </label>
-        </section>
+        {isDev && (
+          <section className="rounded-3xl border border-line bg-panel p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <QualityBadge />
+            <label className="flex items-center gap-2 text-sm text-zinc-400">
+              <input
+                type="checkbox"
+                checked={tier === "pro"}
+                onChange={(e) => {
+                  const next = e.target.checked ? "pro" : "free";
+                  setDemoTier(next);
+                  setTier(next);
+                  void session.reapplyQuality();
+                }}
+              />
+              {t("home.simulatePro")}
+            </label>
+          </section>
+        )}
       </div>
     </main>
   );

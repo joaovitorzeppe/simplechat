@@ -1,4 +1,5 @@
 import type { QualityTier } from "./types";
+import { isDev } from "./env";
 
 const DEMO_KEY = "simplechat.demoTier";
 
@@ -28,15 +29,17 @@ export const MAX_PARTICIPANTS: Record<QualityTier, number> = {
 };
 
 export const MAX_FILE_BYTES: Record<QualityTier, number> = {
-  free: 50 * 1024 * 1024,
+  free: 10 * 1024 * 1024,
   pro: 100 * 1024 * 1024,
 };
 
 export const currentTier = (): QualityTier => {
+  if (!isDev) return "free";
   return localStorage.getItem(DEMO_KEY) === "pro" ? "pro" : "free";
 };
 
 export const setDemoTier = (tier: QualityTier) => {
+  if (!isDev) return;
   localStorage.setItem(DEMO_KEY, tier);
 };
 
@@ -44,7 +47,7 @@ export const maxParticipants = () => MAX_PARTICIPANTS[currentTier()];
 
 export const maxFileBytes = () => MAX_FILE_BYTES[currentTier()];
 
-export const canSendFiles = () => currentTier() === "pro";
+export const canSendFiles = () => true;
 
 export const getCameraConstraints = (
   tier: QualityTier,

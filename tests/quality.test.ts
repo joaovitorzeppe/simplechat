@@ -1,19 +1,29 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { canSendFiles, currentTier, setDemoTier } from "@libs/quality";
+import {
+  canSendFiles,
+  currentTier,
+  maxFileBytes,
+  setDemoTier,
+} from "@libs/quality";
 
-describe("canSendFiles", () => {
+describe("planos", () => {
   afterEach(() => {
     localStorage.removeItem("simplechat.demoTier");
   });
 
-  it("bloqueia no plano gratuito", () => {
+  it("permite envio de arquivo em qualquer plano", () => {
     setDemoTier("free");
-    expect(currentTier()).toBe("free");
-    expect(canSendFiles()).toBe(false);
+    expect(canSendFiles()).toBe(true);
   });
 
-  it("libera no plano Pro", () => {
+  it("limita arquivos gratuitos a 10 MB", () => {
+    setDemoTier("free");
+    expect(currentTier()).toBe("free");
+    expect(maxFileBytes()).toBe(10 * 1024 * 1024);
+  });
+
+  it("mantém 100 MB no plano Pro de desenvolvimento", () => {
     setDemoTier("pro");
-    expect(canSendFiles()).toBe(true);
+    expect(maxFileBytes()).toBe(100 * 1024 * 1024);
   });
 });
