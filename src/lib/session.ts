@@ -196,6 +196,7 @@ export class PeerSession {
   >();
   private incomingByteTail = new Map<string, Promise<void>>();
   private lastFileStart = new Map<string, number>();
+  private timerAlarms = new Map<string, number>();
 
   subscribe = (listener: Listener) => {
     this.listeners.add(listener);
@@ -628,17 +629,24 @@ export class PeerSession {
         return false;
       }
       const mentions = mentionsForCommand(command.command);
+      if (command.command.kind === "emote") {
+        for (const id of resolveMentions(command.command.action, this.roomMembers)) {
+          if (!mentions.includes(id)) mentions.push(id);
+        }
+      }
       const message: ChatMessage = {
         id: crypto.randomUUID(),
         fromPeerId: me.peerId,
         fromName: me.displayName,
-        text: formatCommandText(command.command, t),
+        text: formatCommandText(command.command, t, me.displayName),
         at: Date.now(),
         command: command.command,
         ...(mentions.length ? { mentions } : {}),
       };
       this.appendMessage(message);
-      this.broadcast({ type: "chat", ...message });
+      if (command.command.kind !== "help") {
+        this.broadcast({ type: "chat", ...message });
+      }
       return true;
     }
     const mentions = resolveMentions(trimmed, this.roomMembers);
@@ -653,6 +661,13 @@ export class PeerSession {
     this.appendMessage(message);
     this.broadcast({ type: "chat", ...message });
     return true;
+  }
+
+  votePoll(pollId: string, option: number) {
+    const me = this.state.identity;
+    if (!me || !this.inRoom()) return;
+    if (!this.applyPollVote(pollId, me.peerId, option)) return;
+    this.broadcast({ type: "poll-vote", id: pollId, option });
   }
 
   async sendFile(file: File) {
@@ -1308,6 +1323,12 @@ export class PeerSession {
       return;
     }
 
+    if (msg.type === "poll-vote") {
+      if (!this.inRoom()) return;
+      this.applyPollVote(msg.id, from, msg.option);
+      return;
+    }
+
     if (msg.type === "file-start") {
       if (!this.inRoom()) return;
       this.beginIncomingFile(from, msg);
@@ -1486,12 +1507,59 @@ export class PeerSession {
     if (messages.length > MAX_MESSAGES) {
       const dropped = messages.splice(0, messages.length - MAX_MESSAGES);
       for (const old of dropped) {
+        this.clearTimerAlarm(old.id);
         if (!old.file) continue;
         if (old.file.blobUrl) URL.revokeObjectURL(old.file.blobUrl);
         clearFileProgress(old.file.id);
       }
     }
     this.patch({ messages });
+    this.scheduleTimerAlarm(message);
+  }
+
+  private applyPollVote(pollId: string, peerId: string, option: number) {
+    const index = this.state.messages.findLastIndex(
+      (msg) => msg.command?.kind === "poll" && msg.command.id === pollId,
+    );
+    if (index < 0) return false;
+    const message = this.state.messages[index];
+    if (!message || message.command?.kind !== "poll") return false;
+    if (option < 0 || option >= message.command.options.length) return false;
+    if (message.pollVotes?.[peerId] === option) return false;
+    const next = [...this.state.messages];
+    next[index] = {
+      ...message,
+      pollVotes: { ...message.pollVotes, [peerId]: option },
+    };
+    this.patch({ messages: next });
+    return true;
+  }
+
+  private scheduleTimerAlarm(message: ChatMessage) {
+    if (message.command?.kind !== "timer") return;
+    this.clearTimerAlarm(message.id);
+    const remaining = message.at + message.command.ms - Date.now();
+    if (remaining <= 0) {
+      showToast("chat.command.timerDone");
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      this.timerAlarms.delete(message.id);
+      showToast("chat.command.timerDone");
+    }, remaining);
+    this.timerAlarms.set(message.id, timeout);
+  }
+
+  private clearTimerAlarm(id: string) {
+    const timeout = this.timerAlarms.get(id);
+    if (timeout === undefined) return;
+    window.clearTimeout(timeout);
+    this.timerAlarms.delete(id);
+  }
+
+  private clearAllTimerAlarms() {
+    for (const timeout of this.timerAlarms.values()) window.clearTimeout(timeout);
+    this.timerAlarms.clear();
   }
 
   /**
@@ -2056,6 +2124,7 @@ export class PeerSession {
     this.incomingFiles.clear();
     this.incomingByteTail.clear();
     this.lastFileStart.clear();
+    this.clearAllTimerAlarms();
     this.sendingFile = false;
     void this.files.abortAll();
     clearAllFileProgress();

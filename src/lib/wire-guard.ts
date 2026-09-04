@@ -11,12 +11,17 @@ import type {
 } from "./types";
 import {
   exprPassTotal,
+  MAX_COMMAND_CHOICE_LENGTH,
+  MAX_COMMAND_CHOICE_OPTIONS,
   MAX_COMMAND_DICE,
+  MAX_COMMAND_EMOTE,
   MAX_COMMAND_MOD,
   MAX_COMMAND_RANGE,
   MAX_COMMAND_REPEATS,
   MAX_COMMAND_SIDES,
   MAX_COMMAND_TERMS,
+  MAX_TIMER_MS,
+  MIN_TIMER_MS,
 } from "./commands";
 
 export const MAX_CHAT_TEXT = 4000;
@@ -169,6 +174,22 @@ const parseExprPayload = (value: Record<string, unknown>) => {
   return { kind: "expr" as const, passes, total };
 };
 
+const parseOrderPeople = (value: unknown) => {
+  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_PEERS)
+    return null;
+  const people: Array<{ name: string; peerId: string }> = [];
+  const seen = new Set<string>();
+  for (const entry of value) {
+    if (!isRecord(entry)) return null;
+    const name = str(entry.name, MAX_DISPLAY_NAME);
+    const peerId = str(entry.peerId, MAX_PEER_ID);
+    if (!name || !peerId || seen.has(peerId)) return null;
+    seen.add(peerId);
+    people.push({ name, peerId });
+  }
+  return people;
+};
+
 /** `null` quando ausente, `false` quando presente e inválido. */
 const parseChatCommandPayload = (
   value: unknown,
@@ -214,7 +235,53 @@ const parseChatCommandPayload = (
     if (!name || !peerId) return false;
     return { kind: "pick", name, peerId };
   }
+  if (value.kind === "choice") {
+    const option = str(value.option, MAX_COMMAND_CHOICE_LENGTH);
+    if (!option) return false;
+    return { kind: "choice", option };
+  }
+  if (value.kind === "order") {
+    const people = parseOrderPeople(value.people);
+    if (!people) return false;
+    return { kind: "order", people };
+  }
+  if (value.kind === "coin") {
+    if (value.face !== "heads" && value.face !== "tails") return false;
+    return { kind: "coin", face: value.face };
+  }
+  if (value.kind === "emote") {
+    const action = str(value.action, MAX_COMMAND_EMOTE);
+    if (!action) return false;
+    return { kind: "emote", action };
+  }
+  if (value.kind === "timer") {
+    const ms = int(value.ms, MIN_TIMER_MS, MAX_TIMER_MS);
+    if (ms === null) return false;
+    return { kind: "timer", ms };
+  }
+  if (value.kind === "poll") {
+    const id = str(value.id, MAX_TRANSFER_ID);
+    const options = parsePollOptions(value.options);
+    if (!id || !options) return false;
+    return { kind: "poll", id, options };
+  }
   return false;
+};
+
+const parsePollOptions = (value: unknown): string[] | null => {
+  if (!Array.isArray(value)) return null;
+  if (value.length < 2 || value.length > MAX_COMMAND_CHOICE_OPTIONS) return null;
+  const options: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of value) {
+    const option = str(entry, MAX_COMMAND_CHOICE_LENGTH);
+    if (!option) return null;
+    const key = option.toLowerCase();
+    if (seen.has(key)) return null;
+    seen.add(key);
+    options.push(option);
+  }
+  return options;
 };
 
 const peerInfo = (value: unknown): PeerInfo | null => {
@@ -407,6 +474,13 @@ export const parseWire = (raw: unknown): WireMessage | null => {
     case "file-end": {
       const id = str(raw.id, MAX_TRANSFER_ID);
       return id ? { type: "file-end", id } : null;
+    }
+
+    case "poll-vote": {
+      const id = str(raw.id, MAX_TRANSFER_ID);
+      const option = int(raw.option, 0, MAX_COMMAND_CHOICE_OPTIONS - 1);
+      if (!id || option === null) return null;
+      return { type: "poll-vote", id, option };
     }
 
     default:

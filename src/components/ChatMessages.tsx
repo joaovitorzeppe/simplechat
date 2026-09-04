@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@i18n/use-i18n";
 import {
   formatFileSize,
@@ -7,9 +7,13 @@ import {
   isPreviewableImage,
   splitMessageText,
 } from "@libs/chat";
-import { formatCommandText, peopleForCommandMentions } from "@libs/commands";
+import {
+  formatCommandText,
+  formatTimerClock,
+  peopleForCommandMentions,
+} from "@libs/commands";
 import { isPinged, mentionMarks, type MentionPerson } from "@libs/mentions";
-import type { ChatFile, ChatMessage } from "@libs/types";
+import type { ChatCommandPayload, ChatFile, ChatMessage } from "@libs/types";
 import { useFileProgress } from "@libs/file-progress";
 import { cn } from "@libs/cn";
 import { DownloadIcon } from "./Icons";
@@ -20,6 +24,7 @@ type Props = {
   messages: ChatMessage[];
   selfId: string;
   people: MentionPerson[];
+  onVote: (pollId: string, option: number) => void;
 };
 
 const MessageBody = ({
@@ -135,7 +140,73 @@ const FileCard = ({ file }: { file: ChatFile }) => {
   );
 };
 
-export const ChatMessages = ({ messages, selfId, people }: Props) => {
+const TimerCard = ({ ms, startedAt }: { ms: number; startedAt: number }) => {
+  const { t } = useI18n();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (startedAt + ms - Date.now() <= 0) return;
+    const id = window.setInterval(() => {
+      const next = Date.now();
+      setNow(next);
+      if (startedAt + ms - next <= 0) window.clearInterval(id);
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [ms, startedAt]);
+  const left = Math.max(0, startedAt + ms - now);
+  return (
+    <p className="min-w-28 text-center font-mono text-2xl tabular-nums tracking-tight">
+      {left <= 0 ? t("chat.command.timerEnded") : formatTimerClock(left)}
+    </p>
+  );
+};
+
+const EMPTY_VOTES: Record<string, number> = {};
+
+const PollCard = ({
+  poll,
+  votes = EMPTY_VOTES,
+  selfId,
+  onVote,
+}: {
+  poll: Extract<ChatCommandPayload, { kind: "poll" }>;
+  votes?: Record<string, number>;
+  selfId: string;
+  onVote: (pollId: string, option: number) => void;
+}) => {
+  const mine = votes[selfId];
+  const counts = Array.from({ length: poll.options.length }, () => 0);
+  for (const vote of Object.values(votes)) {
+    if (vote >= 0 && vote < counts.length) counts[vote] += 1;
+  }
+  return (
+    <div className="min-w-48 space-y-1.5">
+      {poll.options.map((option, index) => {
+        const selected = mine === index;
+        return (
+          <button
+            key={`${poll.id}-${index}`}
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onVote(poll.id, index)}
+            className={cn(
+              "flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm transition",
+              selected
+                ? "bg-accent/25 ring-1 ring-accent/50"
+                : "bg-zinc-900/70 hover:bg-zinc-900",
+            )}
+          >
+            <span className="min-w-0 wrap-break-word">{option}</span>
+            <span className="shrink-0 tabular-nums text-zinc-400">
+              {counts[index] ?? 0}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+export const ChatMessages = ({ messages, selfId, people, onVote }: Props) => {
   const { locale, t } = useI18n();
   const groups = useMemo(() => groupChatMessages(messages), [messages]);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -189,11 +260,20 @@ export const ChatMessages = ({ messages, selfId, people }: Props) => {
                     )}
                   >
                     {msg.file && <FileCard file={msg.file} />}
-                    {msg.command || msg.text ? (
+                    {msg.command?.kind === "timer" ? (
+                      <TimerCard ms={msg.command.ms} startedAt={msg.at} />
+                    ) : msg.command?.kind === "poll" ? (
+                      <PollCard
+                        poll={msg.command}
+                        votes={msg.pollVotes}
+                        selfId={selfId}
+                        onVote={onVote}
+                      />
+                    ) : msg.command || msg.text ? (
                       <MessageBody
                         text={
                           msg.command
-                            ? formatCommandText(msg.command, t)
+                            ? formatCommandText(msg.command, t, msg.fromName)
                             : msg.text
                         }
                         marks={mentionMarks(

@@ -917,3 +917,69 @@ describe("envio de arquivo", () => {
     expect(core.state.messages.at(-1)?.file?.status).toBe("ready");
   });
 });
+
+describe("timer e voto no chat", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+  const poll = {
+    type: "chat" as const,
+    id: "p1",
+    text: "Votação: pizza, sushi",
+    fromPeerId: HOST,
+    fromName: "Host",
+    at: 1,
+    command: { kind: "poll" as const, id: "poll-1", options: ["pizza", "sushi"] },
+  };
+
+  it("avisa quando o timer acaba mesmo com o chat fechado", () => {
+    vi.useFakeTimers();
+    asGuest();
+    expect(session.sendChat("/timer 5s")).toBe(true);
+    expect(getToast()?.key).not.toBe("chat.command.timerDone");
+    vi.advanceTimersByTime(5_000);
+    expect(getToast()?.key).toBe("chat.command.timerDone");
+    vi.useRealTimers();
+  });
+
+  it("aplica o voto local e anuncia só se mudou", () => {
+    asGuest();
+    const c = conn(HOST);
+    core.data.set(HOST, c);
+    core.onWire(conn(HOST), poll);
+    session.votePoll("poll-1", 0);
+    expect(core.state.messages.at(-1)?.pollVotes).toEqual({ [ME]: 0 });
+    expect(c.sent).toEqual([{ type: "poll-vote", id: "poll-1", option: 0 }]);
+    c.sent.length = 0;
+    session.votePoll("poll-1", 0);
+    expect(c.sent).toEqual([]);
+    session.votePoll("poll-1", 1);
+    expect(core.state.messages.at(-1)?.pollVotes).toEqual({ [ME]: 1 });
+    expect(c.sent).toEqual([{ type: "poll-vote", id: "poll-1", option: 1 }]);
+  });
+
+  it("usa a conexão como votante, não o payload", () => {
+    asGuest();
+    core.roomMembers = [
+      ...core.roomMembers,
+      { peerId: "bruno-1", displayName: "Bruno" },
+    ];
+    core.onWire(conn(HOST), poll);
+    core.onWire(conn("bruno-1"), { type: "poll-vote", id: "poll-1", option: 1 });
+    expect(core.state.messages.at(-1)?.pollVotes).toEqual({ "bruno-1": 1 });
+  });
+
+  it("ignora voto de quem não está na sala", () => {
+    asGuest();
+    core.onWire(conn(HOST), poll);
+    core.onWire(conn(INTRUDER), { type: "poll-vote", id: "poll-1", option: 0 });
+    expect(core.state.messages.at(-1)?.pollVotes).toBeUndefined();
+  });
+
+  it("ignora opção que a enquete não tem", () => {
+    asGuest();
+    core.onWire(conn(HOST), poll);
+    core.onWire(conn(HOST), { type: "poll-vote", id: "poll-1", option: 9 });
+    expect(core.state.messages.at(-1)?.pollVotes).toBeUndefined();
+  });
+});

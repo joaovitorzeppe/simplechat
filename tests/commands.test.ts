@@ -3,10 +3,12 @@ import {
   commandQueryAt,
   filterChatCommands,
   formatCommandText,
+  formatTimerClock,
   insertCommand,
   mentionsForCommand,
   parseChatCommand,
   parseRollArgs,
+  parseTimerArgs,
   peopleForCommandMentions,
   randomInt,
   runChatCommand,
@@ -43,10 +45,23 @@ describe("commandQueryAt", () => {
 
 describe("filterChatCommands", () => {
   it("filtra pelo nome e pelos apelidos", () => {
-    expect(filterChatCommands("").map((cmd) => cmd.id)).toEqual(["roll", "pick"]);
+    expect(filterChatCommands("").map((cmd) => cmd.id)).toEqual([
+      "roll",
+      "pick",
+      "choose",
+      "order",
+      "coin",
+      "emote",
+      "timer",
+      "poll",
+      "help",
+    ]);
     expect(filterChatCommands("da").map((cmd) => cmd.id)).toEqual(["roll"]);
     expect(filterChatCommands("roll").map((cmd) => cmd.id)).toEqual(["roll"]);
     expect(filterChatCommands("sor").map((cmd) => cmd.id)).toEqual(["pick"]);
+    expect(filterChatCommands("esc").map((cmd) => cmd.id)).toEqual(["choose"]);
+    expect(filterChatCommands("or").map((cmd) => cmd.id)).toEqual(["order"]);
+    expect(filterChatCommands("me").map((cmd) => cmd.id)).toEqual(["emote"]);
   });
 });
 
@@ -285,6 +300,95 @@ describe("runChatCommand", () => {
     });
   });
 
+  it("escolhe opções, ordem, moeda, ação e ajuda", () => {
+    expect(
+      runChatCommand("/escolher pizza, sushi", people, rngOf([0.6])),
+    ).toEqual({
+      ok: true,
+      command: { kind: "choice", option: "sushi" },
+    });
+    expect(runChatCommand("/escolher pizza sushi taco", people, rngOf([0]))).toEqual({
+      ok: true,
+      command: { kind: "choice", option: "pizza" },
+    });
+    expect(runChatCommand("/escolher pizza", people)).toEqual({
+      ok: false,
+      error: "chat.command.chooseInvalid",
+    });
+    expect(runChatCommand("/ordem", people, rngOf([0]))).toEqual({
+      ok: true,
+      command: {
+        kind: "order",
+        people: [
+          { name: "Bruno", peerId: "bruno-1" },
+          { name: "Ana", peerId: "ana-1" },
+        ],
+      },
+    });
+    expect(runChatCommand("/moeda", people, rngOf([0]))).toEqual({
+      ok: true,
+      command: { kind: "coin", face: "heads" },
+    });
+    expect(runChatCommand("/me acena", people)).toEqual({
+      ok: true,
+      command: { kind: "emote", action: "acena" },
+    });
+    expect(runChatCommand("/me", people)).toEqual({
+      ok: false,
+      error: "chat.command.emoteEmpty",
+    });
+    expect(runChatCommand("/ajuda", people)).toEqual({
+      ok: true,
+      command: { kind: "help" },
+    });
+  });
+
+  it("começa um timer a partir de minutos, unidades ou combinação", () => {
+    expect(parseTimerArgs("5")).toBe(5 * 60_000);
+    expect(parseTimerArgs("30s")).toBe(30_000);
+    expect(parseTimerArgs("5m")).toBe(5 * 60_000);
+    expect(parseTimerArgs("5min")).toBe(5 * 60_000);
+    expect(parseTimerArgs("1h")).toBe(60 * 60_000);
+    expect(parseTimerArgs("1h30m")).toBe(90 * 60_000);
+    expect(parseTimerArgs("1 h 30 m")).toBe(90 * 60_000);
+    expect(parseTimerArgs("4s")).toBeNull();
+    expect(parseTimerArgs("3h")).toBeNull();
+    expect(parseTimerArgs("")).toBeNull();
+    expect(runChatCommand("/timer 5s", people)).toEqual({
+      ok: true,
+      command: { kind: "timer", ms: 5_000 },
+    });
+    expect(runChatCommand("/cronômetro 30s", people)).toEqual({
+      ok: true,
+      command: { kind: "timer", ms: 30_000 },
+    });
+    expect(runChatCommand("/timer", people)).toEqual({
+      ok: false,
+      error: "chat.command.timerInvalid",
+    });
+  });
+
+  it("abre uma votação com as mesmas opções do escolher", () => {
+    expect(runChatCommand("/voto pizza, sushi", people)).toEqual({
+      ok: true,
+      command: {
+        kind: "poll",
+        id: expect.stringMatching(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+        ),
+        options: ["pizza", "sushi"],
+      },
+    });
+    expect(runChatCommand("/vote pizza sushi taco", people)).toMatchObject({
+      ok: true,
+      command: { kind: "poll", options: ["pizza", "sushi", "taco"] },
+    });
+    expect(runChatCommand("/voto pizza", people)).toEqual({
+      ok: false,
+      error: "chat.command.pollInvalid",
+    });
+  });
+
   it("recusa /dado inválido", () => {
     expect(runChatCommand("/dado banana", people)).toEqual({
       ok: false,
@@ -371,11 +475,64 @@ describe("formatCommandText", () => {
     ).toBe("Rolou 2d6*3: (1 + 6) * 3 = 21");
     expect(formatCommandText(pick, t)).toBe("Sorteou: @Bruno");
     expect(formatCommandText(pick, en)).toBe("Picked: @Bruno");
+    expect(formatCommandText({ kind: "choice", option: "pizza" }, t)).toBe(
+      "Escolheu: pizza",
+    );
+    expect(formatCommandText({ kind: "coin", face: "heads" }, t)).toBe(
+      "Moeda: cara",
+    );
+    expect(formatCommandText({ kind: "coin", face: "heads" }, en)).toBe(
+      "Coin: heads",
+    );
+    expect(formatCommandText({ kind: "emote", action: "acena" }, t, "João")).toBe(
+      "João acena",
+    );
+    expect(formatCommandText({ kind: "timer", ms: 90_000 }, t)).toBe(
+      "Timer: 1:30",
+    );
+    expect(formatCommandText({ kind: "timer", ms: 3_600_000 }, t)).toBe(
+      "Timer: 1:00:00",
+    );
+    expect(
+      formatCommandText(
+        { kind: "poll", id: "p1", options: ["pizza", "sushi"] },
+        t,
+      ),
+    ).toBe("Votação: pizza, sushi");
+    expect(
+      formatCommandText(
+        {
+          kind: "order",
+          people: [
+            { name: "Ana", peerId: "ana-1" },
+            { name: "Bruno", peerId: "bruno-1" },
+          ],
+        },
+        t,
+      ),
+    ).toBe("Ordem: @Ana, @Bruno");
+    expect(formatCommandText({ kind: "help" }, t)).toMatch(/^Comandos:\n\/dado /);
+  });
+
+  it("mostra o relógio do timer", () => {
+    expect(formatTimerClock(0)).toBe("0:00");
+    expect(formatTimerClock(5_000)).toBe("0:05");
+    expect(formatTimerClock(90_000)).toBe("1:30");
+    expect(formatTimerClock(3_661_000)).toBe("1:01:01");
   });
 
   it("o sorteio marca a pessoa escolhida", () => {
     expect(mentionsForCommand(die)).toEqual([]);
     expect(mentionsForCommand(pick)).toEqual(["bruno-1"]);
+    expect(
+      mentionsForCommand({
+        kind: "order",
+        people: [
+          { name: "Ana", peerId: "ana-1" },
+          { name: "Bruno", peerId: "bruno-1" },
+        ],
+      }),
+    ).toEqual(["ana-1", "bruno-1"]);
     expect(
       peopleForCommandMentions(pick, [
         { peerId: "bruno-1", displayName: "Bruno agora" },

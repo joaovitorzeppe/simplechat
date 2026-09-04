@@ -6,7 +6,16 @@ import type {
   RollExprTerm,
 } from "./types";
 
-export type CommandId = "roll" | "pick";
+export type CommandId =
+  | "roll"
+  | "pick"
+  | "choose"
+  | "order"
+  | "coin"
+  | "emote"
+  | "timer"
+  | "poll"
+  | "help";
 
 export type ChatCommand = {
   id: CommandId;
@@ -30,6 +39,62 @@ export const CHAT_COMMANDS: ChatCommand[] = [
     nameKey: "chat.command.pickName",
     hintKey: "chat.command.pickHint",
     exampleKey: "chat.command.pickExample",
+  },
+  {
+    id: "choose",
+    names: ["choose", "escolher", "elegir", "choisir", "scegli"],
+    nameKey: "chat.command.chooseName",
+    hintKey: "chat.command.chooseHint",
+    exampleKey: "chat.command.chooseExample",
+  },
+  {
+    id: "order",
+    names: ["order", "ordem", "orden", "ordre", "ordine"],
+    nameKey: "chat.command.orderName",
+    hintKey: "chat.command.orderHint",
+    exampleKey: "chat.command.orderExample",
+  },
+  {
+    id: "coin",
+    names: ["coin", "moeda", "moneda", "pièce", "piece", "moneta"],
+    nameKey: "chat.command.coinName",
+    hintKey: "chat.command.coinHint",
+    exampleKey: "chat.command.coinExample",
+  },
+  {
+    id: "emote",
+    names: ["me"],
+    nameKey: "chat.command.emoteName",
+    hintKey: "chat.command.emoteHint",
+    exampleKey: "chat.command.emoteExample",
+  },
+  {
+    id: "timer",
+    names: [
+      "timer",
+      "cronometro",
+      "cronômetro",
+      "temporizador",
+      "minuteur",
+      "temporizzatore",
+    ],
+    nameKey: "chat.command.timerName",
+    hintKey: "chat.command.timerHint",
+    exampleKey: "chat.command.timerExample",
+  },
+  {
+    id: "poll",
+    names: ["vote", "voto", "votar", "voter", "vota"],
+    nameKey: "chat.command.pollName",
+    hintKey: "chat.command.pollHint",
+    exampleKey: "chat.command.pollExample",
+  },
+  {
+    id: "help",
+    names: ["help", "ajuda", "ayuda", "aide", "aiuto"],
+    nameKey: "chat.command.helpName",
+    hintKey: "chat.command.helpHint",
+    exampleKey: "chat.command.helpExample",
   },
 ];
 
@@ -89,12 +154,91 @@ export const randomInt = (min: number, max: number, rng: Rng = defaultRng) => {
   return lo + Math.floor(rng() * (hi - lo + 1));
 };
 
+export const shuffle = <T,>(items: readonly T[], rng: Rng = defaultRng): T[] => {
+  const next = [...items];
+  for (let i = next.length - 1; i > 0; i -= 1) {
+    const j = randomInt(0, i, rng);
+    const a = next[i];
+    const b = next[j];
+    if (a === undefined || b === undefined) continue;
+    next[i] = b;
+    next[j] = a;
+  }
+  return next;
+};
+
+export const parseChoiceOptions = (args: string): string[] | null => {
+  const raw = args.trim();
+  if (!raw) return null;
+  const parts = raw.includes(",") ? raw.split(",") : raw.split(/\s+/);
+  const unique: string[] = [];
+  const seen = new Set<string>();
+  for (const part of parts) {
+    const option = part.trim();
+    if (!option) continue;
+    if (option.length > MAX_COMMAND_CHOICE_LENGTH) return null;
+    const key = option.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(option);
+  }
+  if (unique.length < 2 || unique.length > MAX_COMMAND_CHOICE_OPTIONS)
+    return null;
+  return unique;
+};
+
 export const MAX_COMMAND_DICE = 20;
 export const MAX_COMMAND_SIDES = 1000;
 export const MAX_COMMAND_RANGE = 1_000_000;
 export const MAX_COMMAND_REPEATS = 20;
 export const MAX_COMMAND_TERMS = 10;
 export const MAX_COMMAND_MOD = 10_000;
+export const MAX_COMMAND_CHOICE_OPTIONS = 12;
+export const MAX_COMMAND_CHOICE_LENGTH = 80;
+export const MAX_COMMAND_EMOTE = 200;
+export const MIN_TIMER_MS = 5_000;
+export const MAX_TIMER_MS = 2 * 60 * 60 * 1000;
+
+export const parseTimerArgs = (args: string): number | null => {
+  const raw = args.trim().toLowerCase().replace(/\s+/g, "");
+  if (!raw) return null;
+  if (/^\d+$/.test(raw)) {
+    const minutes = Number(raw);
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 120) return null;
+    const ms = minutes * 60_000;
+    return ms >= MIN_TIMER_MS && ms <= MAX_TIMER_MS ? ms : null;
+  }
+  const match = raw.match(
+    /^(?:(\d+)h)?(?:(\d+)m(?:in)?)?(?:(\d+)s(?:ec|eg)?)?$/,
+  );
+  if (!match || (!match[1] && !match[2] && !match[3])) return null;
+  const hours = match[1] ? Number(match[1]) : 0;
+  const minutes = match[2] ? Number(match[2]) : 0;
+  const seconds = match[3] ? Number(match[3]) : 0;
+  if (
+    !Number.isInteger(hours) ||
+    !Number.isInteger(minutes) ||
+    !Number.isInteger(seconds)
+  ) {
+    return null;
+  }
+  const ms = ((hours * 60 + minutes) * 60 + seconds) * 1000;
+  if (ms < MIN_TIMER_MS || ms > MAX_TIMER_MS) return null;
+  return ms;
+};
+
+export const formatTimerClock = (ms: number) => {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const seconds = total % 60;
+  const minuteTotal = Math.floor(total / 60);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  if (minuteTotal >= 60) {
+    const hours = Math.floor(minuteTotal / 60);
+    const minutes = minuteTotal % 60;
+    return `${hours}:${pad(minutes)}:${pad(seconds)}`;
+  }
+  return `${minuteTotal}:${pad(seconds)}`;
+};
 
 export type RollTermSpec =
   | { kind: "dice"; n: number; sides: number; op: RollExprOp }
@@ -320,6 +464,7 @@ export type CommandResult =
 export const formatCommandText = (
   command: ChatCommandPayload,
   translate: Translate,
+  fromName = "",
 ) => {
   if (command.kind === "die") {
     return translate("chat.command.rollDie", {
@@ -361,24 +506,80 @@ export const formatCommandText = (
       total: command.total,
     });
   }
-  return translate("chat.command.pickResult", {
-    name: `@${command.name}`,
-  });
+  if (command.kind === "pick") {
+    return translate("chat.command.pickResult", {
+      name: `@${command.name}`,
+    });
+  }
+  if (command.kind === "choice") {
+    return translate("chat.command.chooseResult", { option: command.option });
+  }
+  if (command.kind === "order") {
+    const names = command.people.map((person) => `@${person.name}`).join(", ");
+    return translate("chat.command.orderResult", { names });
+  }
+  if (command.kind === "coin") {
+    const face =
+      command.face === "heads"
+        ? translate("chat.command.coinHeads")
+        : translate("chat.command.coinTails");
+    return translate("chat.command.coinResult", { face });
+  }
+  if (command.kind === "emote") {
+    return translate("chat.command.emoteResult", {
+      name: fromName,
+      action: command.action,
+    });
+  }
+  if (command.kind === "timer") {
+    return translate("chat.command.timerResult", {
+      clock: formatTimerClock(command.ms),
+    });
+  }
+  if (command.kind === "poll") {
+    return translate("chat.command.pollResult", {
+      options: command.options.join(", "),
+    });
+  }
+  if (command.kind === "help") {
+    const lines = CHAT_COMMANDS.map(
+      (item) => `/${translate(item.nameKey)} — ${translate(item.hintKey)}`,
+    );
+    return `${translate("chat.command.helpResult")}\n${lines.join("\n")}`;
+  }
+  return "";
 };
 
 export const mentionsForCommand = (command: ChatCommandPayload) => {
-  return command.kind === "pick" ? [command.peerId] : [];
+  if (command.kind === "pick") return [command.peerId];
+  if (command.kind === "order") {
+    return command.people.map((person) => person.peerId);
+  }
+  return [];
 };
 
 export const peopleForCommandMentions = (
   command: ChatCommandPayload | undefined,
   people: PeerInfo[],
 ) => {
-  if (command?.kind !== "pick") return people;
-  return [
-    { peerId: command.peerId, displayName: command.name },
-    ...people.filter((person) => person.peerId !== command.peerId),
-  ];
+  if (command?.kind === "pick") {
+    return [
+      { peerId: command.peerId, displayName: command.name },
+      ...people.filter((person) => person.peerId !== command.peerId),
+    ];
+  }
+  if (command?.kind === "order") {
+    const extras = command.people.map((person) => ({
+      peerId: person.peerId,
+      displayName: person.name,
+    }));
+    const seen = new Set(extras.map((person) => person.peerId));
+    return [
+      ...extras,
+      ...people.filter((person) => !seen.has(person.peerId)),
+    ];
+  }
+  return people;
 };
 
 export const runChatCommand = (
@@ -453,6 +654,58 @@ export const runChatCommand = (
         value: randomInt(spec.min, spec.max, rng),
       },
     };
+  }
+  if (parsed.id === "choose") {
+    const options = parseChoiceOptions(parsed.args);
+    if (!options) return { ok: false, error: "chat.command.chooseInvalid" };
+    const option = options[randomInt(0, options.length - 1, rng)];
+    if (!option) return { ok: false, error: "chat.command.chooseInvalid" };
+    return { ok: true, command: { kind: "choice", option } };
+  }
+  if (parsed.id === "order") {
+    if (people.length === 0) {
+      return { ok: false, error: "chat.command.pickEmpty" };
+    }
+    return {
+      ok: true,
+      command: {
+        kind: "order",
+        people: shuffle(people, rng).map((person) => ({
+          name: person.displayName,
+          peerId: person.peerId,
+        })),
+      },
+    };
+  }
+  if (parsed.id === "coin") {
+    return {
+      ok: true,
+      command: {
+        kind: "coin",
+        face: randomInt(0, 1, rng) === 0 ? "heads" : "tails",
+      },
+    };
+  }
+  if (parsed.id === "emote") {
+    const action = parsed.args.trim().slice(0, MAX_COMMAND_EMOTE);
+    if (!action) return { ok: false, error: "chat.command.emoteEmpty" };
+    return { ok: true, command: { kind: "emote", action } };
+  }
+  if (parsed.id === "timer") {
+    const ms = parseTimerArgs(parsed.args);
+    if (ms === null) return { ok: false, error: "chat.command.timerInvalid" };
+    return { ok: true, command: { kind: "timer", ms } };
+  }
+  if (parsed.id === "poll") {
+    const options = parseChoiceOptions(parsed.args);
+    if (!options) return { ok: false, error: "chat.command.pollInvalid" };
+    return {
+      ok: true,
+      command: { kind: "poll", id: crypto.randomUUID(), options },
+    };
+  }
+  if (parsed.id === "help") {
+    return { ok: true, command: { kind: "help" } };
   }
   if (people.length === 0) {
     return { ok: false, error: "chat.command.pickEmpty" };

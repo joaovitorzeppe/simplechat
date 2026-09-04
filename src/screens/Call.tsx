@@ -367,6 +367,7 @@ export const Call = () => {
             people={people}
             onSend={(text) => session.sendChat(text)}
             onSendFile={(file) => void session.sendFile(file)}
+            onVote={(pollId, option) => session.votePoll(pollId, option)}
             onClose={() => setChat(false)}
           />
         </div>
@@ -387,6 +388,7 @@ export const Call = () => {
               people={people}
               onSend={(text) => session.sendChat(text)}
               onSendFile={(file) => void session.sendFile(file)}
+              onVote={(pollId, option) => session.votePoll(pollId, option)}
               onClose={() => setChat(false)}
             />
           </div>

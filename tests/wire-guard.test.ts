@@ -190,6 +190,85 @@ describe("parseWire", () => {
         }),
       ),
     ).toBeNull();
+    expect(parseWire(chat({ command: { kind: "help" } }))).toBeNull();
+    expect(
+      parseWire(chat({ command: { kind: "choice", option: "pizza" } })),
+    ).toEqual(chat({ command: { kind: "choice", option: "pizza" } }));
+    expect(
+      parseWire(chat({ command: { kind: "coin", face: "tails" } })),
+    ).toEqual(chat({ command: { kind: "coin", face: "tails" } }));
+    expect(
+      parseWire(chat({ command: { kind: "emote", action: "acena" } })),
+    ).toEqual(chat({ command: { kind: "emote", action: "acena" } }));
+    const timer = { kind: "timer", ms: 30_000 };
+    expect(parseWire(chat({ command: timer }))).toEqual(
+      chat({ command: timer }),
+    );
+    expect(
+      parseWire(chat({ command: { kind: "timer", ms: 4_000 } })),
+    ).toBeNull();
+    expect(
+      parseWire(
+        chat({ command: { kind: "timer", ms: 30_000, startedAt: 1 } }),
+      ),
+    ).toEqual(chat({ command: timer }));
+    const poll = {
+      kind: "poll",
+      id: "poll-1",
+      options: ["pizza", "sushi"],
+    };
+    expect(parseWire(chat({ command: poll }))).toEqual(chat({ command: poll }));
+    expect(
+      parseWire(
+        chat({
+          command: {
+            kind: "poll",
+            id: "poll-1",
+            options: ["pizza", "sushi"],
+            votes: { "ana-1": 0 },
+          },
+        }),
+      ),
+    ).toEqual(chat({ command: poll }));
+    expect(
+      parseWire(
+        chat({ command: { kind: "poll", id: "poll-1", options: ["pizza"] } }),
+      ),
+    ).toBeNull();
+    expect(
+      parseWire(
+        chat({
+          command: {
+            kind: "poll",
+            id: "poll-1",
+            options: ["pizza", "Pizza"],
+          },
+        }),
+      ),
+    ).toBeNull();
+    const order = {
+      kind: "order",
+      people: [
+        { name: "Ana", peerId: "ana-1" },
+        { name: "Bruno", peerId: "bruno-1" },
+      ],
+    };
+    expect(parseWire(chat({ command: order }))).toEqual(
+      chat({ command: order }),
+    );
+    expect(
+      parseWire(
+        chat({
+          command: {
+            kind: "order",
+            people: [
+              { name: "Ana", peerId: "ana-1" },
+              { name: "Ana 2", peerId: "ana-1" },
+            ],
+          },
+        }),
+      ),
+    ).toBeNull();
   });
 
   it("rejeita chat com texto que não é string", () => {
@@ -301,6 +380,22 @@ describe("parseWire", () => {
     expect(parseWire({ type: "room-ended" })).toEqual({ type: "room-ended" });
     expect(parseWire({ type: "room-full" })).toEqual({ type: "room-full" });
     expect(parseWire({ type: "hangup" })).toEqual({ type: "hangup" });
+  });
+
+  it("aceita voto de enquete pelo índice da opção", () => {
+    expect(parseWire({ type: "poll-vote", id: "poll-1", option: 0 })).toEqual({
+      type: "poll-vote",
+      id: "poll-1",
+      option: 0,
+    });
+    expect(parseWire({ type: "poll-vote", id: "poll-1", option: 11 })).toEqual({
+      type: "poll-vote",
+      id: "poll-1",
+      option: 11,
+    });
+    expect(parseWire({ type: "poll-vote", id: "poll-1", option: 12 })).toBeNull();
+    expect(parseWire({ type: "poll-vote", id: "poll-1", option: -1 })).toBeNull();
+    expect(parseWire({ type: "poll-vote", option: 0 })).toBeNull();
   });
 });
 

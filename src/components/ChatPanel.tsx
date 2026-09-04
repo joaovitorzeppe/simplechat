@@ -39,6 +39,7 @@ type Props = {
   people: MentionPerson[];
   onSend: (text: string) => boolean | void;
   onSendFile: (file: File) => void;
+  onVote: (pollId: string, option: number) => void;
   onClose: () => void;
 };
 
@@ -48,6 +49,7 @@ export const ChatPanel = ({
   people,
   onSend,
   onSendFile,
+  onVote,
   onClose,
 }: Props) => {
   const { t } = useI18n();
@@ -204,7 +206,12 @@ export const ChatPanel = ({
         {messages.length === 0 && (
           <p className="text-zinc-500">{t("chat.empty")}</p>
         )}
-        <ChatMessages messages={messages} selfId={selfId} people={people} />
+        <ChatMessages
+          messages={messages}
+          selfId={selfId}
+          people={people}
+          onVote={onVote}
+        />
       </div>
       <form
         onSubmit={submit}

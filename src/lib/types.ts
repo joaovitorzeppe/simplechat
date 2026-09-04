@@ -53,7 +53,17 @@ export type ChatCommandPayload =
       passes: Array<{ terms: RollExprTerm[]; total: number }>;
       total: number;
     }
-  | { kind: "pick"; name: string; peerId: string };
+  | { kind: "pick"; name: string; peerId: string }
+  | { kind: "choice"; option: string }
+  | {
+      kind: "order";
+      people: Array<{ name: string; peerId: string }>;
+    }
+  | { kind: "coin"; face: "heads" | "tails" }
+  | { kind: "emote"; action: string }
+  | { kind: "help" }
+  | { kind: "timer"; ms: number }
+  | { kind: "poll"; id: string; options: string[] };
 
 export type ChatMessage = {
   id: string;
@@ -66,6 +76,8 @@ export type ChatMessage = {
   /** peerIds marcados, ou `"all"`. Ausente = ninguém. */
   mentions?: string[];
   command?: ChatCommandPayload;
+  /** Votos em `/voto`: peerId → índice da opção. Só local; o fio usa poll-vote. */
+  pollVotes?: Record<string, number>;
 };
 
 export type IncomingInvite = {
@@ -105,6 +117,7 @@ export type WireMessage =
       mentions?: string[];
       command?: ChatCommandPayload;
     }
+  | { type: "poll-vote"; id: string; option: number }
   | { type: "room-ended" }
   | { type: "room-full" }
   | { type: "host-transfer"; hostPeerId: string }
