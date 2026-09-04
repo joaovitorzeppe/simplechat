@@ -1,0 +1,194 @@
+import type { Messages } from "./pt";
+
+export const fr: Messages = {
+  "meta.description":
+    "SimpleChat — appel audio, vidéo et chat P2P dans le navigateur.",
+  "language.label": "Langue",
+  "language.pt": "Português",
+  "language.en": "English",
+  "language.es": "Español",
+  "language.fr": "Français",
+  "language.it": "Italiano",
+
+  "common.you": "Vous",
+  "common.someone": "Quelqu’un",
+  "common.youSuffix": " (vous)",
+  "common.screen": "écran",
+  "common.loading": "Chargement…",
+
+  "onboarding.title": "Comment voulez-vous apparaître ?",
+  "onboarding.subtitle":
+    "Pas de compte et pas de serveur de notre côté. Si vous ne demandez pas à être mémorisé, nous générons une nouvelle clé à chaque visite.",
+  "onboarding.inviteSubtitle":
+    "Vous avez une invitation. Après le nom, on vous emmène dans l’appel.",
+  "onboarding.name": "Nom",
+  "onboarding.namePlaceholder": "ex. : Ana",
+  "onboarding.rememberTitle": "Se souvenir de qui je suis",
+  "onboarding.rememberBody":
+    "Nous enregistrons votre nom et la clé dans ce navigateur pour la prochaine visite. Sinon, une nouvelle clé est générée à l’entrée.",
+  "onboarding.enter": "Entrer",
+
+  "home.hello": "Bonjour, {name}",
+  "home.ready": "Prêt à appeler.",
+  "home.connecting": "Connexion au broker PeerJS…",
+  "home.switchIdentity": "Changer d’identité",
+  "home.yourKey": "Votre clé",
+  "home.inviteLink": "Lien de votre appel",
+  "home.copy": "Copier",
+  "home.inviteBody":
+    "Démarrez un appel et partagez le lien. Vous êtes l’hôte : vous approuvez qui entre, vous pouvez retirer quelqu’un et, en partant, vous choisissez entre transmettre le rôle d’hôte ou terminer pour tout le monde.",
+  "home.startCall": "Démarrer l’appel",
+  "home.joinTitle": "Rejoindre ou appeler",
+  "home.joinBody":
+    "Appeler sonne quelqu’un qui n’est pas encore en appel : vous êtes l’hôte. S’il a déjà commencé, Appeler rejoint en tant qu’invité. Rejoindre vous ajoute à un appel déjà commencé.",
+  "home.invitePlaceholder": "clé ou lien (?room=)",
+  "home.call": "Appeler",
+  "home.join": "Rejoindre",
+  "home.disabledConnecting":
+    "Toujours en connexion au broker. Attendez quelques secondes.",
+  "home.disabledNeedInvite": "Collez la clé ou le lien de l’appel.",
+  "home.install": "Installer l’app",
+  "home.installIos":
+    "Dans Safari : appuyez sur Partager, puis sur Ajouter à l’écran d’accueil.",
+  "home.simulatePro": "Simuler Pro (ce navigateur uniquement)",
+  "home.recentsTitle": "Récents",
+  "home.recentsBody":
+    "Personnes avec qui vous avez déjà été en appel. Appeler les sonne à nouveau ; une ancienne invitation ne rouvre pas la salle.",
+  "home.recentsCall": "Appeler",
+  "home.recentsForget": "Oublier",
+
+  "call.host": "Appel · vous êtes l’hôte",
+  "call.guest": "Appel",
+  "call.connecting": "Connexion…",
+  "call.networkHint":
+    "Ce réseau bloque peut-être l’appel P2P. Passez du Wi‑Fi aux données mobiles (ou l’inverse) et réessayez.",
+  "call.inCall": "{count}/{max} dans l’appel",
+  "call.copyInvite": "Copier l’invitation",
+  "call.endForEveryone": "Terminer pour tout le monde",
+  "call.leave": "Quitter l’appel",
+  "call.hideCameras": "Masquer les caméras",
+  "call.showCameras": "Afficher les caméras",
+  "call.cameras": "Caméras",
+  "call.unmute": "Activer le micro",
+  "call.mute": "Couper le micro",
+  "call.cameraOn": "Allumer la caméra",
+  "call.cameraOff": "Éteindre la caméra",
+  "call.shareScreen": "Partager l’écran",
+  "call.chat": "Chat",
+  "call.pinScreen": "Centrer cet écran",
+  "call.waiting": "En attente que l’hôte vous laisse entrer…",
+  "call.remove": "Retirer de l’appel",
+  "call.muteForMe": "Couper pour moi",
+  "call.unmuteForMe": "Activer l’audio pour moi",
+  "call.muteForRoom": "Couper pour la salle",
+  "call.unmuteForRoom": "Autoriser le micro dans la salle",
+  "call.muteVideoForMe": "Couper la vidéo pour moi",
+  "call.unmuteVideoForMe": "Activer la vidéo pour moi",
+  "call.muteVideoForRoom": "Couper la vidéo pour la salle",
+  "call.unmuteVideoForRoom": "Autoriser la vidéo dans la salle",
+  "call.muteAudioOptions": "Audio de ce participant",
+  "call.muteVideoOptions": "Vidéo de ce participant",
+  "call.hostMutedAudio": "L’hôte a coupé le micro dans la salle",
+  "call.hostMutedVideo": "L’hôte a éteint la caméra dans la salle",
+  "call.hostMutedYouAudio": "L’hôte a coupé votre micro",
+  "call.hostMutedYouVideo": "L’hôte a éteint votre caméra",
+
+  "lobby.title": "Demandes d’entrée",
+  "lobby.body": "Seules les personnes que vous approuvez entrent.",
+  "lobby.admit": "Accepter",
+  "lobby.deny": "Refuser",
+
+  "hostLeave.title": "Vous êtes l’hôte de cet appel",
+  "hostLeave.body":
+    "Si vous terminez, l’appel s’arrête pour tout le monde. Vous pouvez aussi transmettre le rôle d’hôte à quelqu’un d’autre et la salle continue sans vous.",
+  "hostLeave.transfer": "Transmettre l’hôte et partir",
+  "hostLeave.end": "Terminer pour tout le monde",
+  "hostLeave.cancel": "Rester dans l’appel",
+
+  "chat.title": "Chat",
+  "chat.close": "Fermer le chat",
+  "chat.empty": "Messages de cet appel. Ils disparaissent à la fin.",
+  "chat.placeholder": "Écrire un message",
+  "chat.send": "Envoyer",
+  "chat.linkWarningKicker": "Lien externe",
+  "chat.linkWarningTitle": "Ce lien peut être dangereux",
+  "chat.linkWarningBody":
+    "Il peut mener à un site faux ou malveillant. Vérifiez l’adresse avant d’ouvrir.",
+  "chat.linkCancel": "Annuler",
+  "chat.linkOpen": "Ouvrir quand même",
+  "chat.attach": "Envoyer un fichier",
+  "chat.attachPro": "L’envoi de fichiers est une fonction Pro",
+  "chat.download": "Télécharger",
+  "chat.fileSending": "Envoi…",
+  "chat.fileReceiving": "Réception…",
+  "chat.fileError": "Échec du fichier",
+  "chat.mentionAll": "Tout le monde dans l’appel",
+  "chat.mentionPicker": "Mentionner quelqu’un",
+
+  "incoming.title": "Appel entrant",
+  "incoming.body": "Audio, vidéo et chat P2P.",
+  "incoming.reject": "Refuser",
+  "incoming.accept": "Répondre",
+
+  "quality.pro": "Qualité Pro (démo)",
+  "quality.free": "Qualité gratuite",
+  "quality.proSoon":
+    "Pro bientôt — 720p, fichiers dans le chat et plus de bitrate",
+
+  "error.unavailableId":
+    "Cette clé est encore occupée sur le broker. Rechargez dans quelques secondes.",
+  "error.peerjs": "Échec de PeerJS",
+  "error.crashTitle": "Quelque chose a cassé ici",
+  "error.crashBody":
+    "L’écran s’est figé à cause d’une erreur inattendue. Recharger règle souvent le problème ; votre appel devra être relancé.",
+  "error.crashReload": "Recharger",
+  "error.insecureContext":
+    "Ouvrez en HTTPS ou en localhost. La caméra et le micro ne fonctionnent pas sur cette origine.",
+  "toast.networkPath":
+    "Impossible de se connecter sur ce réseau. Passez du Wi‑Fi aux données mobiles (ou l’inverse) et réessayez — certains réseaux bloquent les appels P2P.",
+  "toast.networkPathPeer":
+    "Impossible d’atteindre {name} sur ce réseau. Passez du Wi‑Fi aux données mobiles (ou l’inverse).",
+  "toast.peerUnavailable": "Personne introuvable. Vérifiez la clé.",
+  "toast.mediaCall": "Autorisez la caméra et le micro pour appeler.",
+  "toast.mediaRoom": "Autorisez la caméra et le micro pour créer la salle.",
+  "toast.mediaJoin": "Autorisez la caméra et le micro pour rejoindre la salle.",
+  "toast.mediaAccept": "Autorisez la caméra et le micro pour répondre.",
+  "toast.roomEndedByHost": "L’hôte a terminé l’appel.",
+  "toast.leftCall": "Vous avez quitté l’appel.",
+  "toast.peerLeft": "{name} a quitté l’appel.",
+  "toast.mentioned": "{name} vous a mentionné",
+  "toast.mentionedAll": "{name} a mentionné tout le monde",
+  "toast.callEnded": "Appel terminé.",
+  "toast.roomFull": "Cet appel est complet.",
+  "toast.mediaCamera": "Autorisez la caméra pour l’allumer.",
+  "toast.mediaMic": "Autorisez le micro pour l’activer.",
+  "toast.mediaAudioOnly":
+    "Entrée en audio seulement. Vous pourrez allumer la caméra plus tard.",
+  "toast.mediaVideoOnly":
+    "Entrée sans micro. Vous pourrez l’activer plus tard.",
+  "toast.mediaListenOnly":
+    "Entrée sans caméra ni micro. Vous pouvez écouter et utiliser le chat.",
+  "toast.fileTooBig": "Fichier supérieur à {max} Mo.",
+  "toast.fileTooBigPro": "Fichier supérieur à 100 Mo (offre Pro).",
+  "toast.fileProOnly": "L’envoi de fichiers est une fonction Pro.",
+  "toast.fileFailed": "Impossible d’envoyer ou de recevoir le fichier.",
+  "toast.fileBusy": "Attendez la fin de l’envoi en cours.",
+  "toast.knock": "{name} veut rejoindre l’appel.",
+  "toast.joinDenied": "L’hôte n’a pas approuvé votre entrée.",
+  "toast.inviteStale": "Lien invalide ou expiré. Demandez une nouvelle invitation.",
+  "toast.kicked": "L’hôte vous a retiré de l’appel.",
+  "toast.removed": "{name} a été retiré de l’appel.",
+  "toast.hostHandedOver": "Vous avez transmis l’hôte à {name}.",
+  "toast.hostLeftYouHost": "L’hôte est parti. Vous conduisez maintenant l’appel.",
+  "toast.hostLeftNewHost": "L’hôte est parti. {name} conduit maintenant l’appel.",
+  "toast.hostDroppedYouHost":
+    "L’hôte a perdu la connexion. Vous conduisez maintenant l’appel.",
+  "toast.hostDroppedNewHost":
+    "L’hôte a perdu la connexion. {name} conduit maintenant l’appel.",
+  "toast.hostDroppedAlone":
+    "L’hôte a perdu la connexion et l’appel s’est terminé.",
+  "toast.roomMutedAudio": "L’hôte a coupé votre micro pour la salle.",
+  "toast.roomUnmutedAudio": "L’hôte a réactivé votre micro.",
+  "toast.roomMutedVideo": "L’hôte a éteint votre caméra pour la salle.",
+  "toast.roomUnmutedVideo": "L’hôte a réactivé votre caméra.",
+};

@@ -1,0 +1,194 @@
+export const pt = {
+  "meta.description":
+    "SimpleChat — chamada de áudio, vídeo e chat P2P no navegador.",
+  "language.label": "Idioma",
+  "language.pt": "Português",
+  "language.en": "English",
+  "language.es": "Español",
+  "language.fr": "Français",
+  "language.it": "Italiano",
+
+  "common.you": "Você",
+  "common.someone": "Alguém",
+  "common.youSuffix": " (você)",
+  "common.screen": "tela",
+  "common.loading": "Carregando…",
+
+  "onboarding.title": "Como você quer aparecer?",
+  "onboarding.subtitle":
+    "Sem conta e sem servidor nosso. Se você não pedir para lembrar, geramos uma chave nova a cada visita.",
+  "onboarding.inviteSubtitle":
+    "Você recebeu um convite. Depois do nome, entramos na chamada.",
+  "onboarding.name": "Nome",
+  "onboarding.namePlaceholder": "ex.: Ana",
+  "onboarding.rememberTitle": "Lembrar quem eu sou",
+  "onboarding.rememberBody":
+    "Guardamos seu nome e a chave neste navegador para a próxima visita. Sem isso, uma nova chave é gerada ao entrar.",
+  "onboarding.enter": "Entrar",
+
+  "home.hello": "Olá, {name}",
+  "home.ready": "Pronto para ligar.",
+  "home.connecting": "Conectando ao broker PeerJS…",
+  "home.switchIdentity": "Trocar identidade",
+  "home.yourKey": "Sua chave",
+  "home.inviteLink": "Link da sua chamada",
+  "home.copy": "Copiar",
+  "home.inviteBody":
+    "Inicie uma chamada e compartilhe o link. Você é o host: aprova quem entra, pode remover alguém e, ao sair, escolhe entre passar o host adiante ou encerrar para todos.",
+  "home.startCall": "Iniciar chamada",
+  "home.joinTitle": "Entrar ou ligar",
+  "home.joinBody":
+    "Ligar convoca quem ainda não está em chamada: você é o host. Se a pessoa já começou, Ligar entra como convidado. Entrar junta você à chamada que ela já iniciou.",
+  "home.invitePlaceholder": "chave ou link (?room=)",
+  "home.call": "Ligar",
+  "home.join": "Entrar",
+  "home.disabledConnecting":
+    "Ainda conectando ao broker. Espere alguns segundos.",
+  "home.disabledNeedInvite": "Cole a chave ou o link da chamada.",
+  "home.install": "Instalar app",
+  "home.installIos":
+    "No Safari: toque em Compartilhar e depois em Adicionar à Tela de Início.",
+  "home.simulatePro": "Simular Pro (só neste navegador)",
+  "home.recentsTitle": "Recentes",
+  "home.recentsBody":
+    "Pessoas com quem você já esteve numa chamada. Ligar convoca de novo; o convite antigo não reabre a sala.",
+  "home.recentsCall": "Ligar",
+  "home.recentsForget": "Esquecer",
+
+  "call.host": "Chamada · você é o host",
+  "call.guest": "Chamada",
+  "call.connecting": "Conectando…",
+  "call.networkHint":
+    "Esta rede pode estar bloqueando a chamada P2P. Troque Wi‑Fi por dados móveis (ou o contrário) e tente de novo.",
+  "call.inCall": "{count}/{max} na chamada",
+  "call.copyInvite": "Copiar convite",
+  "call.endForEveryone": "Encerrar para todos",
+  "call.leave": "Sair da chamada",
+  "call.hideCameras": "Ocultar câmeras",
+  "call.showCameras": "Mostrar câmeras",
+  "call.cameras": "Câmeras",
+  "call.unmute": "Ativar microfone",
+  "call.mute": "Silenciar",
+  "call.cameraOn": "Ligar câmera",
+  "call.cameraOff": "Desligar câmera",
+  "call.shareScreen": "Compartilhar tela",
+  "call.chat": "Chat",
+  "call.pinScreen": "Centralizar esta tela",
+  "call.waiting": "Esperando o host aprovar sua entrada…",
+  "call.remove": "Remover da chamada",
+  "call.muteForMe": "Silenciar para mim",
+  "call.unmuteForMe": "Ativar áudio para mim",
+  "call.muteForRoom": "Silenciar para a sala",
+  "call.unmuteForRoom": "Liberar microfone na sala",
+  "call.muteVideoForMe": "Desligar vídeo para mim",
+  "call.unmuteVideoForMe": "Ativar vídeo para mim",
+  "call.muteVideoForRoom": "Desligar vídeo para a sala",
+  "call.unmuteVideoForRoom": "Liberar vídeo na sala",
+  "call.muteAudioOptions": "Áudio deste participante",
+  "call.muteVideoOptions": "Vídeo deste participante",
+  "call.hostMutedAudio": "O host silenciou o microfone na sala",
+  "call.hostMutedVideo": "O host desligou a câmera na sala",
+  "call.hostMutedYouAudio": "O host silenciou seu microfone",
+  "call.hostMutedYouVideo": "O host desligou sua câmera",
+
+  "lobby.title": "Querem entrar",
+  "lobby.body": "Só entra quem você aprovar.",
+  "lobby.admit": "Aceitar",
+  "lobby.deny": "Recusar",
+
+  "hostLeave.title": "Você é o host desta chamada",
+  "hostLeave.body":
+    "Se encerrar, a chamada acaba para todos. Se preferir, passe o host para outra pessoa e a sala continua sem você.",
+  "hostLeave.transfer": "Passar o host e sair",
+  "hostLeave.end": "Encerrar para todos",
+  "hostLeave.cancel": "Continuar na chamada",
+
+  "chat.title": "Chat",
+  "chat.close": "Fechar chat",
+  "chat.empty": "Mensagens desta chamada. Somem quando ela termina.",
+  "chat.placeholder": "Escreva uma mensagem",
+  "chat.send": "Enviar",
+  "chat.linkWarningKicker": "Link externo",
+  "chat.linkWarningTitle": "Este link pode ser perigoso",
+  "chat.linkWarningBody":
+    "Ele pode levar a um site falso ou malicioso. Confira o endereço antes de abrir.",
+  "chat.linkCancel": "Cancelar",
+  "chat.linkOpen": "Abrir mesmo assim",
+  "chat.attach": "Enviar arquivo",
+  "chat.attachPro": "Enviar arquivo é um recurso Pro",
+  "chat.download": "Baixar",
+  "chat.fileSending": "Enviando…",
+  "chat.fileReceiving": "Recebendo…",
+  "chat.fileError": "Falha no arquivo",
+  "chat.mentionAll": "Todos na chamada",
+  "chat.mentionPicker": "Marcar alguém",
+
+  "incoming.title": "Chamada recebida",
+  "incoming.body": "Áudio, vídeo e chat P2P.",
+  "incoming.reject": "Recusar",
+  "incoming.accept": "Atender",
+
+  "quality.pro": "Qualidade Pro (demo)",
+  "quality.free": "Qualidade gratuita",
+  "quality.proSoon":
+    "Pro em breve — 720p, arquivos no chat e mais bitrate",
+
+  "error.unavailableId":
+    "Esta chave ainda está ocupada no broker. Recarregue em alguns segundos.",
+  "error.peerjs": "Falha no PeerJS",
+  "error.crashTitle": "Algo quebrou por aqui",
+  "error.crashBody":
+    "A tela travou por um erro inesperado. Recarregar costuma resolver; sua chamada precisará ser refeita.",
+  "error.crashReload": "Recarregar",
+  "error.insecureContext":
+    "Abra por HTTPS ou localhost. Câmera e microfone não funcionam nesta origem.",
+  "toast.networkPath":
+    "Não deu para conectar nesta rede. Troque Wi‑Fi por dados móveis (ou o contrário) e tente de novo — algumas redes bloqueiam chamadas P2P.",
+  "toast.networkPathPeer":
+    "Não deu para chegar em {name} nesta rede. Troque Wi‑Fi por dados móveis (ou o contrário).",
+  "toast.peerUnavailable": "Pessoa não encontrada. Confira a chave.",
+  "toast.mediaCall": "Permita câmera e microfone para ligar.",
+  "toast.mediaRoom": "Permita câmera e microfone para criar a sala.",
+  "toast.mediaJoin": "Permita câmera e microfone para entrar na sala.",
+  "toast.mediaAccept": "Permita câmera e microfone para atender.",
+  "toast.roomEndedByHost": "O host encerrou a chamada.",
+  "toast.leftCall": "Você saiu da chamada.",
+  "toast.peerLeft": "{name} saiu da chamada.",
+  "toast.mentioned": "{name} marcou você",
+  "toast.mentionedAll": "{name} marcou todo mundo",
+  "toast.callEnded": "Chamada encerrada.",
+  "toast.roomFull": "Esta chamada está cheia.",
+  "toast.mediaCamera": "Permita a câmera para ligá-la.",
+  "toast.mediaMic": "Permita o microfone para ativá-lo.",
+  "toast.mediaAudioOnly":
+    "Entrou só com áudio. A câmera pode ser ligada depois.",
+  "toast.mediaVideoOnly":
+    "Entrou sem microfone. Você pode ativá-lo depois.",
+  "toast.mediaListenOnly":
+    "Entrou sem câmera e microfone. Você ouve e usa o chat.",
+  "toast.fileTooBig": "Arquivo acima de {max} MB.",
+  "toast.fileTooBigPro": "Arquivo acima de 100 MB (plano Pro).",
+  "toast.fileProOnly": "Enviar arquivo é um recurso Pro.",
+  "toast.fileFailed": "Não foi possível enviar ou receber o arquivo.",
+  "toast.fileBusy": "Espere o arquivo atual terminar de enviar.",
+  "toast.knock": "{name} quer entrar na chamada.",
+  "toast.joinDenied": "O host não aprovou sua entrada.",
+  "toast.inviteStale": "Link inválido ou expirado. Peça um convite novo.",
+  "toast.kicked": "O host removeu você da chamada.",
+  "toast.removed": "{name} foi removido da chamada.",
+  "toast.hostHandedOver": "Você passou o host para {name}.",
+  "toast.hostLeftYouHost": "O host saiu. Agora você conduz a chamada.",
+  "toast.hostLeftNewHost": "O host saiu. Agora {name} conduz a chamada.",
+  "toast.hostDroppedYouHost":
+    "A conexão do host caiu. Agora você conduz a chamada.",
+  "toast.hostDroppedNewHost":
+    "A conexão do host caiu. Agora {name} conduz a chamada.",
+  "toast.hostDroppedAlone": "A conexão do host caiu e a chamada acabou.",
+  "toast.roomMutedAudio": "O host silenciou seu microfone para a sala.",
+  "toast.roomUnmutedAudio": "O host liberou seu microfone.",
+  "toast.roomMutedVideo": "O host desligou sua câmera para a sala.",
+  "toast.roomUnmutedVideo": "O host liberou sua câmera.",
+} as const;
+
+export type MessageKey = keyof typeof pt;
+export type Messages = Record<MessageKey, string>;

@@ -1,9 +1,7 @@
 import { GlobeIcon } from "./Icons";
-import { localeNames, type Locale } from "@i18n/i18n";
+import { localeNames, supportedLocales, type Locale } from "@i18n/i18n";
 import { useI18n } from "@i18n/use-i18n";
 import { cn } from "@libs/cn";
-
-const OPTIONS: Locale[] = ["pt", "en", "es"];
 
 export const LanguageSwitcher = ({ className }: { className?: string }) => {
   const { locale, setLocale, t } = useI18n();
@@ -23,7 +21,7 @@ export const LanguageSwitcher = ({ className }: { className?: string }) => {
         onChange={(e) => setLocale(e.target.value as Locale)}
         className="rounded-xl border border-line bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-100 outline-none focus:border-accent cursor-pointer"
       >
-        {OPTIONS.map((code) => (
+        {supportedLocales.map((code) => (
           <option key={code} value={code}>
             {t(localeNames[code])}
           </option>

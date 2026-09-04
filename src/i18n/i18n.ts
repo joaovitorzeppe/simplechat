@@ -1,24 +1,29 @@
 import { dictionaries, type MessageKey } from "./locales";
 
-export type Locale = "pt" | "en" | "es";
+export type Locale = keyof typeof dictionaries;
 
 const KEY = "simplechat.locale";
-const LOCALES = new Set<string>(["pt", "en", "es"]);
+
+export const supportedLocales = Object.keys(dictionaries) as Locale[];
 
 export const localeNames: Record<Locale, MessageKey> = {
   pt: "language.pt",
   en: "language.en",
   es: "language.es",
+  fr: "language.fr",
+  it: "language.it",
 };
 
 export const localeTags: Record<Locale, string> = {
   pt: "pt-BR",
   en: "en",
   es: "es",
+  fr: "fr",
+  it: "it",
 };
 
 const isLocale = (value: string): value is Locale => {
-  return LOCALES.has(value);
+  return value in dictionaries;
 };
 
 export const detectLocale = (): Locale => {
@@ -29,9 +34,7 @@ export const detectLocale = (): Locale => {
     // ignore
   }
   const lang = (navigator.language || "en").toLowerCase();
-  if (lang.startsWith("pt")) return "pt";
-  if (lang.startsWith("es")) return "es";
-  return "en";
+  return supportedLocales.find((code) => lang.startsWith(code)) ?? "en";
 };
 
 let locale: Locale = detectLocale();
