@@ -8,6 +8,22 @@ O formato segue a ideia de [Keep a Changelog](https://keepachangelog.com/pt-BR/1
 
 Tudo o que entrou depois do primeiro CHANGELOG.
 
+### Segurança, performance e confiabilidade
+
+Commit: `f92fd3a`.
+
+Auditoria do stack P2P (segurança, CPU/memória, bugs). Altos e médios fechados; TURN estático no bundle ficou de fora de propósito.
+
+- **Segredo da sala:** sai do `metadata` do PeerJS (não ia para o broker); continua só no hello do data channel e em `room-peers`. Abrir sala (`createRoom`) gira o segredo — convite antigo morre.
+- **Call:** um `ChatPanel` (overlay só no mobile); `useSessionSelector` + `CallStage`/`CallChatDock`; `patch` no-op e `upsertRemote` sem reavisar se nada mudou.
+- **Speak-level:** um `SpeakBus` (rAF único) em vez de analyser por tile.
+- **Arquivos:** finish do OPFS devolve o `File` do disco (sem `arrayBuffer` completo) e `release` na revoke; envio com concurrency 3; se alguém cai no meio, toast `filePartial`; free envia até 10 MB, Pro até 100 MB (receber no teto Pro continua intencional).
+- **SW:** cache `simplechat-v2`; assets `/assets/*` hashed são network-only (não acumulam).
+- **Chat hostil:** cooldown por peer, toast de `@` coalescido, teto de timers ativos; `displayName` do metadata de call passa por `clampDisplayName`.
+- **Mídia/UI:** `video.play()` após `srcObject`; handlers estáveis no `VideoTile` (`peerId` + métodos da sessão); `NotAllowedError` para a cascata do `getUserMedia`; timeouts de “copiado” limpos no unmount.
+- **CSP/tema:** bootstrap do tema em `/theme-boot.js` (sem script inline). Fontes IBM Plex só no `main`.
+- **room-mute:** viewers já silenciam na tile; comment deixa claro o teto P2P (remetente hostil ainda pode enviar bytes).
+
 ### Produção
 
 - Domínio `simplechat.me` na Vercel; o apex redireciona para `www.simplechat.me`.
@@ -58,7 +74,7 @@ Commits: `845b1ee`, `01ca868`, `a56b288`.
 Commits: `872b2f8`, `395ac4c`, `2732ee2`, `1f4e155`.
 
 - Links no chat viram texto clicável. Antes de abrir, um aviso mostra o endereço com Cancelar ou Abrir em nova aba.
-- Arquivos no chat via data channel P2P. **Só o plano Pro envia** (teto 100 MB). O free ainda recebe. Preview de jpeg/png/gif/webp; o resto só baixa. Some ao sair da chamada.
+- Arquivos no chat via data channel P2P. **Free envia até 10 MB**, Pro até 100 MB; qualquer um na sala pode receber (até o teto Pro do fio). Preview de jpeg/png/gif/webp; o resto só baixa. Some ao sair da chamada.
 - Leitura e montagem das fatias no worker (fallback na UI). Com OPFS, os bytes recebidos vão para o disco do origin durante a transferência.
 - Recentes na home: quem já esteve numa chamada com você, para Ligar de novo (não reabre a sala antiga).
 - Quando alguém sai, os outros veem toast e uma linha no chat com o nome.
