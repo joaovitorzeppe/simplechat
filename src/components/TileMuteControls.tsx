@@ -4,7 +4,7 @@ import { useI18n } from "@i18n/use-i18n";
 import { cn } from "@libs/cn";
 import { MUTE_OFF, type MuteFlags, type MuteKind } from "@libs/mutes";
 import { CameraIcon, CameraOffIcon, MicIcon, MicOffIcon } from "./Icons";
-import { DisabledTouchHint } from "./DisabledTouchHint";
+import { Tooltip } from "./Tooltip";
 
 type Props = {
   name: string;
@@ -134,16 +134,17 @@ const MuteButton = ({
       aria-haspopup={isHostViewer ? "menu" : undefined}
       aria-controls={isHostViewer && open ? menuId : undefined}
       aria-label={`${label}: ${name}`}
-      title={locked ? undefined : label}
       onClick={() => {
         if (locked) return;
         if (isHostViewer && onSetRoom) onOpen();
         else onToggleLocal(kind);
       }}
       className={cn(
-        "grid size-7 place-items-center rounded-full border border-line bg-black/60",
+        "grid size-7 place-items-center rounded-full border",
         locked ? "cursor-not-allowed opacity-70" : "cursor-pointer",
-        roomOn ? "text-red-300" : off ? "text-zinc-300" : "text-zinc-100",
+        off
+          ? "border-red-500 bg-red-500 text-white"
+          : "border-line bg-black/60 text-zinc-100",
       )}
     >
       <Icon width={14} height={14} />
@@ -152,16 +153,9 @@ const MuteButton = ({
 
   return (
     <div className="relative">
-      {locked ? (
-        <DisabledTouchHint
-          hint={label}
-          tooltipClassName="bottom-[calc(100%+0.4rem)] max-w-40 px-2 py-1 text-[10px]"
-        >
-          {trigger}
-        </DisabledTouchHint>
-      ) : (
-        trigger
-      )}
+      <Tooltip label={label} touchToast={locked}>
+        {trigger}
+      </Tooltip>
       {open && onSetRoom && (
         <div
           id={menuId}

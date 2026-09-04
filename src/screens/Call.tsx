@@ -35,6 +35,9 @@ type ScreenItem = {
   local: boolean;
 };
 
+const iconOff =
+  "bg-red-500! hover:bg-red-400! hover:border-red-400 border-red-500";
+
 export const Call = () => {
   const { t } = useI18n();
   const { state, session } = useSession();
@@ -267,6 +270,7 @@ export const Call = () => {
         <div className="safe-bottom flex shrink-0 flex-wrap items-center justify-center gap-2 px-4 pt-4">
           <Button
             variant="icon"
+            className={state.muted ? iconOff : undefined}
             onClick={() => void session.toggleMute()}
             disabled={!!selfRoom?.audio}
             title={
@@ -281,6 +285,7 @@ export const Call = () => {
           </Button>
           <Button
             variant="icon"
+            className={state.cameraOff ? iconOff : undefined}
             onClick={() => void session.toggleCamera()}
             disabled={!!selfRoom?.video}
             title={
@@ -297,7 +302,7 @@ export const Call = () => {
             variant="icon"
             className={state.sharingScreen ? "border-accent text-accent" : ""}
             onClick={() => void session.shareScreen()}
-            title={t("call.shareScreen")}
+            title={state.sharingScreen ? t("call.stopScreen") : t("call.shareScreen")}
           >
             <ScreenIcon />
           </Button>
@@ -310,9 +315,11 @@ export const Call = () => {
             }
             onClick={() => setChat(!chatOpen)}
             title={
-              unread > 0 && !chatOpen
-                ? `${t("call.chat")} (${unread})`
-                : t("call.chat")
+              chatOpen
+                ? t("chat.close")
+                : unread > 0
+                  ? `${t("call.openChat")} (${unread})`
+                  : t("call.openChat")
             }
           >
             <ChatIcon />
@@ -324,7 +331,7 @@ export const Call = () => {
           </Button>
           <Button
             variant="icon"
-            className="bg-red-500! hover:bg-red-400! hover:border-red-400 border-red-500"
+            className={iconOff}
             onClick={() => session.hangUp()}
             title={t("call.leave")}
           >

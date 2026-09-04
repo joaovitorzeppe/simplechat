@@ -2,7 +2,7 @@ import type { Messages } from "./pt";
 
 export const it: Messages = {
   "meta.description":
-    "SimpleChat — chiamata audio, video e chat P2P nel browser.",
+    "SimpleChat — chiamata audio, video senza compromessi nel browser.",
   "language.label": "Lingua",
   "language.pt": "Português",
   "language.en": "English",
@@ -18,7 +18,7 @@ export const it: Messages = {
 
   "onboarding.title": "Come vuoi apparire?",
   "onboarding.subtitle":
-    "Niente account e niente server nostro. Se non chiedi di essere ricordato, generiamo una nuova chiave a ogni visita.",
+    "Se non chiedi di essere ricordato, generiamo una nuova chiave a ogni visita.",
   "onboarding.inviteSubtitle":
     "Hai un invito. Dopo il nome, entriamo nella chiamata.",
   "onboarding.name": "Nome",
@@ -48,8 +48,7 @@ export const it: Messages = {
     "Ancora in connessione al broker. Aspetta qualche secondo.",
   "home.disabledNeedInvite": "Incolla la chiave o il link della chiamata.",
   "home.install": "Installa app",
-  "home.installIos":
-    "In Safari: tocca Condividi e poi Aggiungi a Home.",
+  "home.installIos": "In Safari: tocca Condividi e poi Aggiungi a Home.",
   "home.simulatePro": "Simula Pro (solo in questo browser)",
   "home.recentsTitle": "Recenti",
   "home.recentsBody":
@@ -74,7 +73,9 @@ export const it: Messages = {
   "call.cameraOn": "Accendi fotocamera",
   "call.cameraOff": "Spegni fotocamera",
   "call.shareScreen": "Condividi schermo",
+  "call.stopScreen": "Interrompi condivisione",
   "call.chat": "Chat",
+  "call.openChat": "Apri chat",
   "call.pinScreen": "Centra questo schermo",
   "call.waiting": "In attesa che l’host ti faccia entrare…",
   "call.remove": "Rimuovi dalla chiamata",
@@ -132,8 +133,7 @@ export const it: Messages = {
 
   "quality.pro": "Qualità Pro (demo)",
   "quality.free": "Qualità gratuita",
-  "quality.proSoon":
-    "Pro in arrivo — 720p, file in chat e più bitrate",
+  "quality.proSoon": "Pro in arrivo — 720p, file in chat e più bitrate",
 
   "error.unavailableId":
     "Questa chiave è ancora occupata sul broker. Ricarica tra qualche secondo.",
@@ -151,7 +151,8 @@ export const it: Messages = {
   "toast.peerUnavailable": "Persona non trovata. Controlla la chiave.",
   "toast.mediaCall": "Consenti fotocamera e microfono per chiamare.",
   "toast.mediaRoom": "Consenti fotocamera e microfono per creare la stanza.",
-  "toast.mediaJoin": "Consenti fotocamera e microfono per entrare nella stanza.",
+  "toast.mediaJoin":
+    "Consenti fotocamera e microfono per entrare nella stanza.",
   "toast.mediaAccept": "Consenti fotocamera e microfono per rispondere.",
   "toast.roomEndedByHost": "L’host ha terminato la chiamata.",
   "toast.leftCall": "Sei uscito dalla chiamata.",
@@ -164,8 +165,7 @@ export const it: Messages = {
   "toast.mediaMic": "Consenti il microfono per attivarlo.",
   "toast.mediaAudioOnly":
     "Sei entrato solo con l’audio. Puoi accendere la fotocamera dopo.",
-  "toast.mediaVideoOnly":
-    "Sei entrato senza microfono. Puoi attivarlo dopo.",
+  "toast.mediaVideoOnly": "Sei entrato senza microfono. Puoi attivarlo dopo.",
   "toast.mediaListenOnly":
     "Sei entrato senza fotocamera né microfono. Puoi ascoltare e usare la chat.",
   "toast.fileTooBig": "File sopra i {max} MB.",
@@ -187,7 +187,8 @@ export const it: Messages = {
     "L’host ha perso la connessione. Ora {name} conduce la chiamata.",
   "toast.hostDroppedAlone":
     "L’host ha perso la connessione e la chiamata è finita.",
-  "toast.roomMutedAudio": "L’host ha disattivato il tuo microfono per la stanza.",
+  "toast.roomMutedAudio":
+    "L’host ha disattivato il tuo microfono per la stanza.",
   "toast.roomUnmutedAudio": "L’host ha riattivato il tuo microfono.",
   "toast.roomMutedVideo": "L’host ha spento la tua fotocamera per la stanza.",
   "toast.roomUnmutedVideo": "L’host ha riattivato la tua fotocamera.",

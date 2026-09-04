@@ -1,6 +1,6 @@
 export const pt = {
   "meta.description":
-    "SimpleChat — chamada de áudio, vídeo e chat P2P no navegador.",
+    "SimpleChat — chamada de áudio, vídeo sem compromisso no navegador.",
   "language.label": "Idioma",
   "language.pt": "Português",
   "language.en": "English",
@@ -16,7 +16,7 @@ export const pt = {
 
   "onboarding.title": "Como você quer aparecer?",
   "onboarding.subtitle":
-    "Sem conta e sem servidor nosso. Se você não pedir para lembrar, geramos uma chave nova a cada visita.",
+    "Se você não pedir para lembrar, geramos uma chave nova a cada visita.",
   "onboarding.inviteSubtitle":
     "Você recebeu um convite. Depois do nome, entramos na chamada.",
   "onboarding.name": "Nome",
@@ -68,11 +68,13 @@ export const pt = {
   "call.showCameras": "Mostrar câmeras",
   "call.cameras": "Câmeras",
   "call.unmute": "Ativar microfone",
-  "call.mute": "Silenciar",
+  "call.mute": "Silenciar microfone",
   "call.cameraOn": "Ligar câmera",
   "call.cameraOff": "Desligar câmera",
   "call.shareScreen": "Compartilhar tela",
+  "call.stopScreen": "Parar de compartilhar",
   "call.chat": "Chat",
+  "call.openChat": "Abrir chat",
   "call.pinScreen": "Centralizar esta tela",
   "call.waiting": "Esperando o host aprovar sua entrada…",
   "call.remove": "Remover da chamada",
@@ -130,8 +132,7 @@ export const pt = {
 
   "quality.pro": "Qualidade Pro (demo)",
   "quality.free": "Qualidade gratuita",
-  "quality.proSoon":
-    "Pro em breve — 720p, arquivos no chat e mais bitrate",
+  "quality.proSoon": "Pro em breve — 720p, arquivos no chat e mais bitrate",
 
   "error.unavailableId":
     "Esta chave ainda está ocupada no broker. Recarregue em alguns segundos.",
@@ -162,8 +163,7 @@ export const pt = {
   "toast.mediaMic": "Permita o microfone para ativá-lo.",
   "toast.mediaAudioOnly":
     "Entrou só com áudio. A câmera pode ser ligada depois.",
-  "toast.mediaVideoOnly":
-    "Entrou sem microfone. Você pode ativá-lo depois.",
+  "toast.mediaVideoOnly": "Entrou sem microfone. Você pode ativá-lo depois.",
   "toast.mediaListenOnly":
     "Entrou sem câmera e microfone. Você ouve e usa o chat.",
   "toast.fileTooBig": "Arquivo acima de {max} MB.",

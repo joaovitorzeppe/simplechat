@@ -3,8 +3,10 @@ import { useI18n } from "@i18n/use-i18n";
 import { cn } from "@libs/cn";
 import type { MuteFlags, MuteKind } from "@libs/mutes";
 import { firstGrapheme } from "@libs/text";
+import { useSpeakLevel } from "@libs/use-speak-level";
 import { ExpandIcon, UserRemoveIcon } from "./Icons";
 import { TileMuteControls } from "./TileMuteControls";
+import { Tooltip } from "./Tooltip";
 
 type Props = {
   stream: MediaStream | null;
@@ -42,7 +44,9 @@ export const VideoTile = memo(function VideoTile({
   badge,
 }: Props) {
   const ref = useRef<HTMLVideoElement>(null);
+  const tileRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
+  useSpeakLevel(stream, !sharingScreen, tileRef);
 
   useEffect(() => {
     const el = ref.current;
@@ -57,8 +61,9 @@ export const VideoTile = memo(function VideoTile({
 
   return (
     <div
+      ref={tileRef}
       className={cn(
-        "relative overflow-hidden rounded-2xl bg-zinc-900 border border-line min-h-40",
+        "relative overflow-hidden rounded-2xl bg-zinc-900 border border-line min-h-40 speak-ring",
         className,
       )}
     >
@@ -83,26 +88,28 @@ export const VideoTile = memo(function VideoTile({
       )}
       <div className="absolute top-2 right-2 flex gap-1">
         {onRemove && (
-          <button
-            type="button"
-            title={t("call.remove")}
-            aria-label={`${t("call.remove")}: ${name}`}
-            onClick={onRemove}
-            className="grid size-8 place-items-center rounded-full border border-line bg-black/60 text-zinc-100 hover:bg-red-500/80 cursor-pointer"
-          >
-            <UserRemoveIcon width={16} height={16} />
-          </button>
+          <Tooltip label={t("call.remove")}>
+            <button
+              type="button"
+              aria-label={`${t("call.remove")}: ${name}`}
+              onClick={onRemove}
+              className="grid size-8 place-items-center rounded-full border border-line bg-black/60 text-zinc-100 hover:bg-red-500/80 cursor-pointer"
+            >
+              <UserRemoveIcon width={16} height={16} />
+            </button>
+          </Tooltip>
         )}
         {onPin && (
-          <button
-            type="button"
-            title={t("call.pinScreen")}
-            aria-label={`${t("call.pinScreen")}: ${name}`}
-            onClick={onPin}
-            className="grid size-8 place-items-center rounded-full border border-line bg-black/60 text-zinc-100 hover:bg-zinc-800 cursor-pointer"
-          >
-            <ExpandIcon width={16} height={16} />
-          </button>
+          <Tooltip label={t("call.pinScreen")}>
+            <button
+              type="button"
+              aria-label={`${t("call.pinScreen")}: ${name}`}
+              onClick={onPin}
+              className="grid size-8 place-items-center rounded-full border border-line bg-black/60 text-zinc-100 hover:bg-zinc-800 cursor-pointer"
+            >
+              <ExpandIcon width={16} height={16} />
+            </button>
+          </Tooltip>
         )}
       </div>
       <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-linear-to-t from-black/70 to-transparent px-3 py-2 text-xs">

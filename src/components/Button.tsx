@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes } from "react";
-import { DisabledTouchHint } from "./DisabledTouchHint";
+import { Tooltip } from "./Tooltip";
 import { cn } from "@libs/cn";
 
 type Variant = "primary" | "secondary" | "danger" | "ghost" | "icon";
@@ -30,7 +30,6 @@ export const Button = ({
     <button
       type={type}
       disabled={disabled}
-      title={disabled ? undefined : title}
       // Vários botões são só ícone: sem isto o leitor de tela anuncia "botão".
       aria-label={props["aria-label"] ?? title}
       className={cn(
@@ -42,14 +41,15 @@ export const Button = ({
     />
   );
 
-  if (!disabled || !title) return button;
+  if (!title) return button;
 
   return (
-    <DisabledTouchHint
-      hint={title}
+    <Tooltip
+      label={title}
+      touchToast={!!disabled}
       className={/\bw-full\b/.test(className ?? "") ? "w-full" : undefined}
     >
       {button}
-    </DisabledTouchHint>
+    </Tooltip>
   );
 };

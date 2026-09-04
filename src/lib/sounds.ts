@@ -10,6 +10,8 @@ const audio = (): AudioContext | null => {
   }
 }
 
+export const getAudioContext = () => audio()
+
 export const unlockAudio = () => {
   const c = audio()
   if (c?.state === 'suspended') void c.resume()

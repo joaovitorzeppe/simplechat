@@ -2,7 +2,7 @@ import type { Messages } from "./pt";
 
 export const fr: Messages = {
   "meta.description":
-    "SimpleChat — appel audio, vidéo et chat P2P dans le navigateur.",
+    "SimpleChat — appel audio, vidéo sans compromis dans le navigateur.",
   "language.label": "Langue",
   "language.pt": "Português",
   "language.en": "English",
@@ -18,7 +18,7 @@ export const fr: Messages = {
 
   "onboarding.title": "Comment voulez-vous apparaître ?",
   "onboarding.subtitle":
-    "Pas de compte et pas de serveur de notre côté. Si vous ne demandez pas à être mémorisé, nous générons une nouvelle clé à chaque visite.",
+    "Si vous ne demandez pas à être mémorisé, nous générons une nouvelle clé à chaque visite.",
   "onboarding.inviteSubtitle":
     "Vous avez une invitation. Après le nom, on vous emmène dans l’appel.",
   "onboarding.name": "Nom",
@@ -74,7 +74,9 @@ export const fr: Messages = {
   "call.cameraOn": "Allumer la caméra",
   "call.cameraOff": "Éteindre la caméra",
   "call.shareScreen": "Partager l’écran",
+  "call.stopScreen": "Arrêter le partage",
   "call.chat": "Chat",
+  "call.openChat": "Ouvrir le chat",
   "call.pinScreen": "Centrer cet écran",
   "call.waiting": "En attente que l’hôte vous laisse entrer…",
   "call.remove": "Retirer de l’appel",
@@ -175,12 +177,15 @@ export const fr: Messages = {
   "toast.fileBusy": "Attendez la fin de l’envoi en cours.",
   "toast.knock": "{name} veut rejoindre l’appel.",
   "toast.joinDenied": "L’hôte n’a pas approuvé votre entrée.",
-  "toast.inviteStale": "Lien invalide ou expiré. Demandez une nouvelle invitation.",
+  "toast.inviteStale":
+    "Lien invalide ou expiré. Demandez une nouvelle invitation.",
   "toast.kicked": "L’hôte vous a retiré de l’appel.",
   "toast.removed": "{name} a été retiré de l’appel.",
   "toast.hostHandedOver": "Vous avez transmis l’hôte à {name}.",
-  "toast.hostLeftYouHost": "L’hôte est parti. Vous conduisez maintenant l’appel.",
-  "toast.hostLeftNewHost": "L’hôte est parti. {name} conduit maintenant l’appel.",
+  "toast.hostLeftYouHost":
+    "L’hôte est parti. Vous conduisez maintenant l’appel.",
+  "toast.hostLeftNewHost":
+    "L’hôte est parti. {name} conduit maintenant l’appel.",
   "toast.hostDroppedYouHost":
     "L’hôte a perdu la connexion. Vous conduisez maintenant l’appel.",
   "toast.hostDroppedNewHost":

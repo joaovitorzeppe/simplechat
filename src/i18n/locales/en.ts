@@ -1,7 +1,8 @@
 import type { Messages } from "./pt";
 
 export const en: Messages = {
-  "meta.description": "SimpleChat — audio, video and P2P chat in the browser.",
+  "meta.description":
+    "SimpleChat — audio, video without hassle in the browser.",
   "language.label": "Language",
   "language.pt": "Português",
   "language.en": "English",
@@ -17,7 +18,7 @@ export const en: Messages = {
 
   "onboarding.title": "How do you want to appear?",
   "onboarding.subtitle":
-    "No account and no server of ours. If you don’t ask us to remember you, we generate a new key on every visit.",
+    "If you don’t ask us to remember you, we generate a new key on every visit.",
   "onboarding.inviteSubtitle":
     "You have an invite. After your name, we take you into the call.",
   "onboarding.name": "Name",
@@ -68,11 +69,13 @@ export const en: Messages = {
   "call.showCameras": "Show cameras",
   "call.cameras": "Cameras",
   "call.unmute": "Unmute",
-  "call.mute": "Mute",
+  "call.mute": "Mute microphone",
   "call.cameraOn": "Turn camera on",
   "call.cameraOff": "Turn camera off",
   "call.shareScreen": "Share screen",
+  "call.stopScreen": "Stop sharing",
   "call.chat": "Chat",
+  "call.openChat": "Open chat",
   "call.pinScreen": "Focus this screen",
   "call.waiting": "Waiting for the host to let you in…",
   "call.remove": "Remove from call",
@@ -130,8 +133,7 @@ export const en: Messages = {
 
   "quality.pro": "Pro quality (demo)",
   "quality.free": "Free quality",
-  "quality.proSoon":
-    "Pro coming soon — 720p, chat files and higher bitrate",
+  "quality.proSoon": "Pro coming soon — 720p, chat files and higher bitrate",
 
   "error.unavailableId":
     "This key is still taken on the broker. Reload in a few seconds.",
@@ -160,8 +162,10 @@ export const en: Messages = {
   "toast.roomFull": "This call is full.",
   "toast.mediaCamera": "Allow the camera to turn it on.",
   "toast.mediaMic": "Allow the microphone to turn it on.",
-  "toast.mediaAudioOnly": "Joined with audio only. You can turn the camera on later.",
-  "toast.mediaVideoOnly": "Joined without a microphone. You can turn it on later.",
+  "toast.mediaAudioOnly":
+    "Joined with audio only. You can turn the camera on later.",
+  "toast.mediaVideoOnly":
+    "Joined without a microphone. You can turn it on later.",
   "toast.mediaListenOnly":
     "Joined without camera or microphone. You can listen and use chat.",
   "toast.fileTooBig": "File is over {max} MB.",

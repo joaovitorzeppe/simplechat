@@ -2,7 +2,7 @@ import type { Messages } from "./pt";
 
 export const es: Messages = {
   "meta.description":
-    "SimpleChat — llamada de audio, vídeo y chat P2P en el navegador.",
+    "SimpleChat — llamada de audio, vídeo sin compromis en el navegador.",
   "language.label": "Idioma",
   "language.pt": "Português",
   "language.en": "English",
@@ -18,7 +18,7 @@ export const es: Messages = {
 
   "onboarding.title": "¿Cómo quieres aparecer?",
   "onboarding.subtitle":
-    "Sin cuenta y sin servidor nuestro. Si no pides que te recordemos, generamos una clave nueva en cada visita.",
+    "Si no pides que te recordemos, generamos una clave nueva en cada visita.",
   "onboarding.inviteSubtitle":
     "Tienes una invitación. Después del nombre, entramos a la llamada.",
   "onboarding.name": "Nombre",
@@ -69,11 +69,13 @@ export const es: Messages = {
   "call.showCameras": "Mostrar cámaras",
   "call.cameras": "Cámaras",
   "call.unmute": "Activar micrófono",
-  "call.mute": "Silenciar",
+  "call.mute": "Silenciar micrófono",
   "call.cameraOn": "Encender cámara",
   "call.cameraOff": "Apagar cámara",
   "call.shareScreen": "Compartir pantalla",
+  "call.stopScreen": "Dejar de compartir",
   "call.chat": "Chat",
+  "call.openChat": "Abrir chat",
   "call.pinScreen": "Centrar esta pantalla",
   "call.waiting": "Esperando que el anfitrión te deje entrar…",
   "call.remove": "Quitar de la llamada",
@@ -131,8 +133,7 @@ export const es: Messages = {
 
   "quality.pro": "Calidad Pro (demo)",
   "quality.free": "Calidad gratuita",
-  "quality.proSoon":
-    "Pro pronto — 720p, archivos en el chat y más bitrate",
+  "quality.proSoon": "Pro pronto — 720p, archivos en el chat y más bitrate",
 
   "error.unavailableId":
     "Esta clave sigue ocupada en el broker. Recarga en unos segundos.",
@@ -163,8 +164,7 @@ export const es: Messages = {
   "toast.mediaMic": "Permite el micrófono para encenderlo.",
   "toast.mediaAudioOnly":
     "Entraste solo con audio. Puedes encender la cámara después.",
-  "toast.mediaVideoOnly":
-    "Entraste sin micrófono. Puedes encenderlo después.",
+  "toast.mediaVideoOnly": "Entraste sin micrófono. Puedes encenderlo después.",
   "toast.mediaListenOnly":
     "Entraste sin cámara ni micrófono. Puedes escuchar y usar el chat.",
   "toast.fileTooBig": "Archivo por encima de {max} MB.",
@@ -179,12 +179,14 @@ export const es: Messages = {
   "toast.removed": "{name} fue quitado de la llamada.",
   "toast.hostHandedOver": "Pasaste el anfitrión a {name}.",
   "toast.hostLeftYouHost": "El anfitrión salió. Ahora tú diriges la llamada.",
-  "toast.hostLeftNewHost": "El anfitrión salió. Ahora {name} dirige la llamada.",
+  "toast.hostLeftNewHost":
+    "El anfitrión salió. Ahora {name} dirige la llamada.",
   "toast.hostDroppedYouHost":
     "El anfitrión perdió la conexión. Ahora tú diriges la llamada.",
   "toast.hostDroppedNewHost":
     "El anfitrión perdió la conexión. Ahora {name} dirige la llamada.",
-  "toast.hostDroppedAlone": "El anfitrión perdió la conexión y la llamada terminó.",
+  "toast.hostDroppedAlone":
+    "El anfitrión perdió la conexión y la llamada terminó.",
   "toast.roomMutedAudio": "El anfitrión silenció tu micrófono para la sala.",
   "toast.roomUnmutedAudio": "El anfitrión liberó tu micrófono.",
   "toast.roomMutedVideo": "El anfitrión apagó tu cámara para la sala.",

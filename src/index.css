@@ -39,13 +39,6 @@ body {
   padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
 }
 
-@media (hover: hover) {
-  .touch-hint-group:hover .touch-hint,
-  .touch-hint-group:focus-within .touch-hint {
-    opacity: 1;
-  }
-}
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -56,4 +49,24 @@ body {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+@property --speak {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+/* Borda da câmera acompanha o volume de quem está falando. */
+.speak-ring {
+  border-color: color-mix(
+    in srgb,
+    var(--color-line) calc((1 - var(--speak)) * 100%),
+    var(--color-accent) calc(var(--speak) * 100%)
+  );
+  box-shadow:
+    inset 0 0 0 calc(var(--speak) * 3px)
+      color-mix(in srgb, var(--color-accent) calc(var(--speak) * 90%), transparent),
+    inset 0 0 24px
+      color-mix(in srgb, var(--color-accent) calc(var(--speak) * 32%), transparent);
 }
