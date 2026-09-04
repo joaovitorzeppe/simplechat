@@ -15,6 +15,11 @@ import { t } from "@i18n/i18n";
 import { playCallEnded } from "./sounds";
 import { showToast } from "./toast";
 import { safeFileName } from "./chat";
+import {
+  formatCommandText,
+  mentionsForCommand,
+  runChatCommand,
+} from "./commands";
 import { ALL_MENTION, isPinged, resolveMentions } from "./mentions";
 import { FILE_CHUNK } from "./file-assembly";
 import {
@@ -615,7 +620,27 @@ export class PeerSession {
   sendChat(text: string) {
     const trimmed = clampChatText(text.trim());
     const me = this.state.identity;
-    if (!trimmed || !me || !this.inRoom()) return;
+    if (!trimmed || !me || !this.inRoom()) return false;
+    const command = runChatCommand(trimmed, this.roomMembers);
+    if (command) {
+      if (!command.ok) {
+        showToast(command.error);
+        return false;
+      }
+      const mentions = mentionsForCommand(command.command);
+      const message: ChatMessage = {
+        id: crypto.randomUUID(),
+        fromPeerId: me.peerId,
+        fromName: me.displayName,
+        text: formatCommandText(command.command, t),
+        at: Date.now(),
+        command: command.command,
+        ...(mentions.length ? { mentions } : {}),
+      };
+      this.appendMessage(message);
+      this.broadcast({ type: "chat", ...message });
+      return true;
+    }
     const mentions = resolveMentions(trimmed, this.roomMembers);
     const message: ChatMessage = {
       id: crypto.randomUUID(),
@@ -627,6 +652,7 @@ export class PeerSession {
     };
     this.appendMessage(message);
     this.broadcast({ type: "chat", ...message });
+    return true;
   }
 
   async sendFile(file: File) {
@@ -1268,6 +1294,7 @@ export class PeerSession {
         text: msg.text,
         at: Date.now(),
         ...(mentions.length ? { mentions } : {}),
+        ...(msg.command ? { command: msg.command } : {}),
       });
       const me = this.state.identity?.peerId;
       if (me && isPinged(mentions, me, from)) {

@@ -16,11 +16,17 @@ import {
   mentionQueryAt,
   type MentionPerson,
 } from "@libs/mentions";
+import {
+  commandQueryAt,
+  filterChatCommands,
+  insertCommand,
+} from "@libs/commands";
 import type { ChatMessage } from "@libs/types";
 import { MAX_CHAT_TEXT } from "@libs/wire-guard";
 import { Button } from "./Button";
 import { ChatMessages } from "./ChatMessages";
 import { CloseIcon, PaperclipIcon } from "./Icons";
+import { CommandPicker, type CommandPickerItem } from "./CommandPicker";
 import { MentionPicker } from "./MentionPicker";
 
 type PickerItem =
@@ -31,7 +37,7 @@ type Props = {
   messages: ChatMessage[];
   selfId: string;
   people: MentionPerson[];
-  onSend: (text: string) => void;
+  onSend: (text: string) => boolean | void;
   onSendFile: (file: File) => void;
   onClose: () => void;
 };
@@ -54,25 +60,38 @@ export const ChatPanel = ({
   const listRef = useRef<HTMLDivElement>(null);
   const pinnedToBottom = useRef(true);
 
-  const query = mentionQueryAt(text, caret);
+  const mentionQuery = mentionQueryAt(text, caret);
+  const commandQuery = mentionQuery ? null : commandQueryAt(text, caret);
   const others = useMemo(
     () => people.filter((person) => person.peerId !== selfId),
     [people, selfId],
   );
   const filtered = useMemo(
-    () => (query ? filterMentionPeople(people, query.query, selfId) : []),
-    [people, query, selfId],
+    () =>
+      mentionQuery
+        ? filterMentionPeople(people, mentionQuery.query, selfId)
+        : [],
+    [people, mentionQuery, selfId],
   );
   const showAll = Boolean(
-    query && matchAllOption(query.query, others.length > 0),
+    mentionQuery && matchAllOption(mentionQuery.query, others.length > 0),
   );
-  const items: PickerItem[] = useMemo(() => {
-    if (!query) return [];
+  const mentionItems: PickerItem[] = useMemo(() => {
+    if (!mentionQuery) return [];
     const next: PickerItem[] = [];
     if (showAll) next.push({ kind: "all", label: ALL_MENTION });
     for (const person of filtered) next.push({ kind: "peer", person });
     return next;
-  }, [filtered, query, showAll]);
+  }, [filtered, mentionQuery, showAll]);
+  const commandItems: CommandPickerItem[] = useMemo(() => {
+    if (!commandQuery) return [];
+    return filterChatCommands(commandQuery.query).map((command) => ({
+      id: command.id,
+      slash: `/${t(command.nameKey)}`,
+      hint: t(command.hintKey),
+      example: t(command.exampleKey),
+    }));
+  }, [commandQuery, t]);
 
   useEffect(() => {
     const list = listRef.current;
@@ -92,9 +111,7 @@ export const ChatPanel = ({
     // oxlint-disable-next-line exhaustive-effect-dependencies
   }, [messages.length]);
 
-  const applyMention = (item: PickerItem) => {
-    const label = item.kind === "all" ? ALL_MENTION : item.person.displayName;
-    const next = insertMention(text, caret, label);
+  const focusCaret = (next: { text: string; caret: number }) => {
     setText(next.text);
     setCaret(next.caret);
     requestAnimationFrame(() => {
@@ -105,41 +122,67 @@ export const ChatPanel = ({
     });
   };
 
+  const applyMention = (item: PickerItem) => {
+    const label = item.kind === "all" ? ALL_MENTION : item.person.displayName;
+    focusCaret(insertMention(text, caret, label));
+  };
+
+  const applyCommand = (item: CommandPickerItem) => {
+    focusCaret(insertCommand(text, caret, item.slash));
+  };
+
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     pinnedToBottom.current = true;
-    onSend(text);
+    const sent = onSend(text);
+    if (sent === false) return;
     setText("");
     setCaret(0);
     setDismissedAt(null);
   };
 
+  const pickerKind = mentionItems.length
+    ? "mention"
+    : commandItems.length
+      ? "command"
+      : null;
+  const pickerCount =
+    pickerKind === "mention" ? mentionItems.length : commandItems.length;
+  const pickerQueryStart =
+    pickerKind === "mention" ? mentionQuery?.start : commandQuery?.start;
+  const pickerOpen =
+    pickerKind !== null &&
+    pickerQueryStart !== undefined &&
+    dismissedAt !== pickerQueryStart;
+
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (!items.length) return;
+    if (!pickerOpen || !pickerCount) return;
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setActive((index) => (index + 1) % items.length);
+      setActive((index) => (index + 1) % pickerCount);
       return;
     }
     if (event.key === "ArrowUp") {
       event.preventDefault();
-      setActive((index) => (index - 1 + items.length) % items.length);
+      setActive((index) => (index - 1 + pickerCount) % pickerCount);
       return;
     }
     if (event.key === "Enter" || event.key === "Tab") {
       event.preventDefault();
-      const item = items[active] ?? items[0];
-      if (item) applyMention(item);
+      if (pickerKind === "mention") {
+        const item = mentionItems[active] ?? mentionItems[0];
+        if (item) applyMention(item);
+      } else {
+        const item = commandItems[active] ?? commandItems[0];
+        if (item) applyCommand(item);
+      }
       return;
     }
     if (event.key === "Escape") {
       event.preventDefault();
-      setDismissedAt(query?.start ?? null);
+      setDismissedAt(pickerQueryStart ?? null);
     }
   };
-
-  const pickerOpen =
-    items.length > 0 && query !== null && dismissedAt !== query.start;
 
   return (
     <aside className="flex h-full w-full max-w-sm flex-col border-l border-line bg-panel">
@@ -187,13 +230,22 @@ export const ChatPanel = ({
           <PaperclipIcon />
         </Button>
         <div className="relative min-w-0 flex-1">
-          {pickerOpen && (
+          {pickerOpen && pickerKind === "mention" && (
             <MentionPicker
-              items={items}
-              active={Math.min(active, items.length - 1)}
+              items={mentionItems}
+              active={Math.min(active, mentionItems.length - 1)}
               label={t("chat.mentionPicker")}
               allLabel={t("chat.mentionAll")}
               onPick={applyMention}
+              onActive={setActive}
+            />
+          )}
+          {pickerOpen && pickerKind === "command" && (
+            <CommandPicker
+              items={commandItems}
+              active={Math.min(active, commandItems.length - 1)}
+              label={t("chat.commandPicker")}
+              onPick={applyCommand}
               onActive={setActive}
             />
           )}

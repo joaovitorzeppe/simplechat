@@ -32,6 +32,12 @@ export type ChatFile = {
   blobUrl: string | null;
 };
 
+export type ChatCommandPayload =
+  | { kind: "die"; n: number; sides: number; value: number }
+  | { kind: "dice"; n: number; sides: number; values: number[]; total: number }
+  | { kind: "range"; min: number; max: number; value: number }
+  | { kind: "pick"; name: string; peerId: string };
+
 export type ChatMessage = {
   id: string;
   fromPeerId: string;
@@ -42,6 +48,7 @@ export type ChatMessage = {
   system?: "left";
   /** peerIds marcados, ou `"all"`. Ausente = ninguém. */
   mentions?: string[];
+  command?: ChatCommandPayload;
 };
 
 export type IncomingInvite = {
@@ -79,6 +86,7 @@ export type WireMessage =
       text: string;
       at: number;
       mentions?: string[];
+      command?: ChatCommandPayload;
     }
   | { type: "room-ended" }
   | { type: "room-full" }

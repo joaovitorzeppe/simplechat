@@ -91,4 +91,12 @@ describe("splitMessageText com menções", () => {
       },
     ]);
   });
+
+  it("destaca a pessoa sorteada", () => {
+    const marks = mentionMarks(["ana-1"], people, "me-1");
+    expect(splitMessageText("Sorteou: @Ana", marks)).toEqual([
+      { type: "text", value: "Sorteou: " },
+      { type: "mention", label: "Ana", mine: false },
+    ]);
+  });
 });

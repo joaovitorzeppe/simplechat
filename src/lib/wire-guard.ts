@@ -2,7 +2,12 @@ import { MAX_FILE_BYTES, MAX_PARTICIPANTS } from "./quality";
 import { ALL_MENTION } from "./mentions";
 import { truncateText } from "./text";
 import type { RoomMuteEntry } from "./mutes";
-import type { PeerInfo, WireMessage } from "./types";
+import type { ChatCommandPayload, PeerInfo, WireMessage } from "./types";
+import {
+  MAX_COMMAND_DICE,
+  MAX_COMMAND_RANGE,
+  MAX_COMMAND_SIDES,
+} from "./commands";
 
 export const MAX_CHAT_TEXT = 4000;
 export const MAX_DISPLAY_NAME = 100;
@@ -65,6 +70,65 @@ const parseMentions = (value: unknown): string[] | null | false => {
     out.push(id);
   }
   return out.length > 0 ? out : null;
+};
+
+const parseCommandValues = (
+  value: unknown,
+  n: number,
+  sides: number,
+): number[] | null => {
+  if (!Array.isArray(value) || value.length !== n) return null;
+  const values: number[] = [];
+  for (const entry of value) {
+    const roll = int(entry, 1, sides);
+    if (roll === null) return null;
+    values.push(roll);
+  }
+  return values;
+};
+
+/** `null` quando ausente, `false` quando presente e inválido. */
+const parseChatCommandPayload = (
+  value: unknown,
+): ChatCommandPayload | null | false => {
+  if (value === undefined) return null;
+  if (!isRecord(value) || typeof value.kind !== "string") return false;
+  if (value.kind === "die") {
+    const n = int(value.n, 1, 1);
+    const sides = int(value.sides, 2, MAX_COMMAND_SIDES);
+    if (n === null || sides === null) return false;
+    const roll = int(value.value, 1, sides);
+    if (roll === null) return false;
+    return { kind: "die", n, sides, value: roll };
+  }
+  if (value.kind === "dice") {
+    const n = int(value.n, 2, MAX_COMMAND_DICE);
+    const sides = int(value.sides, 2, MAX_COMMAND_SIDES);
+    if (n === null || sides === null) return false;
+    const values = parseCommandValues(value.values, n, sides);
+    const total = int(value.total, n, n * sides);
+    if (!values || total === null) return false;
+    const sum = values.reduce((acc, roll) => acc + roll, 0);
+    if (sum !== total) return false;
+    return { kind: "dice", n, sides, values, total };
+  }
+  if (value.kind === "range") {
+    const min = int(value.min, 0, MAX_COMMAND_RANGE);
+    const max = int(value.max, 0, MAX_COMMAND_RANGE);
+    if (min === null || max === null) return false;
+    const lo = Math.min(min, max);
+    const hi = Math.max(min, max);
+    const roll = int(value.value, lo, hi);
+    if (roll === null) return false;
+    return { kind: "range", min: lo, max: hi, value: roll };
+  }
+  if (value.kind === "pick") {
+    const name = str(value.name, MAX_DISPLAY_NAME);
+    const peerId = str(value.peerId, MAX_PEER_ID);
+    if (!name || !peerId) return false;
+    return { kind: "pick", name, peerId };
+  }
+  return false;
 };
 
 const peerInfo = (value: unknown): PeerInfo | null => {
@@ -173,8 +237,9 @@ export const parseWire = (raw: unknown): WireMessage | null => {
       const fromName = str(raw.fromName, MAX_DISPLAY_NAME);
       const at = timestamp(raw.at);
       const mentions = parseMentions(raw.mentions);
+      const command = parseChatCommandPayload(raw.command);
       if (!id || !text || !fromPeerId || !fromName || at === null) return null;
-      if (mentions === false) return null;
+      if (mentions === false || command === false) return null;
       return {
         type: "chat",
         id,
@@ -183,6 +248,7 @@ export const parseWire = (raw: unknown): WireMessage | null => {
         fromName,
         at,
         ...(mentions ? { mentions } : {}),
+        ...(command ? { command } : {}),
       };
     }
 

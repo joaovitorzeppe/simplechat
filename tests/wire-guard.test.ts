@@ -68,6 +68,41 @@ describe("parseWire", () => {
     expect(parseWire(chat({ mentions: "all" }))).toBeNull();
   });
 
+  it("aceita payload de comando válido e rejeita o resto", () => {
+    const die = { kind: "die", n: 1, sides: 20, value: 7 };
+    const dice = {
+      kind: "dice",
+      n: 2,
+      sides: 6,
+      values: [1, 6],
+      total: 7,
+    };
+    const range = { kind: "range", min: 1, max: 100, value: 51 };
+    const pick = { kind: "pick", name: "Bruno", peerId: "bruno-1" };
+    expect(parseWire(chat({ command: die }))).toEqual(chat({ command: die }));
+    expect(parseWire(chat({ command: dice }))).toEqual(chat({ command: dice }));
+    expect(parseWire(chat({ command: range }))).toEqual(
+      chat({ command: range }),
+    );
+    expect(parseWire(chat({ command: pick }))).toEqual(chat({ command: pick }));
+    expect(
+      parseWire(chat({ command: { kind: "range", min: 10, max: 1, value: 5 } })),
+    ).toEqual(chat({ command: { kind: "range", min: 1, max: 10, value: 5 } }));
+    expect(parseWire(chat({ command: "die" }))).toBeNull();
+    expect(parseWire(chat({ command: { kind: "nope" } }))).toBeNull();
+    expect(
+      parseWire(chat({ command: { kind: "die", n: 1, sides: 20, value: 21 } })),
+    ).toBeNull();
+    expect(
+      parseWire(
+        chat({
+          command: { kind: "dice", n: 2, sides: 6, values: [1, 2], total: 99 },
+        }),
+      ),
+    ).toBeNull();
+    expect(parseWire(chat({ command: { kind: "pick", name: "Bruno" } }))).toBeNull();
+  });
+
   it("rejeita chat com texto que não é string", () => {
     expect(parseWire(chat({ text: { toString: 1 } }))).toBeNull();
     expect(parseWire(chat({ text: 123 }))).toBeNull();

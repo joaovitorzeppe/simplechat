@@ -7,6 +7,7 @@ import {
   isPreviewableImage,
   splitMessageText,
 } from "@libs/chat";
+import { formatCommandText, peopleForCommandMentions } from "@libs/commands";
 import { isPinged, mentionMarks, type MentionPerson } from "@libs/mentions";
 import type { ChatFile, ChatMessage } from "@libs/types";
 import { useFileProgress } from "@libs/file-progress";
@@ -188,10 +189,18 @@ export const ChatMessages = ({ messages, selfId, people }: Props) => {
                     )}
                   >
                     {msg.file && <FileCard file={msg.file} />}
-                    {msg.text ? (
+                    {msg.command || msg.text ? (
                       <MessageBody
-                        text={msg.text}
-                        marks={mentionMarks(msg.mentions, people, selfId)}
+                        text={
+                          msg.command
+                            ? formatCommandText(msg.command, t)
+                            : msg.text
+                        }
+                        marks={mentionMarks(
+                          msg.mentions,
+                          peopleForCommandMentions(msg.command, people),
+                          selfId,
+                        )}
                         onOpenLink={setPendingHref}
                       />
                     ) : null}
