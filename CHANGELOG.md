@@ -8,6 +8,11 @@ O formato segue a ideia de [Keep a Changelog](https://keepachangelog.com/pt-BR/1
 
 Tudo o que entrou depois do primeiro CHANGELOG.
 
+### Produção
+
+- Domínio `simplechat.me` na Vercel; o apex redireciona para `www.simplechat.me`.
+- `robots.txt` (não indexa `?room=`), `sitemap.xml`, canonical, Open Graph e JSON-LD apontando para `https://www.simplechat.me/`.
+
 ### Comandos do chat
 
 Commits: `c5264d3`, `183c5e1`, `8cc398a`.

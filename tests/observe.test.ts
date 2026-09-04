@@ -4,13 +4,13 @@ import { publicObserveUrl } from "@libs/observe";
 describe("publicObserveUrl", () => {
   it("remove query e hash do convite", () => {
     expect(
-      publicObserveUrl("https://simplechat.app/?room=abc#k=segredo"),
-    ).toBe("https://simplechat.app/");
+      publicObserveUrl("https://www.simplechat.me/?room=abc#k=segredo"),
+    ).toBe("https://www.simplechat.me/");
   });
 
   it("mantém a origem quando já é a raiz", () => {
-    expect(publicObserveUrl("https://simplechat.app/")).toBe(
-      "https://simplechat.app/",
+    expect(publicObserveUrl("https://www.simplechat.me/")).toBe(
+      "https://www.simplechat.me/",
     );
   });
 });

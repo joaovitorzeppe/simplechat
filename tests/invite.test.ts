@@ -7,21 +7,21 @@ describe("parseInvite", () => {
   });
 
   it("extrai da query string do link", () => {
-    expect(parseInvite("https://simplechat.app/?room=ana-123")).toEqual({
+    expect(parseInvite("https://www.simplechat.me/?room=ana-123")).toEqual({
       peerId: "ana-123",
       secret: null,
     });
   });
 
   it("ainda lê o parâmetro antigo call", () => {
-    expect(parseInvite("https://simplechat.app/?call=ana-123")).toEqual({
+    expect(parseInvite("https://www.simplechat.me/?call=ana-123")).toEqual({
       peerId: "ana-123",
       secret: null,
     });
   });
 
   it("lê a chave do hash", () => {
-    expect(parseInvite("https://simplechat.app/#/?room=ana-123")).toEqual({
+    expect(parseInvite("https://www.simplechat.me/#/?room=ana-123")).toEqual({
       peerId: "ana-123",
       secret: null,
     });
@@ -29,7 +29,7 @@ describe("parseInvite", () => {
 
   it("remove aspas e sinais de colagem", () => {
     expect(parseInvite('"ana-123"')).toEqual({ peerId: "ana-123", secret: null });
-    expect(parseInvite("<https://simplechat.app/?room=ana-123>")).toEqual({
+    expect(parseInvite("<https://www.simplechat.me/?room=ana-123>")).toEqual({
       peerId: "ana-123",
       secret: null,
     });
@@ -44,17 +44,17 @@ describe("parseInvite", () => {
   });
 
   it("devolve nulo para link sem chave", () => {
-    expect(parseInvite("https://simplechat.app/")).toBeNull();
+    expect(parseInvite("https://www.simplechat.me/")).toBeNull();
   });
 
   it("invitePeerId devolve string vazia quando não há convite", () => {
-    expect(invitePeerId("https://simplechat.app/")).toBe("");
+    expect(invitePeerId("https://www.simplechat.me/")).toBe("");
   });
 });
 
 describe("segredo da sala no fragmento", () => {
   it("lê o segredo do link completo", () => {
-    expect(parseInvite("https://simplechat.app/?room=ana-123#k=abc123")).toEqual(
+    expect(parseInvite("https://www.simplechat.me/?room=ana-123#k=abc123")).toEqual(
       { peerId: "ana-123", secret: "abc123" },
     );
   });
@@ -95,17 +95,17 @@ describe("deep link para join automático", () => {
 
   it("ignora o próprio peerId", () => {
     expect(
-      deepLinkJoinArg("https://simplechat.app/?room=me-1#k=abc", "me-1"),
+      deepLinkJoinArg("https://www.simplechat.me/?room=me-1#k=abc", "me-1"),
     ).toBeNull();
   });
 
   it("devolve o convite de outra pessoa", () => {
     expect(
-      deepLinkJoinArg("https://simplechat.app/?room=host-1#k=abc", "me-1"),
+      deepLinkJoinArg("https://www.simplechat.me/?room=host-1#k=abc", "me-1"),
     ).toBe("host-1#k=abc");
   });
 
   it("devolve nulo sem room na URL", () => {
-    expect(deepLinkJoinArg("https://simplechat.app/", "me-1")).toBeNull();
+    expect(deepLinkJoinArg("https://www.simplechat.me/", "me-1")).toBeNull();
   });
 });
