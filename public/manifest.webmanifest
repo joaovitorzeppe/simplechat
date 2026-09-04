@@ -2,7 +2,7 @@
   "id": "/",
   "name": "SimpleChat",
   "short_name": "SimpleChat",
-  "description": "SimpleChat — chamada de áudio, vídeo e chat P2P no navegador.",
+  "description": "SimpleChat — chamada de áudio, vídeo e chat sem compromisso no navegador.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
