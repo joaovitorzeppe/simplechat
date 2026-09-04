@@ -58,7 +58,7 @@ export const ChatPanel = ({
   const [active, setActive] = useState(0);
   const [dismissedAt, setDismissedAt] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const pinnedToBottom = useRef(true);
 
@@ -157,7 +157,23 @@ export const ChatPanel = ({
     pickerQueryStart !== undefined &&
     dismissedAt !== pickerQueryStart;
 
-  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      if (pickerOpen && pickerCount) {
+        event.preventDefault();
+        if (pickerKind === "mention") {
+          const item = mentionItems[active] ?? mentionItems[0];
+          if (item) applyMention(item);
+        } else {
+          const item = commandItems[active] ?? commandItems[0];
+          if (item) applyCommand(item);
+        }
+        return;
+      }
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+      return;
+    }
     if (!pickerOpen || !pickerCount) return;
     if (event.key === "ArrowDown") {
       event.preventDefault();
@@ -169,7 +185,7 @@ export const ChatPanel = ({
       setActive((index) => (index - 1 + pickerCount) % pickerCount);
       return;
     }
-    if (event.key === "Enter" || event.key === "Tab") {
+    if (event.key === "Tab") {
       event.preventDefault();
       if (pickerKind === "mention") {
         const item = mentionItems[active] ?? mentionItems[0];
@@ -215,7 +231,7 @@ export const ChatPanel = ({
       </div>
       <form
         onSubmit={submit}
-        className="safe-bottom relative flex gap-2 border-t border-line p-3"
+        className="safe-bottom relative flex items-end gap-2 border-t border-line p-3"
       >
         <input
           ref={fileRef}
@@ -256,9 +272,10 @@ export const ChatPanel = ({
               onActive={setActive}
             />
           )}
-          <input
+          <textarea
             ref={inputRef}
             value={text}
+            rows={Math.min(6, Math.max(1, text.split("\n").length))}
             maxLength={MAX_CHAT_TEXT}
             onChange={(e) => {
               setText(e.target.value);
@@ -274,7 +291,7 @@ export const ChatPanel = ({
             aria-label={t("chat.placeholder")}
             aria-autocomplete="list"
             aria-expanded={pickerOpen}
-            className="w-full rounded-xl bg-zinc-900 border border-line px-3 py-2 text-sm outline-none focus:border-accent"
+            className="max-h-40 w-full resize-none rounded-xl bg-zinc-900 border border-line px-3 py-2 text-sm outline-none focus:border-accent"
           />
         </div>
         <Button type="submit" disabled={!text.trim()} className="shrink-0">

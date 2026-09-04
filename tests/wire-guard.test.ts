@@ -246,6 +246,18 @@ describe("parseWire", () => {
         }),
       ),
     ).toBeNull();
+    const snippet = { kind: "code", language: "js", source: "console.log(1)" };
+    expect(parseWire(chat({ command: snippet }))).toEqual(
+      chat({ command: snippet }),
+    );
+    expect(
+      parseWire(
+        chat({ command: { kind: "code", language: "javascript", source: "x" } }),
+      ),
+    ).toBeNull();
+    expect(
+      parseWire(chat({ command: { kind: "code", language: "js", source: "" } })),
+    ).toBeNull();
     const order = {
       kind: "order",
       people: [

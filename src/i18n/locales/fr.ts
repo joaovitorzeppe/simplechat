@@ -184,6 +184,14 @@ export const fr: Messages = {
   "chat.command.pollResult": "Vote : {options}",
   "chat.command.pollInvalid":
     "Indiquez au moins deux options. Ex. : /vote pizza, sushi",
+  "chat.command.codeName": "code",
+  "chat.command.codeHint": "Affiche un extrait de code formaté",
+  "chat.command.codeExample": "/code js console.log(1) · /code select * from t",
+  "chat.command.codeResult": "{language}\n{source}",
+  "chat.command.codeEmpty":
+    "Écrivez le code après /code. Vous pouvez indiquer le langage : /code python …",
+  "chat.command.codeCopy": "Copier le code",
+  "chat.command.codeCopied": "Copié",
 
   "incoming.title": "Appel entrant",
   "incoming.body": "Audio, vidéo et chat P2P.",

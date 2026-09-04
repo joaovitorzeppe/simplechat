@@ -23,6 +23,7 @@ import {
   MAX_TIMER_MS,
   MIN_TIMER_MS,
 } from "./commands";
+import { isCodeLanguage, MAX_COMMAND_CODE } from "./code";
 
 export const MAX_CHAT_TEXT = 4000;
 export const MAX_DISPLAY_NAME = 100;
@@ -264,6 +265,13 @@ const parseChatCommandPayload = (
     const options = parsePollOptions(value.options);
     if (!id || !options) return false;
     return { kind: "poll", id, options };
+  }
+  if (value.kind === "code") {
+    if (typeof value.language !== "string" || !isCodeLanguage(value.language))
+      return false;
+    const source = str(value.source, MAX_COMMAND_CODE);
+    if (!source) return false;
+    return { kind: "code", language: value.language, source };
   }
   return false;
 };

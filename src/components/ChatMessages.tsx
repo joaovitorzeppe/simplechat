@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@i18n/use-i18n";
 import {
   formatFileSize,
@@ -12,11 +12,16 @@ import {
   formatTimerClock,
   peopleForCommandMentions,
 } from "@libs/commands";
+import {
+  CODE_LANGUAGE_LABELS,
+  highlightCode,
+  type CodeLanguage,
+} from "@libs/code";
 import { isPinged, mentionMarks, type MentionPerson } from "@libs/mentions";
 import type { ChatCommandPayload, ChatFile, ChatMessage } from "@libs/types";
 import { useFileProgress } from "@libs/file-progress";
 import { cn } from "@libs/cn";
-import { DownloadIcon } from "./Icons";
+import { CheckIcon, CopyIcon, DownloadIcon } from "./Icons";
 import { Button } from "./Button";
 import { LinkWarning } from "./LinkWarning";
 
@@ -136,6 +141,80 @@ const FileCard = ({ file }: { file: ChatFile }) => {
           />
         </div>
       )}
+    </div>
+  );
+};
+
+const TOKEN_CLASS: Record<
+  "plain" | "comment" | "string" | "number" | "keyword" | "punct",
+  string
+> = {
+  plain: "",
+  comment: "text-zinc-500 italic",
+  string: "text-emerald-400",
+  number: "text-amber-300",
+  keyword: "text-accent",
+  punct: "text-zinc-400",
+};
+
+const CodeCard = ({
+  language,
+  source,
+}: {
+  language: CodeLanguage;
+  source: string;
+}) => {
+  const { t } = useI18n();
+  const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef(0);
+  const tokens = useMemo(
+    () => highlightCode(source, language),
+    [source, language],
+  );
+
+  useEffect(() => () => window.clearTimeout(copiedTimer.current), []);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(source);
+      setCopied(true);
+      window.clearTimeout(copiedTimer.current);
+      copiedTimer.current = window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // sem clipboard (http sem permissão) o botão só não confirma
+    }
+  };
+
+  return (
+    <div className="min-w-52 overflow-hidden rounded-xl bg-zinc-950/40">
+      <div className="flex items-center justify-between gap-2 px-3 py-1.5 text-[11px] text-zinc-500">
+        <span className="truncate font-medium tracking-wide">
+          {CODE_LANGUAGE_LABELS[language]}
+        </span>
+        <Button
+          variant="ghost"
+          className="shrink-0 px-1.5 py-0.5 text-zinc-400"
+          title={copied ? t("chat.command.codeCopied") : t("chat.command.codeCopy")}
+          onClick={() => void copy()}
+        >
+          {copied ? (
+            <CheckIcon width={14} height={14} />
+          ) : (
+            <CopyIcon width={14} height={14} />
+          )}
+        </Button>
+      </div>
+      <pre className="m-0 max-h-80 overflow-auto px-3 pb-3 font-mono text-[12px] leading-5">
+        <code className="block whitespace-pre">
+          {/* oxlint-disable no-array-index-key */}
+          {tokens.map((token, index) => (
+            <span key={index} className={TOKEN_CLASS[token.type]}>
+              {token.value}
+            </span>
+          ))}
+          {/* oxlint-enable no-array-index-key */}
+        </code>
+      </pre>
     </div>
   );
 };
@@ -268,6 +347,11 @@ export const ChatMessages = ({ messages, selfId, people, onVote }: Props) => {
                         votes={msg.pollVotes}
                         selfId={selfId}
                         onVote={onVote}
+                      />
+                    ) : msg.command?.kind === "code" ? (
+                      <CodeCard
+                        language={msg.command.language}
+                        source={msg.command.source}
                       />
                     ) : msg.command || msg.text ? (
                       <MessageBody

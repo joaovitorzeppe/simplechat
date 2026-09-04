@@ -54,6 +54,7 @@ describe("filterChatCommands", () => {
       "emote",
       "timer",
       "poll",
+      "code",
       "help",
     ]);
     expect(filterChatCommands("da").map((cmd) => cmd.id)).toEqual(["roll"]);
@@ -389,6 +390,21 @@ describe("runChatCommand", () => {
     });
   });
 
+  it("formata um trecho de código e detecta a linguagem", () => {
+    expect(runChatCommand("/code js console.log(1)", people)).toEqual({
+      ok: true,
+      command: { kind: "code", language: "js", source: "console.log(1)" },
+    });
+    expect(runChatCommand("/code SELECT * FROM t", people)).toEqual({
+      ok: true,
+      command: { kind: "code", language: "sql", source: "SELECT * FROM t" },
+    });
+    expect(runChatCommand("/código", people)).toEqual({
+      ok: false,
+      error: "chat.command.codeEmpty",
+    });
+  });
+
   it("recusa /dado inválido", () => {
     expect(runChatCommand("/dado banana", people)).toEqual({
       ok: false,
@@ -499,6 +515,12 @@ describe("formatCommandText", () => {
         t,
       ),
     ).toBe("Votação: pizza, sushi");
+    expect(
+      formatCommandText(
+        { kind: "code", language: "js", source: "console.log(1)" },
+        t,
+      ),
+    ).toBe("JavaScript\nconsole.log(1)");
     expect(
       formatCommandText(
         {

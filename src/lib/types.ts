@@ -1,4 +1,5 @@
 import type { RoomMuteEntry } from "./mutes";
+import type { CodeLanguage } from "./code";
 
 export type QualityTier = "free" | "pro";
 export type CallMode = "direct" | "room";
@@ -63,7 +64,8 @@ export type ChatCommandPayload =
   | { kind: "emote"; action: string }
   | { kind: "help" }
   | { kind: "timer"; ms: number }
-  | { kind: "poll"; id: string; options: string[] };
+  | { kind: "poll"; id: string; options: string[] }
+  | { kind: "code"; language: CodeLanguage; source: string };
 
 export type ChatMessage = {
   id: string;

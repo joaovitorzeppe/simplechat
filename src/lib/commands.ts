@@ -5,6 +5,7 @@ import type {
   RollExprOp,
   RollExprTerm,
 } from "./types";
+import { parseCodeArgs, CODE_LANGUAGE_LABELS } from "./code";
 
 export type CommandId =
   | "roll"
@@ -15,6 +16,7 @@ export type CommandId =
   | "emote"
   | "timer"
   | "poll"
+  | "code"
   | "help";
 
 export type ChatCommand = {
@@ -88,6 +90,13 @@ export const CHAT_COMMANDS: ChatCommand[] = [
     nameKey: "chat.command.pollName",
     hintKey: "chat.command.pollHint",
     exampleKey: "chat.command.pollExample",
+  },
+  {
+    id: "code",
+    names: ["code", "codigo", "código", "codice"],
+    nameKey: "chat.command.codeName",
+    hintKey: "chat.command.codeHint",
+    exampleKey: "chat.command.codeExample",
   },
   {
     id: "help",
@@ -195,6 +204,7 @@ export const MAX_COMMAND_TERMS = 10;
 export const MAX_COMMAND_MOD = 10_000;
 export const MAX_COMMAND_CHOICE_OPTIONS = 12;
 export const MAX_COMMAND_CHOICE_LENGTH = 80;
+export { MAX_COMMAND_CODE } from "./code";
 export const MAX_COMMAND_EMOTE = 200;
 export const MIN_TIMER_MS = 5_000;
 export const MAX_TIMER_MS = 2 * 60 * 60 * 1000;
@@ -541,6 +551,12 @@ export const formatCommandText = (
       options: command.options.join(", "),
     });
   }
+  if (command.kind === "code") {
+    return translate("chat.command.codeResult", {
+      language: CODE_LANGUAGE_LABELS[command.language],
+      source: command.source,
+    });
+  }
   if (command.kind === "help") {
     const lines = CHAT_COMMANDS.map(
       (item) => `/${translate(item.nameKey)} — ${translate(item.hintKey)}`,
@@ -702,6 +718,18 @@ export const runChatCommand = (
     return {
       ok: true,
       command: { kind: "poll", id: crypto.randomUUID(), options },
+    };
+  }
+  if (parsed.id === "code") {
+    const snippet = parseCodeArgs(parsed.args);
+    if (!snippet) return { ok: false, error: "chat.command.codeEmpty" };
+    return {
+      ok: true,
+      command: {
+        kind: "code",
+        language: snippet.language,
+        source: snippet.source,
+      },
     };
   }
   if (parsed.id === "help") {
