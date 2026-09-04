@@ -6,7 +6,11 @@ import "@i18n/i18n";
 import "@libs/theme";
 import "./index.css";
 import { registerPwa } from "@libs/pwa";
+import { startVercelObserve } from "@libs/observe";
+import { settleSpaPath } from "@libs/spa-path";
 
+settleSpaPath();
+startVercelObserve();
 registerPwa();
 
 createRoot(document.getElementById("root")!).render(
