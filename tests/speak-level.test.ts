@@ -21,6 +21,10 @@ describe("nível de fala", () => {
     expect(intensityFromRms(rmsFromTimeDomain(loud()))).toBe(1);
   });
 
+  it("fala em volume normal já acende forte", () => {
+    expect(intensityFromRms(0.05)).toBeGreaterThan(0.55);
+  });
+
   it("ruído abaixo do limiar não acende a borda", () => {
     expect(intensityFromRms(SPEAK_GATE)).toBe(0);
     expect(intensityFromRms(SPEAK_GATE / 2)).toBe(0);

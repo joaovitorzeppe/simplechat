@@ -70,7 +70,7 @@ export const useSpeakLevel = (
       }
       analyser = ctx.createAnalyser();
       analyser.fftSize = 512;
-      analyser.smoothingTimeConstant = 0.4;
+      analyser.smoothingTimeConstant = 0.12;
       mute = ctx.createGain();
       mute.gain.value = 0;
       source.connect(analyser);
