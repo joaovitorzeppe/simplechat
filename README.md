@@ -19,7 +19,7 @@ Idiomas: português, inglês, espanhol, francês e italiano (`LanguageSwitcher`)
 
 Na Vercel, um path sem arquivo (ex.: `/foo`) devolve o SPA — onboarding se não houver identidade, home se houver. Query e hash do convite (`?room=` e `#k=`) são preservados. Web Analytics e Speed Insights medem visitas e Core Web Vitals; o envio tira query e hash para o segredo da sala não ir para a Vercel. Os dois precisam estar ligados no painel do projeto.
 
-Produção: [https://simplechat.me](https://simplechat.me) redireciona para [https://www.simplechat.me](https://www.simplechat.me). Convites usam a origem do navegador (`/?room=…#k=…`). `robots.txt` impede indexar URLs com query; o canonical aponta para a home.
+Produção: [https://simplechat.me](https://simplechat.me) redireciona para [https://www.simplechat.me](https://www.simplechat.me). Convites usam a origem do navegador (`/?room=…#k=…`). `robots.txt` impede indexar URLs com query; o canonical aponta para a home. Termos e privacidade ficam em `/terms` e `/privacy` (o cliente não joga esses pathnames para `/`).
 
 ## Como funciona
 

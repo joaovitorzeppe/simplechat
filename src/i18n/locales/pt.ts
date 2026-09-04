@@ -253,6 +253,12 @@ export const pt = {
   "toast.roomUnmutedAudio": "O host liberou seu microfone.",
   "toast.roomMutedVideo": "O host desligou sua câmera para a sala.",
   "toast.roomUnmutedVideo": "O host liberou sua câmera.",
+
+  "legal.nav": "Documentos legais",
+  "legal.privacy": "Política de privacidade",
+  "legal.terms": "Termos de uso",
+  "legal.back": "Voltar ao SimpleChat",
+  "legal.updated": "Atualizado em {date}",
 } as const;
 
 export type MessageKey = keyof typeof pt;

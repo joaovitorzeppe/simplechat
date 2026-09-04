@@ -255,4 +255,10 @@ export const en: Messages = {
   "toast.roomUnmutedAudio": "The host released your microphone.",
   "toast.roomMutedVideo": "The host turned off your camera for the room.",
   "toast.roomUnmutedVideo": "The host released your camera.",
+
+  "legal.nav": "Legal documents",
+  "legal.privacy": "Privacy policy",
+  "legal.terms": "Terms of use",
+  "legal.back": "Back to SimpleChat",
+  "legal.updated": "Updated {date}",
 };

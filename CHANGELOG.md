@@ -12,6 +12,7 @@ Tudo o que entrou depois do primeiro CHANGELOG.
 
 - Domínio `simplechat.me` na Vercel; o apex redireciona para `www.simplechat.me`.
 - `robots.txt` (não indexa `?room=`), `sitemap.xml`, canonical, Open Graph e JSON-LD apontando para `https://www.simplechat.me/`.
+- Páginas `/privacy` e `/terms` (textos nos idiomas da interface). Links no onboarding e na home; o SPA deixa esses pathnames no ar.
 
 ### Comandos do chat
 

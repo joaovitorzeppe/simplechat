@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@components/Button";
 import { CheckIcon, CloseIcon, CopyIcon, DownloadIcon } from "@components/Icons";
 import { LanguageSwitcher } from "@components/LanguageSwitcher";
+import { LegalLinks } from "@components/LegalLinks";
 import { QualityBadge } from "@components/QualityBadge";
 import { ThemeToggle } from "@components/ThemeToggle";
 import { useI18n } from "@i18n/use-i18n";
@@ -275,6 +276,8 @@ export const Home = () => {
             </label>
           </section>
         )}
+
+        <LegalLinks />
       </div>
     </main>
   );

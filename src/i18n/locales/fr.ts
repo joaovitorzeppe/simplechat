@@ -262,4 +262,10 @@ export const fr: Messages = {
   "toast.roomUnmutedAudio": "L’hôte a réactivé votre micro.",
   "toast.roomMutedVideo": "L’hôte a éteint votre caméra pour la salle.",
   "toast.roomUnmutedVideo": "L’hôte a réactivé votre caméra.",
+
+  "legal.nav": "Documents juridiques",
+  "legal.privacy": "Politique de confidentialité",
+  "legal.terms": "Conditions d’utilisation",
+  "legal.back": "Retour à SimpleChat",
+  "legal.updated": "Mis à jour le {date}",
 };

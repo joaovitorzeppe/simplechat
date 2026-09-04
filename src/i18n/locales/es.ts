@@ -257,4 +257,10 @@ export const es: Messages = {
   "toast.roomUnmutedAudio": "El anfitrión liberó tu micrófono.",
   "toast.roomMutedVideo": "El anfitrión apagó tu cámara para la sala.",
   "toast.roomUnmutedVideo": "El anfitrión liberó tu cámara.",
+
+  "legal.nav": "Documentos legales",
+  "legal.privacy": "Política de privacidad",
+  "legal.terms": "Términos de uso",
+  "legal.back": "Volver a SimpleChat",
+  "legal.updated": "Actualizado el {date}",
 };

@@ -4,10 +4,15 @@ import { t } from "@i18n/i18n";
 import { loadIdentity } from "@libs/identity";
 import { unlockAudio } from "@libs/sounds";
 import { showToast } from "@libs/toast";
+import { parseLegalPath } from "@libs/spa-path";
 import { Onboarding } from "@screens/Onboarding";
 
 const MainApp = lazy(() =>
   import("./MainApp").then((mod) => ({ default: mod.MainApp })),
+);
+
+const Legal = lazy(() =>
+  import("@screens/Legal").then((mod) => ({ default: mod.Legal })),
 );
 
 const Boot = () => (
@@ -38,6 +43,16 @@ const App = () => {
       window.removeEventListener("keydown", unlock);
     };
   }, []);
+
+  const legal = parseLegalPath(window.location.pathname);
+  if (legal) {
+    return (
+      <Suspense fallback={<Boot />}>
+        <Legal kind={legal} />
+        <Toast />
+      </Suspense>
+    );
+  }
 
   if (!identity) {
     return (

@@ -19,4 +19,24 @@ describe("spaHomeHref", () => {
       }),
     ).toBe("/?room=abc#k=1");
   });
+
+  it("mantém as páginas legais", () => {
+    expect(
+      spaHomeHref({ pathname: "/privacy", search: "", hash: "" }),
+    ).toBeNull();
+    expect(spaHomeHref({ pathname: "/terms", search: "", hash: "" })).toBeNull();
+  });
+
+  it("tira a barra final das páginas legais", () => {
+    expect(
+      spaHomeHref({ pathname: "/privacy/", search: "", hash: "" }),
+    ).toBe("/privacy");
+    expect(
+      spaHomeHref({
+        pathname: "/terms/",
+        search: "?room=abc",
+        hash: "#k=1",
+      }),
+    ).toBe("/terms?room=abc#k=1");
+  });
 });
