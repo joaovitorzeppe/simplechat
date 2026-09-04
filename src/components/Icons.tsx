@@ -167,6 +167,14 @@ export const CloseIcon = (props: IconProps) => {
   );
 }
 
+export const BackIcon = (props: IconProps) => {
+  return (
+    <svg {...base(props)}>
+      <path d="M15 5l-7 7 7 7" />
+    </svg>
+  );
+}
+
 export const DownloadIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>

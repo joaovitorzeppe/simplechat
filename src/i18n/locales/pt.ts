@@ -258,6 +258,7 @@ export const pt = {
   "legal.privacy": "Política de privacidade",
   "legal.terms": "Termos de uso",
   "legal.back": "Voltar ao SimpleChat",
+  "legal.goBack": "Voltar",
   "legal.updated": "Atualizado em {date}",
 } as const;
 

@@ -27,6 +27,16 @@ export const parseLegalPath = (pathname: string): LegalKind | null => {
 
 export const legalHref = (kind: LegalKind) => LEGAL_HREF[kind];
 
+/** Volta no histórico se a página anterior for deste origin; senão vai para `/`. */
+export const sameOriginReferrer = (referrer: string, origin: string) => {
+  if (!referrer) return false;
+  try {
+    return new URL(referrer).origin === origin;
+  } catch {
+    return false;
+  }
+};
+
 export const spaHomeHref = (url: {
   pathname: string;
   search: string;

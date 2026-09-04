@@ -1,12 +1,22 @@
+import { Button } from "@components/Button";
+import { BackIcon } from "@components/Icons";
 import { LanguageSwitcher } from "@components/LanguageSwitcher";
 import { ThemeToggle } from "@components/ThemeToggle";
 import { useI18n } from "@i18n/use-i18n";
 import { legalDoc } from "@i18n/legal";
-import { legalHref, type LegalKind } from "@libs/spa-path";
+import { legalHref, sameOriginReferrer, type LegalKind } from "@libs/spa-path";
 import { useEffect } from "react";
 
 type Props = {
   kind: LegalKind;
+};
+
+const goBack = () => {
+  if (sameOriginReferrer(document.referrer, window.location.origin)) {
+    window.history.back();
+    return;
+  }
+  window.location.assign("/");
 };
 
 export const Legal = ({ kind }: Props) => {
@@ -29,7 +39,21 @@ export const Legal = ({ kind }: Props) => {
   return (
     <main className="min-h-dvh px-4 py-8">
       <div className="mx-auto max-w-2xl space-y-8">
-        <header className="flex flex-wrap items-start justify-between gap-4">
+        <header className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Button
+              variant="ghost"
+              className="-ml-2 px-3 py-2 text-zinc-400 hover:text-zinc-100"
+              onClick={goBack}
+            >
+              <BackIcon />
+              {t("legal.goBack")}
+            </Button>
+            <div className="flex items-center gap-1.5">
+              <LanguageSwitcher />
+              <ThemeToggle />
+            </div>
+          </div>
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-accent">
               SimpleChat
@@ -40,10 +64,6 @@ export const Legal = ({ kind }: Props) => {
             <p className="mt-2 text-sm text-zinc-500">
               {t("legal.updated", { date: doc.updated })}
             </p>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <LanguageSwitcher />
-            <ThemeToggle />
           </div>
         </header>
 

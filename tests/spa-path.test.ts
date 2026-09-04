@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { spaHomeHref } from "@libs/spa-path";
+import { spaHomeHref, sameOriginReferrer } from "@libs/spa-path";
 
 describe("spaHomeHref", () => {
   it("não mexe na raiz", () => {
@@ -38,5 +38,20 @@ describe("spaHomeHref", () => {
         hash: "#k=1",
       }),
     ).toBe("/terms?room=abc#k=1");
+  });
+});
+
+describe("sameOriginReferrer", () => {
+  it("só aceita o mesmo origin", () => {
+    expect(
+      sameOriginReferrer("https://www.simplechat.me/", "https://www.simplechat.me"),
+    ).toBe(true);
+    expect(
+      sameOriginReferrer("https://www.simplechat.me/privacy", "https://www.simplechat.me"),
+    ).toBe(true);
+    expect(sameOriginReferrer("https://google.com/", "https://www.simplechat.me")).toBe(
+      false,
+    );
+    expect(sameOriginReferrer("", "https://www.simplechat.me")).toBe(false);
   });
 });

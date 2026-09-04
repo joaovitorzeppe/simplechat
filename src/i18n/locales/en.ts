@@ -260,5 +260,6 @@ export const en: Messages = {
   "legal.privacy": "Privacy policy",
   "legal.terms": "Terms of use",
   "legal.back": "Back to SimpleChat",
+  "legal.goBack": "Back",
   "legal.updated": "Updated {date}",
 };
