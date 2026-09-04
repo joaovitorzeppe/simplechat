@@ -13,17 +13,17 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="SimpleChat" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="description" content="SimpleChat — chamada de áudio, vídeo e chat P2P no navegador. Sem cadastro." />
+  <meta name="description" content="SimpleChat — chamada de áudio, vídeo e chat sem compromisso no navegador." />
   <meta name="robots" content="index, follow" />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="pt_BR" />
   <meta property="og:url" content="https://www.simplechat.me/" />
   <meta property="og:title" content="SimpleChat" />
-  <meta property="og:description" content="Chamada de áudio, vídeo e chat P2P no navegador. Sem cadastro." />
+  <meta property="og:description" content="Chamada de áudio, vídeo e chat sem compromisso no navegador." />
   <meta property="og:image" content="https://www.simplechat.me/icons/icon-512.png" />
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="SimpleChat" />
-  <meta name="twitter:description" content="Chamada de áudio, vídeo e chat P2P no navegador. Sem cadastro." />
+  <meta name="twitter:description" content="Chamada de áudio, vídeo e chat sem compromisso no navegador." />
   <meta name="twitter:image" content="https://www.simplechat.me/icons/icon-512.png" />
   <title>SimpleChat — chamada de vídeo no navegador</title>
   <script type="application/ld+json">
@@ -32,7 +32,7 @@
       "@type": "WebApplication",
       "name": "SimpleChat",
       "url": "https://www.simplechat.me/",
-      "description": "Chamada de áudio, vídeo e chat P2P no navegador. Sem cadastro.",
+      "description": "Chamada de áudio, vídeo e chat sem compromisso no navegador.",
       "applicationCategory": "CommunicationApplication",
       "operatingSystem": "Any",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "BRL" }
@@ -43,17 +43,17 @@
       var s = localStorage.getItem("simplechat.theme");
       var light = s === "light" || (s !== "dark" && matchMedia("(prefers-color-scheme: light)").matches);
       if (light) document.documentElement.classList.add("light");
-    } catch (e) {}
+    } catch (e) { }
   </script>
 </head>
 
 <body>
   <div id="root">
     <h1>SimpleChat</h1>
-    <p>Chamada de áudio, vídeo e chat P2P no navegador. Sem cadastro e sem servidor próprio.</p>
+    <p>Chamada de áudio, vídeo e chat sem compromisso no navegador.</p>
   </div>
   <noscript>
-    <p>O SimpleChat precisa de JavaScript para a chamada P2P no navegador.</p>
+    <p>O SimpleChat precisa de JavaScript para a chamada sem compromisso no navegador.</p>
   </noscript>
   <script type="module" src="/src/main.tsx"></script>
 </body>
