@@ -2,11 +2,21 @@ import { MAX_FILE_BYTES, MAX_PARTICIPANTS } from "./quality";
 import { ALL_MENTION } from "./mentions";
 import { truncateText } from "./text";
 import type { RoomMuteEntry } from "./mutes";
-import type { ChatCommandPayload, PeerInfo, WireMessage } from "./types";
+import type {
+  ChatCommandPayload,
+  PeerInfo,
+  RollExprOp,
+  RollExprTerm,
+  WireMessage,
+} from "./types";
 import {
+  exprPassTotal,
   MAX_COMMAND_DICE,
+  MAX_COMMAND_MOD,
   MAX_COMMAND_RANGE,
+  MAX_COMMAND_REPEATS,
   MAX_COMMAND_SIDES,
+  MAX_COMMAND_TERMS,
 } from "./commands";
 
 export const MAX_CHAT_TEXT = 4000;
@@ -87,6 +97,78 @@ const parseCommandValues = (
   return values;
 };
 
+const parseExprOp = (value: unknown): RollExprOp | null => {
+  if (value === "+" || value === "-" || value === "*" || value === "/")
+    return value;
+  return null;
+};
+
+const parseExprTerm = (value: unknown): RollExprTerm | null => {
+  if (!isRecord(value) || typeof value.kind !== "string") return null;
+  const op = parseExprOp(value.op);
+  if (!op) return null;
+  if (value.kind === "dice") {
+    const n = int(value.n, 1, MAX_COMMAND_DICE);
+    const sides = int(value.sides, 2, MAX_COMMAND_SIDES);
+    if (n === null || sides === null) return null;
+    const values = parseCommandValues(value.values, n, sides);
+    if (!values) return null;
+    return { kind: "dice", n, sides, op, values };
+  }
+  if (value.kind === "mod") {
+    const raw = int(value.value, 1, MAX_COMMAND_MOD);
+    if (raw === null) return null;
+    return { kind: "mod", value: raw, op };
+  }
+  return null;
+};
+
+const exprTermKey = (term: RollExprTerm) => {
+  if (term.kind === "mod") return `mod:${term.op}:${term.value}`;
+  return `dice:${term.op}:${term.n}:${term.sides}`;
+};
+
+const parseExprPass = (value: unknown) => {
+  if (!isRecord(value) || !Array.isArray(value.terms)) return null;
+  if (value.terms.length < 1 || value.terms.length > MAX_COMMAND_TERMS)
+    return null;
+  const terms: RollExprTerm[] = [];
+  for (const entry of value.terms) {
+    const term = parseExprTerm(entry);
+    if (!term) return null;
+    terms.push(term);
+  }
+  if (!terms.some((term) => term.kind === "dice")) return null;
+  if (terms[0]?.op === "*" || terms[0]?.op === "/") return null;
+  const diceCount = terms.reduce(
+    (sum, term) => sum + (term.kind === "dice" ? term.n : 0),
+    0,
+  );
+  if (diceCount < 1 || diceCount > MAX_COMMAND_DICE) return null;
+  const total = exprPassTotal(terms);
+  if (total === null || value.total !== total) return null;
+  return { terms, total };
+};
+
+const parseExprPayload = (value: Record<string, unknown>) => {
+  if (!Array.isArray(value.passes)) return null;
+  if (value.passes.length < 1 || value.passes.length > MAX_COMMAND_REPEATS)
+    return null;
+  const passes: Array<{ terms: RollExprTerm[]; total: number }> = [];
+  let specKey = "";
+  for (const entry of value.passes) {
+    const pass = parseExprPass(entry);
+    if (!pass) return null;
+    const key = pass.terms.map(exprTermKey).join("|");
+    if (!specKey) specKey = key;
+    else if (key !== specKey) return null;
+    passes.push(pass);
+  }
+  const total = passes.reduce((sum, pass) => sum + pass.total, 0);
+  if (value.total !== total) return null;
+  return { kind: "expr" as const, passes, total };
+};
+
 /** `null` quando ausente, `false` quando presente e inválido. */
 const parseChatCommandPayload = (
   value: unknown,
@@ -121,6 +203,10 @@ const parseChatCommandPayload = (
     const roll = int(value.value, lo, hi);
     if (roll === null) return false;
     return { kind: "range", min: lo, max: hi, value: roll };
+  }
+  if (value.kind === "expr") {
+    const payload = parseExprPayload(value);
+    return payload ?? false;
   }
   if (value.kind === "pick") {
     const name = str(value.name, MAX_DISPLAY_NAME);

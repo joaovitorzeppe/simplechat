@@ -129,17 +129,20 @@ export const it: Messages = {
   "chat.mentionPicker": "Menziona qualcuno",
   "chat.commandPicker": "Comandi",
   "chat.command.rollName": "dado",
-  "chat.command.rollHint": "Lancia dadi o pesca un numero",
-  "chat.command.rollExample": "/dado · /dado 2d6 · /dado 1-100",
+  "chat.command.rollHint": "Lancia dadi, espressioni o un intervallo",
+  "chat.command.rollExample": "/dado · /dado 2d6*3 · /dado 2 5d10+7d4+3",
   "chat.command.pickName": "sorteggia",
   "chat.command.pickHint": "Sceglie qualcuno della chiamata a caso",
   "chat.command.pickExample": "/sorteggia",
   "chat.command.rollDie": "Ha lanciato {n}d{sides}: {value}",
   "chat.command.rollDice": "Ha lanciato {n}d{sides}: {parts} = {total}",
   "chat.command.rollRange": "Ha estratto {min}–{max}: {value}",
+  "chat.command.rollExpr": "Ha lanciato {formula}: {parts} = {total}",
+  "chat.command.rollExprRepeat":
+    "Ha lanciato {n}× ({formula}): {parts} = {total}",
   "chat.command.pickResult": "Ha pescato: {name}",
   "chat.command.rollInvalid":
-    "Comando non capito. Prova /dado, /dado 2d6 o /dado 1-100.",
+    "Comando non capito. Prova /dado, /dado 2d6*3, /dado 5d10+3 o /dado 2 5d10+7d4+3.",
   "chat.command.pickEmpty": "Non c’è nessuno da sorteggiare nella chiamata.",
 
   "incoming.title": "Chiamata in arrivo",

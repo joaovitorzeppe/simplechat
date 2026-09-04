@@ -1,5 +1,10 @@
 import type { MessageKey } from "@i18n/locales";
-import type { ChatCommandPayload, PeerInfo } from "./types";
+import type {
+  ChatCommandPayload,
+  PeerInfo,
+  RollExprOp,
+  RollExprTerm,
+} from "./types";
 
 export type CommandId = "roll" | "pick";
 
@@ -87,37 +92,203 @@ export const randomInt = (min: number, max: number, rng: Rng = defaultRng) => {
 export const MAX_COMMAND_DICE = 20;
 export const MAX_COMMAND_SIDES = 1000;
 export const MAX_COMMAND_RANGE = 1_000_000;
+export const MAX_COMMAND_REPEATS = 20;
+export const MAX_COMMAND_TERMS = 10;
+export const MAX_COMMAND_MOD = 10_000;
+
+export type RollTermSpec =
+  | { kind: "dice"; n: number; sides: number; op: RollExprOp }
+  | { kind: "mod"; value: number; op: RollExprOp };
 
 export type RollSpec =
   | { kind: "dice"; n: number; sides: number }
-  | { kind: "range"; min: number; max: number };
+  | { kind: "range"; min: number; max: number }
+  | { kind: "expr"; repeats: number; terms: RollTermSpec[] };
 
-export const parseRollArgs = (args: string): RollSpec | null => {
-  const raw = args.trim();
-  if (!raw) return { kind: "dice", n: 1, sides: 20 };
-  const dice = raw.match(/^(\d*)d(\d+)$/i);
-  if (dice) {
-    const n = dice[1] ? Number(dice[1]) : 1;
-    const sides = Number(dice[2]);
-    if (!Number.isInteger(n) || !Number.isInteger(sides)) return null;
-    if (n < 1 || n > MAX_COMMAND_DICE || sides < 2 || sides > MAX_COMMAND_SIDES)
-      return null;
-    return { kind: "dice", n, sides };
-  }
-  if (/^\d+$/.test(raw)) {
-    const sides = Number(raw);
-    if (sides < 2 || sides > MAX_COMMAND_SIDES) return null;
-    return { kind: "dice", n: 1, sides };
-  }
-  const range = raw.match(/^(\d+)\s*-\s*(\d+)$/) ?? raw.match(/^(\d+)\s+(\d+)$/);
-  if (!range) return null;
-  const min = Number(range[1]);
-  const max = Number(range[2]);
+const parseRangePair = (min: number, max: number): RollSpec | null => {
   if (!Number.isInteger(min) || !Number.isInteger(max)) return null;
   if (min < 0 || max < 0) return null;
   if (min > MAX_COMMAND_RANGE || max > MAX_COMMAND_RANGE) return null;
   if (Math.abs(max - min) > MAX_COMMAND_RANGE) return null;
   return { kind: "range", min, max };
+};
+
+const isExprOp = (value: string): value is RollExprOp => {
+  return value === "+" || value === "-" || value === "*" || value === "/";
+};
+
+type RollAtomSpec =
+  | { kind: "dice"; n: number; sides: number }
+  | { kind: "mod"; value: number };
+
+const parseExprAtom = (
+  rest: string,
+): { spec: RollAtomSpec; length: number } | null => {
+  const dice = rest.match(/^(\d*)d(\d+)/i);
+  if (dice) {
+    const n = dice[1] ? Number(dice[1]) : 1;
+    const sides = Number(dice[2]);
+    if (!Number.isInteger(n) || !Number.isInteger(sides)) return null;
+    if (n < 1 || n > MAX_COMMAND_DICE) return null;
+    if (sides < 2 || sides > MAX_COMMAND_SIDES) return null;
+    return { spec: { kind: "dice", n, sides }, length: dice[0].length };
+  }
+  const mod = rest.match(/^(\d+)/);
+  if (!mod) return null;
+  const value = Number(mod[1]);
+  if (!Number.isInteger(value) || value < 1 || value > MAX_COMMAND_MOD)
+    return null;
+  return { spec: { kind: "mod", value }, length: mod[0].length };
+};
+
+export const parseExprTerms = (expr: string): RollTermSpec[] | null => {
+  const compact = expr.replace(/\s+/g, "");
+  if (!compact || !/[dD]/.test(compact)) return null;
+  const terms: RollTermSpec[] = [];
+  let i = 0;
+  let op: RollExprOp = "+";
+  const lead = compact[i];
+  if (lead === "+" || lead === "-") {
+    op = lead;
+    i += 1;
+    if (i >= compact.length) return null;
+  }
+  const first = parseExprAtom(compact.slice(i));
+  if (!first) return null;
+  terms.push({ ...first.spec, op });
+  i += first.length;
+  while (i < compact.length) {
+    const next = compact[i] ?? "";
+    if (!isExprOp(next)) return null;
+    i += 1;
+    if (i >= compact.length) return null;
+    const atom = parseExprAtom(compact.slice(i));
+    if (!atom) return null;
+    terms.push({ ...atom.spec, op: next });
+    i += atom.length;
+  }
+  if (terms.length === 0 || terms.length > MAX_COMMAND_TERMS) return null;
+  if (!terms.some((term) => term.kind === "dice")) return null;
+  const diceCount = terms.reduce(
+    (sum, term) => sum + (term.kind === "dice" ? term.n : 0),
+    0,
+  );
+  if (diceCount < 1 || diceCount > MAX_COMMAND_DICE) return null;
+  return terms;
+};
+
+export const parseRollArgs = (args: string): RollSpec | null => {
+  const raw = args.trim();
+  if (!raw) return { kind: "dice", n: 1, sides: 20 };
+  if (/^\d+$/.test(raw)) {
+    const sides = Number(raw);
+    if (sides < 2 || sides > MAX_COMMAND_SIDES) return null;
+    return { kind: "dice", n: 1, sides };
+  }
+  if (!/[dD]/.test(raw)) {
+    const range =
+      raw.match(/^(\d+)\s*-\s*(\d+)$/) ?? raw.match(/^(\d+)\s+(\d+)$/);
+    if (!range) return null;
+    return parseRangePair(Number(range[1]), Number(range[2]));
+  }
+  let repeats = 1;
+  let expr = raw;
+  const repeated = raw.match(/^(\d+)\s+(.+)$/);
+  if (repeated) {
+    repeats = Number(repeated[1]);
+    expr = repeated[2] ?? "";
+    if (!Number.isInteger(repeats) || repeats < 1 || repeats > MAX_COMMAND_REPEATS)
+      return null;
+  }
+  const terms = parseExprTerms(expr);
+  if (!terms) return null;
+  const only = terms[0];
+  if (
+    repeats === 1 &&
+    terms.length === 1 &&
+    only?.kind === "dice" &&
+    only.op === "+"
+  ) {
+    return { kind: "dice", n: only.n, sides: only.sides };
+  }
+  return { kind: "expr", repeats, terms };
+};
+
+export const formatRollFormula = (terms: RollTermSpec[]) => {
+  return terms
+    .map((term, index) => {
+      const body =
+        term.kind === "mod" ? String(term.value) : `${term.n}d${term.sides}`;
+      if (index === 0) return term.op === "-" ? `-${body}` : body;
+      return `${term.op}${body}`;
+    })
+    .join("");
+};
+
+export const joinSigned = (values: number[]) => {
+  return values
+    .map((value, index) => {
+      if (index === 0) return String(value);
+      return value < 0 ? ` - ${-value}` : ` + ${value}`;
+    })
+    .join("");
+};
+
+const atomValue = (term: RollExprTerm) => {
+  if (term.kind === "mod") return term.value;
+  return term.values.reduce((sum, value) => sum + value, 0);
+};
+
+/** `*` e `/` primeiro, da esquerda para a direita; divisão truncada em direção a zero. */
+export const exprPassTotal = (terms: RollExprTerm[]): number | null => {
+  const first = terms[0];
+  if (!first || first.op === "*" || first.op === "/") return null;
+  let acc = atomValue(first);
+  let accOp: "+" | "-" = first.op === "-" ? "-" : "+";
+  const parts: number[] = [];
+  const flush = () => {
+    parts.push(accOp === "-" ? -acc : acc);
+  };
+  for (let i = 1; i < terms.length; i += 1) {
+    const term = terms[i];
+    if (!term) return null;
+    const value = atomValue(term);
+    if (term.op === "*" || term.op === "/") {
+      if (term.op === "*") acc *= value;
+      else {
+        if (value === 0) return null;
+        acc = Math.trunc(acc / value);
+      }
+      if (!Number.isSafeInteger(acc)) return null;
+      continue;
+    }
+    flush();
+    acc = value;
+    accOp = term.op;
+  }
+  flush();
+  const total = parts.reduce((sum, value) => sum + value, 0);
+  return Number.isSafeInteger(total) ? total : null;
+};
+
+export const formatExprParts = (terms: RollExprTerm[]) => {
+  return terms
+    .map((term, index) => {
+      const body =
+        term.kind === "mod"
+          ? String(term.value)
+          : term.values.length === 1
+            ? String(term.values[0])
+            : `(${term.values.join(" + ")})`;
+      if (index === 0) return term.op === "-" ? `-${body}` : body;
+      return ` ${term.op} ${body}`;
+    })
+    .join("");
+};
+
+const specFromExprTerm = (term: RollExprTerm): RollTermSpec => {
+  if (term.kind === "mod") return { kind: "mod", value: term.value, op: term.op };
+  return { kind: "dice", n: term.n, sides: term.sides, op: term.op };
 };
 
 const commandByName = (name: string) => {
@@ -170,6 +341,24 @@ export const formatCommandText = (
       min: command.min,
       max: command.max,
       value: command.value,
+    });
+  }
+  if (command.kind === "expr") {
+    const first = command.passes[0];
+    if (!first) return "";
+    const formula = formatRollFormula(first.terms.map(specFromExprTerm));
+    if (command.passes.length === 1) {
+      return translate("chat.command.rollExpr", {
+        formula,
+        parts: formatExprParts(first.terms),
+        total: command.total,
+      });
+    }
+    return translate("chat.command.rollExprRepeat", {
+      n: command.passes.length,
+      formula,
+      parts: joinSigned(command.passes.map((pass) => pass.total)),
+      total: command.total,
     });
   }
   return translate("chat.command.pickResult", {
@@ -228,6 +417,30 @@ export const runChatCommand = (
           total,
         },
       };
+    }
+    if (spec.kind === "expr") {
+      const passes: Array<{ terms: RollExprTerm[]; total: number }> = [];
+      for (let i = 0; i < spec.repeats; i += 1) {
+        const terms: RollExprTerm[] = spec.terms.map((term) => {
+          if (term.kind === "mod") return term;
+          return {
+            kind: "dice" as const,
+            n: term.n,
+            sides: term.sides,
+            op: term.op,
+            values: Array.from({ length: term.n }, () =>
+              randomInt(1, term.sides, rng),
+            ),
+          };
+        });
+        const total = exprPassTotal(terms);
+        if (total === null) {
+          return { ok: false, error: "chat.command.rollInvalid" };
+        }
+        passes.push({ terms, total });
+      }
+      const total = passes.reduce((sum, pass) => sum + pass.total, 0);
+      return { ok: true, command: { kind: "expr", passes, total } };
     }
     const min = Math.min(spec.min, spec.max);
     const max = Math.max(spec.min, spec.max);

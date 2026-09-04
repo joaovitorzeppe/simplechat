@@ -32,10 +32,27 @@ export type ChatFile = {
   blobUrl: string | null;
 };
 
+export type RollExprOp = "+" | "-" | "*" | "/";
+
+export type RollExprTerm =
+  | {
+      kind: "dice";
+      n: number;
+      sides: number;
+      op: RollExprOp;
+      values: number[];
+    }
+  | { kind: "mod"; value: number; op: RollExprOp };
+
 export type ChatCommandPayload =
   | { kind: "die"; n: number; sides: number; value: number }
   | { kind: "dice"; n: number; sides: number; values: number[]; total: number }
   | { kind: "range"; min: number; max: number; value: number }
+  | {
+      kind: "expr";
+      passes: Array<{ terms: RollExprTerm[]; total: number }>;
+      total: number;
+    }
   | { kind: "pick"; name: string; peerId: string };
 
 export type ChatMessage = {

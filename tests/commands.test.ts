@@ -72,11 +72,76 @@ describe("parseRollArgs", () => {
     expect(parseRollArgs("1 10")).toEqual({ kind: "range", min: 1, max: 10 });
   });
 
+  it("aceita somas, modificadores e repetição", () => {
+    expect(parseRollArgs("5d10+7d4+3")).toEqual({
+      kind: "expr",
+      repeats: 1,
+      terms: [
+        { kind: "dice", n: 5, sides: 10, op: "+" },
+        { kind: "dice", n: 7, sides: 4, op: "+" },
+        { kind: "mod", value: 3, op: "+" },
+      ],
+    });
+    expect(parseRollArgs("2 5d10 + 7d4 + 3")).toEqual({
+      kind: "expr",
+      repeats: 2,
+      terms: [
+        { kind: "dice", n: 5, sides: 10, op: "+" },
+        { kind: "dice", n: 7, sides: 4, op: "+" },
+        { kind: "mod", value: 3, op: "+" },
+      ],
+    });
+    expect(parseRollArgs("2d6-1")).toEqual({
+      kind: "expr",
+      repeats: 1,
+      terms: [
+        { kind: "dice", n: 2, sides: 6, op: "+" },
+        { kind: "mod", value: 1, op: "-" },
+      ],
+    });
+    expect(parseRollArgs("2 d6")).toEqual({
+      kind: "expr",
+      repeats: 2,
+      terms: [{ kind: "dice", n: 1, sides: 6, op: "+" }],
+    });
+    expect(parseRollArgs("2d6*3")).toEqual({
+      kind: "expr",
+      repeats: 1,
+      terms: [
+        { kind: "dice", n: 2, sides: 6, op: "+" },
+        { kind: "mod", value: 3, op: "*" },
+      ],
+    });
+    expect(parseRollArgs("2d6/2+1")).toEqual({
+      kind: "expr",
+      repeats: 1,
+      terms: [
+        { kind: "dice", n: 2, sides: 6, op: "+" },
+        { kind: "mod", value: 2, op: "/" },
+        { kind: "mod", value: 1, op: "+" },
+      ],
+    });
+    expect(parseRollArgs("2d6+3*2")).toEqual({
+      kind: "expr",
+      repeats: 1,
+      terms: [
+        { kind: "dice", n: 2, sides: 6, op: "+" },
+        { kind: "mod", value: 3, op: "+" },
+        { kind: "mod", value: 2, op: "*" },
+      ],
+    });
+  });
+
   it("rejeita valores fora do limite", () => {
     expect(parseRollArgs("0d6")).toBeNull();
     expect(parseRollArgs("21d6")).toBeNull();
     expect(parseRollArgs("d1")).toBeNull();
     expect(parseRollArgs("nope")).toBeNull();
+    expect(parseRollArgs("5d10++3")).toBeNull();
+    expect(parseRollArgs("2d6/")).toBeNull();
+    expect(parseRollArgs("*2d6")).toBeNull();
+    expect(parseRollArgs("21 2d6")).toBeNull();
+    expect(parseRollArgs("5d10+7d4+9d6")).toBeNull();
   });
 });
 
@@ -113,6 +178,105 @@ describe("runChatCommand", () => {
     });
   });
 
+  it("rola uma expressão e pode repetir a soma", () => {
+    expect(runChatCommand("/dado 5d10+7d4+3", people, rngOf(Array(12).fill(0)))).toEqual({
+      ok: true,
+      command: {
+        kind: "expr",
+        total: 15,
+        passes: [
+          {
+            total: 15,
+            terms: [
+              { kind: "dice", n: 5, sides: 10, op: "+", values: [1, 1, 1, 1, 1] },
+              { kind: "dice", n: 7, sides: 4, op: "+", values: [1, 1, 1, 1, 1, 1, 1] },
+              { kind: "mod", value: 3, op: "+" },
+            ],
+          },
+        ],
+      },
+    });
+    expect(
+      runChatCommand("/roll 2 5d10+7d4+3", people, rngOf(Array(24).fill(0))),
+    ).toEqual({
+      ok: true,
+      command: {
+        kind: "expr",
+        total: 30,
+        passes: [
+          {
+            total: 15,
+            terms: [
+              { kind: "dice", n: 5, sides: 10, op: "+", values: [1, 1, 1, 1, 1] },
+              { kind: "dice", n: 7, sides: 4, op: "+", values: [1, 1, 1, 1, 1, 1, 1] },
+              { kind: "mod", value: 3, op: "+" },
+            ],
+          },
+          {
+            total: 15,
+            terms: [
+              { kind: "dice", n: 5, sides: 10, op: "+", values: [1, 1, 1, 1, 1] },
+              { kind: "dice", n: 7, sides: 4, op: "+", values: [1, 1, 1, 1, 1, 1, 1] },
+              { kind: "mod", value: 3, op: "+" },
+            ],
+          },
+        ],
+      },
+    });
+  });
+
+  it("multiplica e divide com precedência", () => {
+    expect(runChatCommand("/dado 2d6*3", people, rngOf([0, 0.999]))).toEqual({
+      ok: true,
+      command: {
+        kind: "expr",
+        total: 21,
+        passes: [
+          {
+            total: 21,
+            terms: [
+              { kind: "dice", n: 2, sides: 6, op: "+", values: [1, 6] },
+              { kind: "mod", value: 3, op: "*" },
+            ],
+          },
+        ],
+      },
+    });
+    expect(runChatCommand("/dado 2d6/2", people, rngOf([0, 0.999]))).toEqual({
+      ok: true,
+      command: {
+        kind: "expr",
+        total: 3,
+        passes: [
+          {
+            total: 3,
+            terms: [
+              { kind: "dice", n: 2, sides: 6, op: "+", values: [1, 6] },
+              { kind: "mod", value: 2, op: "/" },
+            ],
+          },
+        ],
+      },
+    });
+    expect(runChatCommand("/dado 2d6+3*2", people, rngOf([0, 0.999]))).toEqual({
+      ok: true,
+      command: {
+        kind: "expr",
+        total: 13,
+        passes: [
+          {
+            total: 13,
+            terms: [
+              { kind: "dice", n: 2, sides: 6, op: "+", values: [1, 6] },
+              { kind: "mod", value: 3, op: "+" },
+              { kind: "mod", value: 2, op: "*" },
+            ],
+          },
+        ],
+      },
+    });
+  });
+
   it("sorteia uma pessoa da sala", () => {
     expect(parseChatCommand("/sortear")).toEqual({ id: "pick", args: "" });
     expect(runChatCommand("/pick", people, rngOf([0.6]))).toEqual({
@@ -139,6 +303,27 @@ describe("formatCommandText", () => {
     total: 7,
   };
   const range = { kind: "range" as const, min: 1, max: 100, value: 51 };
+  const expr = {
+    kind: "expr" as const,
+    total: 15,
+    passes: [
+      {
+        total: 15,
+        terms: [
+          { kind: "dice" as const, n: 2, sides: 6, op: "+" as const, values: [1, 6] },
+          { kind: "mod" as const, value: 3, op: "+" as const },
+        ],
+      },
+    ],
+  };
+  const exprRepeat = {
+    kind: "expr" as const,
+    total: 30,
+    passes: [
+      { total: 15, terms: expr.passes[0].terms },
+      { total: 15, terms: expr.passes[0].terms },
+    ],
+  };
   const pick = { kind: "pick" as const, name: "Bruno", peerId: "bruno-1" };
   const en = (
     key: Parameters<typeof translate>[1],
@@ -152,6 +337,38 @@ describe("formatCommandText", () => {
     expect(formatCommandText(dice, en)).toBe("Rolled 2d6: 1 + 6 = 7");
     expect(formatCommandText(range, t)).toBe("Rolou 1–100: 51");
     expect(formatCommandText(range, en)).toBe("Rolled 1–100: 51");
+    expect(formatCommandText(expr, t)).toBe("Rolou 2d6+3: (1 + 6) + 3 = 15");
+    expect(formatCommandText(expr, en)).toBe("Rolled 2d6+3: (1 + 6) + 3 = 15");
+    expect(formatCommandText(exprRepeat, t)).toBe(
+      "Rolou 2× (2d6+3): 15 + 15 = 30",
+    );
+    expect(formatCommandText(exprRepeat, en)).toBe(
+      "Rolled 2× (2d6+3): 15 + 15 = 30",
+    );
+    expect(
+      formatCommandText(
+        {
+          kind: "expr",
+          total: 21,
+          passes: [
+            {
+              total: 21,
+              terms: [
+                {
+                  kind: "dice",
+                  n: 2,
+                  sides: 6,
+                  op: "+",
+                  values: [1, 6],
+                },
+                { kind: "mod", value: 3, op: "*" },
+              ],
+            },
+          ],
+        },
+        t,
+      ),
+    ).toBe("Rolou 2d6*3: (1 + 6) * 3 = 21");
     expect(formatCommandText(pick, t)).toBe("Sorteou: @Bruno");
     expect(formatCommandText(pick, en)).toBe("Picked: @Bruno");
   });

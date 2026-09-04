@@ -130,17 +130,20 @@ export const fr: Messages = {
   "chat.mentionPicker": "Mentionner quelqu’un",
   "chat.commandPicker": "Commandes",
   "chat.command.rollName": "dé",
-  "chat.command.rollHint": "Lance des dés ou tire un nombre",
-  "chat.command.rollExample": "/dé · /dé 2d6 · /dé 1-100",
+  "chat.command.rollHint": "Lance des dés, des expressions ou un intervalle",
+  "chat.command.rollExample": "/dé · /dé 2d6*3 · /dé 2 5d10+7d4+3",
   "chat.command.pickName": "tirer",
   "chat.command.pickHint": "Choisit quelqu’un dans l’appel au hasard",
   "chat.command.pickExample": "/tirer",
   "chat.command.rollDie": "A lancé {n}d{sides} : {value}",
   "chat.command.rollDice": "A lancé {n}d{sides} : {parts} = {total}",
   "chat.command.rollRange": "A tiré {min}–{max} : {value}",
+  "chat.command.rollExpr": "A lancé {formula} : {parts} = {total}",
+  "chat.command.rollExprRepeat":
+    "A lancé {n}× ({formula}) : {parts} = {total}",
   "chat.command.pickResult": "A désigné : {name}",
   "chat.command.rollInvalid":
-    "Commande incomprise. Essayez /dé, /dé 2d6 ou /dé 1-100.",
+    "Commande incomprise. Essayez /dé, /dé 2d6*3, /dé 5d10+3 ou /dé 2 5d10+7d4+3.",
   "chat.command.pickEmpty": "Personne à tirer au sort dans l’appel.",
 
   "incoming.title": "Appel entrant",

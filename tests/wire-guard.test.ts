@@ -101,6 +101,95 @@ describe("parseWire", () => {
       ),
     ).toBeNull();
     expect(parseWire(chat({ command: { kind: "pick", name: "Bruno" } }))).toBeNull();
+    const expr = {
+      kind: "expr",
+      total: 10,
+      passes: [
+        {
+          total: 10,
+          terms: [
+            { kind: "dice", n: 2, sides: 6, op: "+", values: [1, 6] },
+            { kind: "mod", value: 3, op: "+" },
+          ],
+        },
+      ],
+    };
+    expect(parseWire(chat({ command: expr }))).toEqual(chat({ command: expr }));
+    expect(
+      parseWire(
+        chat({
+          command: {
+            ...expr,
+            total: 99,
+          },
+        }),
+      ),
+    ).toBeNull();
+    expect(
+      parseWire(
+        chat({
+          command: {
+            kind: "expr",
+            total: 7,
+            passes: [
+              {
+                total: 7,
+                terms: [
+                  { kind: "dice", n: 2, sides: 6, op: "+", values: [1, 6] },
+                ],
+              },
+            ],
+          },
+        }),
+      ),
+    ).toEqual(
+      chat({
+        command: {
+          kind: "expr",
+          total: 7,
+          passes: [
+            {
+              total: 7,
+              terms: [
+                { kind: "dice", n: 2, sides: 6, op: "+", values: [1, 6] },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    const mul = {
+      kind: "expr",
+      total: 21,
+      passes: [
+        {
+          total: 21,
+          terms: [
+            { kind: "dice", n: 2, sides: 6, op: "+", values: [1, 6] },
+            { kind: "mod", value: 3, op: "*" },
+          ],
+        },
+      ],
+    };
+    expect(parseWire(chat({ command: mul }))).toEqual(chat({ command: mul }));
+    expect(
+      parseWire(
+        chat({
+          command: {
+            kind: "expr",
+            total: 6,
+            passes: [
+              {
+                total: 6,
+                terms: [
+                  { kind: "dice", n: 2, sides: 6, op: "*", values: [1, 6] },
+                ],
+              },
+            ],
+          },
+        }),
+      ),
+    ).toBeNull();
   });
 
   it("rejeita chat com texto que não é string", () => {
