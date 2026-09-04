@@ -1,6 +1,7 @@
 import { useState, type SubmitEvent } from "react";
 import { Button } from "@components/Button";
 import { LanguageSwitcher } from "@components/LanguageSwitcher";
+import { ThemeToggle } from "@components/ThemeToggle";
 import {
   clearIdentity,
   createIdentity,
@@ -41,7 +42,10 @@ export const Onboarding = ({ onDone }: Props) => {
           <p className="text-xs uppercase tracking-[0.25em] text-accent">
             SimpleChat
           </p>
-          <LanguageSwitcher />
+          <div className="flex items-center gap-1.5">
+            <LanguageSwitcher />
+            <ThemeToggle />
+          </div>
         </div>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">
           {t("onboarding.title")}

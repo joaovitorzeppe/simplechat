@@ -14,6 +14,13 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="description" content="SimpleChat — chamada de áudio, vídeo sem compromisso no navegador." />
   <title>SimpleChat</title>
+  <script>
+    try {
+      var s = localStorage.getItem("simplechat.theme");
+      var light = s === "light" || (s !== "dark" && matchMedia("(prefers-color-scheme: light)").matches);
+      if (light) document.documentElement.classList.add("light");
+    } catch (e) {}
+  </script>
 </head>
 
 <body>

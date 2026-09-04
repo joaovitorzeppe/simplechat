@@ -16,6 +16,7 @@ import { HostLeaveDialog } from "@components/HostLeaveDialog";
 import { LanguageSwitcher } from "@components/LanguageSwitcher";
 import { Lobby } from "@components/Lobby";
 import { QualityBadge } from "@components/QualityBadge";
+import { ThemeToggle } from "@components/ThemeToggle";
 import { VideoTile } from "@components/VideoTile";
 import { useI18n } from "@i18n/use-i18n";
 import { cn } from "@libs/cn";
@@ -187,6 +188,7 @@ export const Call = () => {
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <ThemeToggle />
             <LanguageSwitcher className="hidden sm:inline-flex" />
             {invite && (
               <Button
@@ -324,7 +326,7 @@ export const Call = () => {
           >
             <ChatIcon />
             {unread > 0 && !chatOpen && (
-              <span className="absolute -top-1 -right-1 grid min-w-5 place-items-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-5 text-ink">
+              <span className="absolute -top-1 -right-1 grid min-w-5 place-items-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-5 text-on-accent">
                 {unread > 9 ? "9+" : unread}
               </span>
             )}

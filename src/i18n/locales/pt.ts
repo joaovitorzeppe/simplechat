@@ -7,6 +7,8 @@ export const pt = {
   "language.es": "Español",
   "language.fr": "Français",
   "language.it": "Italiano",
+  "theme.toLight": "Tema claro",
+  "theme.toDark": "Tema escuro",
 
   "common.you": "Você",
   "common.someone": "Alguém",

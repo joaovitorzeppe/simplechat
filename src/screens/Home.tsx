@@ -3,6 +3,7 @@ import { Button } from "@components/Button";
 import { CheckIcon, CloseIcon, CopyIcon, DownloadIcon } from "@components/Icons";
 import { LanguageSwitcher } from "@components/LanguageSwitcher";
 import { QualityBadge } from "@components/QualityBadge";
+import { ThemeToggle } from "@components/ThemeToggle";
 import { useI18n } from "@i18n/use-i18n";
 import { clearIdentity } from "@libs/identity";
 import { deepLinkJoinArg, inviteJoinArg, inviteLink, parseInvite } from "@libs/invite";
@@ -125,6 +126,7 @@ export const Home = () => {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <LanguageSwitcher />
+            <ThemeToggle />
             {canInstall && (
               <Button variant="secondary" onClick={() => void install()}>
                 <DownloadIcon /> {t("home.install")}

@@ -9,6 +9,8 @@ export const en: Messages = {
   "language.es": "Español",
   "language.fr": "Français",
   "language.it": "Italiano",
+  "theme.toLight": "Light theme",
+  "theme.toDark": "Dark theme",
 
   "common.you": "You",
   "common.someone": "Someone",

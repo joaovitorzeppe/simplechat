@@ -141,6 +141,23 @@ export const GlobeIcon = (props: IconProps) => {
   );
 }
 
+export const SunIcon = (props: IconProps) => {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 3v1.5M12 19.5V21M4.22 4.22l1.06 1.06M18.72 18.72l1.06 1.06M3 12h1.5M19.5 12H21M4.22 19.78l1.06-1.06M18.72 5.28l1.06-1.06" />
+    </svg>
+  );
+}
+
+export const MoonIcon = (props: IconProps) => {
+  return (
+    <svg {...base(props)}>
+      <path d="M21 14.5A8.5 8.5 0 1 1 9.5 3 7 7 0 0 0 21 14.5Z" />
+    </svg>
+  );
+}
+
 export const CloseIcon = (props: IconProps) => {
   return (
     <svg {...base(props)}>

@@ -10,7 +10,7 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const styles: Record<Variant, string> = {
   primary:
-    "bg-accent text-ink hover:bg-teal-300 disabled:bg-zinc-700 disabled:text-zinc-400",
+    "bg-accent text-on-accent hover:bg-teal-300 disabled:bg-zinc-700 disabled:text-zinc-400",
   secondary:
     "bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-line disabled:bg-zinc-800 disabled:text-zinc-500",
   danger: "bg-red-500 text-white hover:bg-red-400",
