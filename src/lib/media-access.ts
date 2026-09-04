@@ -33,13 +33,24 @@ const listenOnly = (): AcquiredMedia => ({
   fallback: "listen",
 });
 
+const isPermissionDenied = (error: unknown) => {
+  if (!error || typeof error !== "object" || !("name" in error)) return false;
+  const name = String((error as { name: unknown }).name);
+  return name === "NotAllowedError" || name === "PermissionDeniedError";
+};
+
+type TryResult = AcquiredMedia | "denied" | null;
+
 const tryGetUserMedia = async (
   getUserMedia: GetUserMedia,
   constraints: MediaStreamConstraints,
-) => {
+): Promise<TryResult> => {
   try {
-    return await getUserMedia(constraints);
-  } catch {
+    const stream = await getUserMedia(constraints);
+    const media = fromStream(stream);
+    return media.fallback === "listen" ? null : media;
+  } catch (error) {
+    if (isPermissionDenied(error)) return "denied";
     return null;
   }
 };
@@ -70,7 +81,7 @@ const fromStream = (stream: MediaStream): AcquiredMedia => {
 /**
  * Sobe o que o dispositivo e a permissão deixarem: os dois, só áudio, só
  * vídeo ou nenhum (ouvir e chat). Nunca rejeita — quem entra sem tracks
- * continua na sala.
+ * continua na sala. Permissão negada para de tentar na hora.
  */
 export const acquireLocalMedia = async (
   getUserMedia: GetUserMedia | undefined,
@@ -78,18 +89,17 @@ export const acquireLocalMedia = async (
 ): Promise<AcquiredMedia> => {
   if (!getUserMedia) return listenOnly();
 
-  const tryOnce = async (constraints: MediaStreamConstraints) => {
-    const stream = await tryGetUserMedia(getUserMedia, constraints);
-    if (!stream) return null;
-    const media = fromStream(stream);
-    return media.fallback === "listen" ? null : media;
-  };
+  const attempts = [
+    preferred,
+    { audio: true, video: true },
+    { audio: true, video: false },
+    { audio: false, video: true },
+  ] as const;
 
-  return (
-    (await tryOnce(preferred)) ??
-    (await tryOnce({ audio: true, video: true })) ??
-    (await tryOnce({ audio: true, video: false })) ??
-    (await tryOnce({ audio: false, video: true })) ??
-    listenOnly()
-  );
+  for (const constraints of attempts) {
+    const result = await tryGetUserMedia(getUserMedia, constraints);
+    if (result === "denied") return listenOnly();
+    if (result) return result;
+  }
+  return listenOnly();
 };

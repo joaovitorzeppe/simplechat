@@ -47,6 +47,7 @@ export const maxParticipants = () => MAX_PARTICIPANTS[currentTier()];
 
 export const maxFileBytes = () => MAX_FILE_BYTES[currentTier()];
 
+/** Envio liberado em todos os tiers; o teto é `maxFileBytes()`. */
 export const canSendFiles = () => true;
 
 export const getCameraConstraints = (

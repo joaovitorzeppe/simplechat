@@ -238,6 +238,8 @@ export const es: Messages = {
   "toast.fileProOnly": "Enviar archivos es un recurso Pro.",
   "toast.fileFailed": "No se pudo enviar o recibir el archivo.",
   "toast.fileBusy": "Espera a que termine el envío actual.",
+  "toast.filePartial":
+    "Archivo enviado solo a parte de la sala — alguien se fue a mitad.",
   "toast.knock": "{name} quiere entrar a la llamada.",
   "toast.joinDenied": "El anfitrión no aprobó tu entrada.",
   "toast.inviteStale": "Enlace inválido o vencido. Pide una invitación nueva.",

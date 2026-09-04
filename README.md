@@ -29,7 +29,7 @@ Toda chamada é uma sala em mesh. Quem inicia é o **host**; quem entra é convi
 - **Iniciar:** você abre a chamada sozinho e compartilha o link `/?room=<sua-chave>#k=<segredo>`. Links antigos `?call=` ainda funcionam, mas sem o fragmento não entram mais.
 - **Ligar:** cola a chave (ou o link) da outra pessoa. Você vira host e convoca ela.
 - **Entrar:** junta você à chamada que a outra pessoa já começou. Abrir o link sem identidade passa pelo onboarding e entra na sala em seguida. O cliente conecta no host por data channel e fica na **sala de espera** até o host aprovar; então o host envia a lista de peers e cada um monta mesh de mídia (quem tem o ID menor inicia, para evitar glare). Quem o host discou entra direto, sem passar pela espera.
-- **Moderação:** o host aprova ou recusa cada entrada e pode remover alguém da chamada. Recusado e removido ficam bloqueados por `peerId` e, como o segredo gira junto, o link que eles têm deixa de valer.
+- **Moderação:** o host aprova ou recusa cada entrada e pode remover alguém da chamada. Recusado e removido ficam bloqueados por `peerId` e, como o segredo gira junto, o link que eles têm deixa de valer. Abrir uma sala nova (`createRoom`) também gira o segredo.
 - **Sair:** convidado só sai da sala. O host escolhe entre passar o papel adiante (`host-transfer`) ou encerrar para todos (`room-ended`).
 - **Queda do host:** se ele some sem avisar, quem ficou elege o substituto sozinho — o menor `peerId` entre os membros. Como a lista veio do host e é a mesma em todos, todos chegam ao mesmo nome sem negociar. Sobrando uma pessoa só, a chamada encerra.
 - **Câmera e microfone:** desligar a câmera para o track (`replaceTrack(null)` + `stop()`). Não envia frames pretos; o LED deve apagar. Os outros veem o avatar. Compartilhamento de tela segue em conexão separada.
@@ -46,12 +46,12 @@ Toda chamada é uma sala em mesh. Quem inicia é o **host**; quem entra é convi
 
 ## Limites do plano
 
-O host aplica o teto de **pessoas** do plano dele. **Enviar arquivo no chat é só Pro**; o teto de tamanho vale para quem envia (`quality.ts`). O free continua recebendo:
+O host aplica o teto de **pessoas** do plano dele. **Enviar arquivo** tem teto por quem manda (`quality.ts`); qualquer um na sala pode receber (até o limite Pro do fio):
 
 |                 | Free                         | Pro (demo)                   |
 | --------------- | ---------------------------- | ---------------------------- |
 | Pessoas         | 5                            | 12                           |
-| Arquivo no chat | — (só recebe)                | envia até 100 MB             |
+| Arquivo no chat | envia até 10 MB              | envia até 100 MB             |
 | Câmera          | 640×480 @ 15 fps, ~400 kbps  | 1280×720 @ 30 fps, ~2.5 Mbps |
 | Tela            | 1280×720 @ 15 fps, ~800 kbps | 1920×1080 @ 30 fps, ~4 Mbps  |
 

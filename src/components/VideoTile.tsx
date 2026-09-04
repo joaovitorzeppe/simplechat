@@ -11,24 +11,26 @@ import { Tooltip } from "./Tooltip";
 type Props = {
   stream: MediaStream | null;
   name: string;
+  peerId?: string;
   local?: boolean;
   mutedAudio?: boolean;
   cameraOff?: boolean;
   sharingScreen?: boolean;
   className?: string;
-  onPin?: () => void;
-  onRemove?: () => void;
+  onPin?: (peerId: string) => void;
+  onRemove?: (peerId: string) => void;
   isHostViewer?: boolean;
   localMute?: MuteFlags;
   roomMute?: MuteFlags;
-  onToggleLocal?: (kind: MuteKind) => void;
-  onSetRoom?: (kind: MuteKind, muted: boolean) => void;
+  onToggleLocal?: (peerId: string, kind: MuteKind) => void;
+  onSetRoom?: (peerId: string, kind: MuteKind, muted: boolean) => void;
   badge?: string;
 };
 
 export const VideoTile = memo(function VideoTile({
   stream,
   name,
+  peerId,
   local,
   mutedAudio,
   cameraOff,
@@ -52,12 +54,14 @@ export const VideoTile = memo(function VideoTile({
     const el = ref.current;
     if (!el) return;
     el.srcObject = stream;
+    if (stream) void el.play().catch(() => undefined);
     return () => {
       el.srcObject = null;
     };
   }, [stream]);
 
   const blank = !stream || cameraOff;
+  const id = peerId ?? "";
 
   return (
     <div
@@ -87,24 +91,24 @@ export const VideoTile = memo(function VideoTile({
         </div>
       )}
       <div className="absolute top-2 right-2 flex gap-1">
-        {onRemove && (
+        {onRemove && peerId && (
           <Tooltip label={t("call.remove")}>
             <button
               type="button"
               aria-label={`${t("call.remove")}: ${name}`}
-              onClick={onRemove}
+              onClick={() => onRemove(id)}
               className="grid size-8 place-items-center rounded-full border border-line bg-black/60 text-zinc-100 hover:bg-red-500/80 cursor-pointer"
             >
               <UserRemoveIcon width={16} height={16} />
             </button>
           </Tooltip>
         )}
-        {onPin && (
+        {onPin && peerId && (
           <Tooltip label={t("call.pinScreen")}>
             <button
               type="button"
               aria-label={`${t("call.pinScreen")}: ${name}`}
-              onClick={onPin}
+              onClick={() => onPin(id)}
               className="grid size-8 place-items-center rounded-full border border-line bg-black/60 text-zinc-100 hover:bg-zinc-800 cursor-pointer"
             >
               <ExpandIcon width={16} height={16} />
@@ -123,14 +127,18 @@ export const VideoTile = memo(function VideoTile({
               {badge}
             </span>
           )}
-          {onToggleLocal && (
+          {onToggleLocal && peerId && (
             <TileMuteControls
               name={name}
               isHostViewer={!!isHostViewer}
               localMute={localMute}
               roomMute={roomMute}
-              onToggleLocal={onToggleLocal}
-              onSetRoom={onSetRoom}
+              onToggleLocal={(kind) => onToggleLocal(id, kind)}
+              onSetRoom={
+                onSetRoom
+                  ? (kind, muted) => onSetRoom(id, kind, muted)
+                  : undefined
+              }
             />
           )}
           {sharingScreen && (

@@ -80,9 +80,15 @@ const onMessage = async (event: MessageEvent<InMessage>) => {
       case "recv-finish": {
         const incoming = recvs.get(msg.peerId);
         recvs.delete(msg.peerId);
-        const blob = incoming ? await incoming.finish() : null;
-        if (!blob) throw new Error("incomplete");
+        if (!incoming) throw new Error("incomplete");
+        const blob = await incoming.finish();
+        if (!blob) {
+          await incoming.dispose();
+          throw new Error("incomplete");
+        }
+        // postMessage clona os bytes; aí o OPFS no worker pode sumir.
         reply({ id: msg.id, type: "ok", blob });
+        await incoming.dispose();
         return;
       }
       case "recv-abort":

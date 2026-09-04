@@ -236,6 +236,8 @@ export const pt = {
   "toast.fileProOnly": "Enviar arquivo é um recurso Pro.",
   "toast.fileFailed": "Não foi possível enviar ou receber o arquivo.",
   "toast.fileBusy": "Espere o arquivo atual terminar de enviar.",
+  "toast.filePartial":
+    "Arquivo enviado só para parte da sala — alguém saiu no meio.",
   "toast.knock": "{name} quer entrar na chamada.",
   "toast.joinDenied": "O host não aprovou sua entrada.",
   "toast.inviteStale": "Link inválido ou expirado. Peça um convite novo.",

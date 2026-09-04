@@ -1,4 +1,4 @@
-const CACHE = "simplechat-v1";
+const CACHE = "simplechat-v2";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
@@ -24,6 +24,14 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/_vercel/")) return;
+
+  // Assets com hash mudam a cada deploy: network-only evita acumular
+  // entradas velhas dentro do mesmo nome de cache.
+  const hashedAsset = /^\/assets\/[^/]+\.[^/]+$/.test(url.pathname);
+  if (hashedAsset) {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   event.respondWith(
     fetch(request)

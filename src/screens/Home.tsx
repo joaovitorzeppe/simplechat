@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@components/Button";
 import { CheckIcon, CloseIcon, CopyIcon, DownloadIcon } from "@components/Icons";
 import { LanguageSwitcher } from "@components/LanguageSwitcher";
@@ -15,8 +15,6 @@ import { forgetPeer, loadRecents, type Recent } from "@libs/recents";
 import { firstGrapheme } from "@libs/text";
 import { showToast } from "@libs/toast";
 import { useSession } from "@libs/use-session";
-import "@fontsource/ibm-plex-mono/400.css";
-import "@fontsource/ibm-plex-mono/500.css";
 
 const CopyField = ({
   label,
@@ -28,11 +26,14 @@ const CopyField = ({
   copyLabel: string;
 }) => {
   const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef(0);
+  useEffect(() => () => window.clearTimeout(copiedTimer.current), []);
 
   const copy = async () => {
     await navigator.clipboard.writeText(value);
     setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    window.clearTimeout(copiedTimer.current);
+    copiedTimer.current = window.setTimeout(() => setCopied(false), 1600);
   };
 
   return (

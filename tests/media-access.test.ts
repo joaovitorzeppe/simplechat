@@ -63,6 +63,15 @@ describe("acquireLocalMedia", () => {
     expect(media.stream.getTracks?.() ?? []).toHaveLength(0);
   });
 
+  it("para na hora se a permissão for negada", async () => {
+    const gum = vi.fn(async () => {
+      throw new DOMException("Permission denied", "NotAllowedError");
+    });
+    const media = await acquireLocalMedia(gum, { audio: true, video: true });
+    expect(media.fallback).toBe("listen");
+    expect(gum).toHaveBeenCalledOnce();
+  });
+
   it("entra só ouvindo quando getUserMedia não existe", async () => {
     const media = await acquireLocalMedia(undefined, {
       audio: true,

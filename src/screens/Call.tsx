@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@components/Button";
 import { ChatPanel } from "@components/ChatPanel";
 import {
@@ -23,11 +23,10 @@ import { cn } from "@libs/cn";
 import { inviteLink } from "@libs/invite";
 import { maxParticipants } from "@libs/quality";
 import { isDev } from "@libs/env";
-import { muteOf, type MuteKind } from "@libs/mutes";
-import { electHost } from "@libs/session";
-import { useSession } from "@libs/use-session";
-import "@fontsource/ibm-plex-mono/400.css";
-import "@fontsource/ibm-plex-mono/500.css";
+import { muteOf } from "@libs/mutes";
+import { electHost, session } from "@libs/session";
+import type { PeerInfo } from "@libs/types";
+import { useSession, useSessionSelector } from "@libs/use-session";
 
 type ScreenItem = {
   id: string;
@@ -39,49 +38,69 @@ type ScreenItem = {
 const iconOff =
   "bg-red-500! hover:bg-red-400! hover:border-red-400 border-red-500";
 
-export const Call = () => {
-  const { t } = useI18n();
-  const { state, session } = useSession();
-  const [chatOpen, setChatOpen] = useState(
-    () => window.matchMedia("(min-width: 768px)").matches,
+const CallChatDock = memo(function CallChatDock({
+  open,
+  people,
+  onClose,
+}: {
+  open: boolean;
+  people: PeerInfo[];
+  onClose: () => void;
+}) {
+  const messages = useSessionSelector((s) => s.messages);
+  const selfId = useSessionSelector((s) => s.identity?.peerId ?? "");
+  if (!open || !selfId) return null;
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-40 bg-black/60 md:hidden"
+        onClick={onClose}
+        aria-hidden
+      />
+      <div
+        className={cn(
+          "z-40 flex w-[min(100%,24rem)] flex-col",
+          "fixed inset-y-0 right-0 md:static md:z-auto md:w-full md:max-w-sm",
+        )}
+      >
+        <ChatPanel
+          messages={messages}
+          selfId={selfId}
+          people={people}
+          onSend={(text) => session.sendChat(text)}
+          onSendFile={(file) => void session.sendFile(file)}
+          onVote={(pollId, option) => session.votePoll(pollId, option)}
+          onClose={onClose}
+        />
+      </div>
+    </>
   );
-  const [seenCount, setSeenCount] = useState(0);
-  const [copied, setCopied] = useState(false);
-  const [pinnedId, setPinnedId] = useState<string | null>(null);
-  const [showCameras, setShowCameras] = useState(false);
-  const me = state.identity;
-  const localPreview = state.localStream;
-  const selfId = me?.peerId;
-  const unread = chatOpen
-    ? 0
-    : state.messages
-      .slice(seenCount)
-      .filter((message) => message.fromPeerId !== selfId).length;
+});
 
-  const setChat = (open: boolean) => {
-    setChatOpen(open);
-    setSeenCount(state.messages.length);
-  };
-
-  // Sempre o link do host: é a sala dele que aceita entradas.
-  const roomId = state.hostPeerId ?? me?.peerId ?? "";
-  const invite = roomId ? inviteLink(roomId, state.roomSecret) : "";
-
-  const people = useMemo(() => {
-    if (!me) return [];
-    return [
-      { peerId: me.peerId, displayName: me.displayName },
-      ...state.remotes,
-    ];
-  }, [me, state.remotes]);
-  const successorId = electHost(state.remotes.map((remote) => remote.peerId));
-  const successorName =
-    state.remotes.find((remote) => remote.peerId === successorId)
-      ?.displayName ?? null;
+const CallStage = memo(function CallStage({
+  pinnedId,
+  showCameras,
+  onPin,
+}: {
+  pinnedId: string | null;
+  showCameras: boolean;
+  onPin: (id: string) => void;
+}) {
+  const { t } = useI18n();
+  const remotes = useSessionSelector((s) => s.remotes);
+  const localStream = useSessionSelector((s) => s.localStream);
+  const localScreenStream = useSessionSelector((s) => s.localScreenStream);
+  const cameraOff = useSessionSelector((s) => s.cameraOff);
+  const identity = useSessionSelector((s) => s.identity);
+  const hostPeerId = useSessionSelector((s) => s.hostPeerId);
+  const isHost = useSessionSelector((s) => s.isHost);
+  const localMutes = useSessionSelector((s) => s.localMutes);
+  const roomMutes = useSessionSelector((s) => s.roomMutes);
+  const screenShareOrder = useSessionSelector((s) => s.screenShareOrder);
 
   const screens = useMemo(() => {
     const items: ScreenItem[] = [];
-    for (const remote of state.remotes) {
+    for (const remote of remotes) {
       if (!remote.screenStream) continue;
       items.push({
         id: remote.peerId,
@@ -90,31 +109,28 @@ export const Call = () => {
         local: false,
       });
     }
-    if (state.localScreenStream && me) {
+    if (localScreenStream && identity) {
       items.push({
-        id: me.peerId,
-        stream: state.localScreenStream,
-        name: me.displayName,
+        id: identity.peerId,
+        stream: localScreenStream,
+        name: identity.displayName,
         local: true,
       });
     }
     return items;
-  }, [state.remotes, state.localScreenStream, me]);
+  }, [remotes, localScreenStream, identity]);
 
   const focusedId =
     (pinnedId && screens.some((item) => item.id === pinnedId)
       ? pinnedId
       : null) ??
-    state.screenShareOrder.find((id) =>
-      screens.some((item) => item.id === id),
-    ) ??
+    screenShareOrder.find((id) => screens.some((item) => item.id === id)) ??
     screens[0]?.id ??
     null;
   const focused = screens.find((item) => item.id === focusedId);
   const others = screens.filter((item) => item.id !== focused?.id);
   const hideCameras = screens.length >= 2 && !showCameras;
-  const count = state.remotes.length + 1;
-  const selfRoom = me ? muteOf(state.roomMutes, me.peerId) : null;
+  const count = remotes.length + 1;
   const grid =
     count === 1
       ? "grid-cols-1"
@@ -126,40 +142,31 @@ export const Call = () => {
     <>
       <VideoTile
         key="local"
-        stream={localPreview}
-        name={me?.displayName ?? t("common.you")}
+        stream={localStream}
+        name={identity?.displayName ?? t("common.you")}
         local
-        cameraOff={state.cameraOff}
+        cameraOff={cameraOff}
         className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
       />
-      {state.remotes.map((remote) => {
-        const isHostTile = remote.peerId === state.hostPeerId;
-        const localMute = muteOf(state.localMutes, remote.peerId);
-        const roomMute = muteOf(state.roomMutes, remote.peerId);
+      {remotes.map((remote) => {
+        const isHostTile = remote.peerId === hostPeerId;
+        const localMute = muteOf(localMutes, remote.peerId);
+        const roomMute = muteOf(roomMutes, remote.peerId);
         return (
           <VideoTile
             key={remote.peerId}
+            peerId={remote.peerId}
             stream={remote.stream}
             name={remote.displayName}
             mutedAudio={localMute.audio || roomMute.audio}
             cameraOff={remote.cameraOff || localMute.video || roomMute.video}
-            onRemove={
-              state.isHost ? () => session.kickPeer(remote.peerId) : undefined
-            }
-            isHostViewer={state.isHost}
+            onRemove={isHost ? session.kickPeer : undefined}
+            isHostViewer={isHost}
             localMute={localMute}
             roomMute={roomMute}
-            onToggleLocal={
-              isHostTile
-                ? undefined
-                : (kind: MuteKind) =>
-                  session.toggleLocalMute(remote.peerId, kind)
-            }
+            onToggleLocal={isHostTile ? undefined : session.toggleLocalMute}
             onSetRoom={
-              state.isHost && !isHostTile
-                ? (kind, muted) =>
-                  session.setRoomMute(remote.peerId, kind, muted)
-                : undefined
+              isHost && !isHostTile ? session.setRoomMute : undefined
             }
             className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
           />
@@ -167,6 +174,99 @@ export const Call = () => {
       })}
     </>
   );
+
+  if (focused) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
+          <VideoTile
+            peerId={focused.id}
+            stream={focused.stream}
+            name={focused.name}
+            local={focused.local}
+            sharingScreen
+            className="min-h-52 flex-1"
+          />
+          {others.length > 0 && (
+            <div className="flex shrink-0 gap-2 overflow-x-auto lg:w-52 lg:flex-col lg:overflow-y-auto">
+              {others.map((item) => (
+                <VideoTile
+                  key={item.id}
+                  peerId={item.id}
+                  stream={item.stream}
+                  name={item.name}
+                  local={item.local}
+                  sharingScreen
+                  onPin={onPin}
+                  className="h-28 w-44 shrink-0 min-h-24 lg:h-32 lg:w-full"
+                />
+              ))}
+            </div>
+          )}
+        </div>
+        {!hideCameras && (
+          <div className="flex shrink-0 gap-2 overflow-x-auto">
+            {cameraTiles(true)}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("min-h-0 flex-1 grid gap-3 overflow-y-auto p-3", grid)}>
+      {cameraTiles(false)}
+    </div>
+  );
+});
+
+export const Call = () => {
+  const { t } = useI18n();
+  const { state, session: peerSession } = useSession();
+  const [chatOpen, setChatOpen] = useState(
+    () => window.matchMedia("(min-width: 768px)").matches,
+  );
+  const [seenCount, setSeenCount] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef(0);
+  useEffect(() => () => window.clearTimeout(copiedTimer.current), []);
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
+  const [showCameras, setShowCameras] = useState(false);
+  const me = state.identity;
+  const selfId = me?.peerId;
+  const unread = chatOpen
+    ? 0
+    : state.messages
+        .slice(seenCount)
+        .filter((message) => message.fromPeerId !== selfId).length;
+
+  const setChat = (open: boolean) => {
+    setChatOpen(open);
+    setSeenCount(state.messages.length);
+  };
+
+  const roomId = state.hostPeerId ?? me?.peerId ?? "";
+  const invite = roomId ? inviteLink(roomId, state.roomSecret) : "";
+
+  const people = useMemo(() => {
+    if (!me) return [];
+    return [
+      { peerId: me.peerId, displayName: me.displayName },
+      ...state.remotes.map((remote) => ({
+        peerId: remote.peerId,
+        displayName: remote.displayName,
+      })),
+    ];
+  }, [me, state.remotes]);
+
+  const successorId = electHost(state.remotes.map((remote) => remote.peerId));
+  const successorName =
+    state.remotes.find((remote) => remote.peerId === successorId)
+      ?.displayName ?? null;
+  const selfRoom = me ? muteOf(state.roomMutes, me.peerId) : null;
+  const screenCount =
+    state.remotes.filter((remote) => remote.screenStream).length +
+    (state.localScreenStream ? 1 : 0);
 
   return (
     <main className="flex h-dvh overflow-hidden">
@@ -182,9 +282,9 @@ export const Call = () => {
                 : state.callStatus === "connecting"
                   ? t("call.connecting")
                   : t("call.inCall", {
-                    count: state.remotes.length + 1,
-                    max: maxParticipants(),
-                  })}
+                      count: state.remotes.length + 1,
+                      max: maxParticipants(),
+                    })}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -197,14 +297,18 @@ export const Call = () => {
                 onClick={async () => {
                   await navigator.clipboard.writeText(invite);
                   setCopied(true);
-                  window.setTimeout(() => setCopied(false), 1600);
+                  window.clearTimeout(copiedTimer.current);
+                  copiedTimer.current = window.setTimeout(
+                    () => setCopied(false),
+                    1600,
+                  );
                 }}
               >
                 {copied ? <CheckIcon /> : <CopyIcon />}
                 {t("call.copyInvite")}
               </Button>
             )}
-            {screens.length >= 2 && (
+            {screenCount >= 2 && (
               <Button
                 variant="secondary"
                 className="px-2.5 text-xs py-1.5 sm:px-4"
@@ -231,49 +335,17 @@ export const Call = () => {
           </p>
         )}
 
-        {focused ? (
-          <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
-            <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
-              <VideoTile
-                stream={focused.stream}
-                name={focused.name}
-                local={focused.local}
-                sharingScreen
-                className="min-h-52 flex-1"
-              />
-              {others.length > 0 && (
-                <div className="flex shrink-0 gap-2 overflow-x-auto lg:w-52 lg:flex-col lg:overflow-y-auto">
-                  {others.map((item) => (
-                    <VideoTile
-                      key={item.id}
-                      stream={item.stream}
-                      name={item.name}
-                      local={item.local}
-                      sharingScreen
-                      onPin={() => setPinnedId(item.id)}
-                      className="h-28 w-44 shrink-0 min-h-24 lg:h-32 lg:w-full"
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-            {!hideCameras && (
-              <div className="flex shrink-0 gap-2 overflow-x-auto">
-                {cameraTiles(true)}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className={cn("min-h-0 flex-1 grid gap-3 overflow-y-auto p-3", grid)}>
-            {cameraTiles(false)}
-          </div>
-        )}
+        <CallStage
+          pinnedId={pinnedId}
+          showCameras={showCameras}
+          onPin={setPinnedId}
+        />
 
         <div className="safe-bottom flex shrink-0 flex-wrap items-center justify-center gap-2 px-4 pt-4">
           <Button
             variant="icon"
             className={state.muted ? iconOff : undefined}
-            onClick={() => void session.toggleMute()}
+            onClick={() => void peerSession.toggleMute()}
             disabled={!!selfRoom?.audio}
             title={
               selfRoom?.audio
@@ -288,7 +360,7 @@ export const Call = () => {
           <Button
             variant="icon"
             className={state.cameraOff ? iconOff : undefined}
-            onClick={() => void session.toggleCamera()}
+            onClick={() => void peerSession.toggleCamera()}
             disabled={!!selfRoom?.video}
             title={
               selfRoom?.video
@@ -303,8 +375,10 @@ export const Call = () => {
           <Button
             variant="icon"
             className={state.sharingScreen ? "border-accent text-accent" : ""}
-            onClick={() => void session.shareScreen()}
-            title={state.sharingScreen ? t("call.stopScreen") : t("call.shareScreen")}
+            onClick={() => void peerSession.shareScreen()}
+            title={
+              state.sharingScreen ? t("call.stopScreen") : t("call.shareScreen")
+            }
           >
             <ScreenIcon />
           </Button>
@@ -334,7 +408,7 @@ export const Call = () => {
           <Button
             variant="icon"
             className={iconOff}
-            onClick={() => session.hangUp()}
+            onClick={() => peerSession.hangUp()}
             title={t("call.leave")}
           >
             <PhoneOffIcon />
@@ -345,55 +419,25 @@ export const Call = () => {
       {state.isHost && (
         <Lobby
           pending={state.pending}
-          onAdmit={(peerId) => session.admitPeer(peerId)}
-          onDeny={(peerId) => session.denyPeer(peerId)}
+          onAdmit={(peerId) => peerSession.admitPeer(peerId)}
+          onDeny={(peerId) => peerSession.denyPeer(peerId)}
         />
       )}
 
       {state.leavePrompt && (
         <HostLeaveDialog
           successorName={successorName}
-          onTransfer={() => session.transferHostAndLeave()}
-          onEnd={() => session.endRoomForAll()}
-          onCancel={() => session.cancelLeave()}
+          onTransfer={() => peerSession.transferHostAndLeave()}
+          onEnd={() => peerSession.endRoomForAll()}
+          onCancel={() => peerSession.cancelLeave()}
         />
       )}
 
-      {chatOpen && me && (
-        <div className="hidden w-full max-w-sm md:block">
-          <ChatPanel
-            messages={state.messages}
-            selfId={me.peerId}
-            people={people}
-            onSend={(text) => session.sendChat(text)}
-            onSendFile={(file) => void session.sendFile(file)}
-            onVote={(pollId, option) => session.votePoll(pollId, option)}
-            onClose={() => setChat(false)}
-          />
-        </div>
-      )}
-
-      {chatOpen && me && (
-        <div
-          className="md:hidden fixed inset-0 z-40 bg-black/60"
-          onClick={() => setChat(false)}
-        >
-          <div
-            className="absolute inset-y-0 right-0 w-[min(100%,24rem)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <ChatPanel
-              messages={state.messages}
-              selfId={me.peerId}
-              people={people}
-              onSend={(text) => session.sendChat(text)}
-              onSendFile={(file) => void session.sendFile(file)}
-              onVote={(pollId, option) => session.votePoll(pollId, option)}
-              onClose={() => setChat(false)}
-            />
-          </div>
-        </div>
-      )}
+      <CallChatDock
+        open={chatOpen}
+        people={people}
+        onClose={() => setChat(false)}
+      />
     </main>
   );
 };

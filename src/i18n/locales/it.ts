@@ -239,6 +239,8 @@ export const it: Messages = {
   "toast.fileProOnly": "Inviare file è una funzione Pro.",
   "toast.fileFailed": "Impossibile inviare o ricevere il file.",
   "toast.fileBusy": "Aspetta che finisca l’invio in corso.",
+  "toast.filePartial":
+    "File inviato solo a parte della stanza — qualcuno è uscito a metà.",
   "toast.knock": "{name} vuole entrare nella chiamata.",
   "toast.joinDenied": "L’host non ha approvato il tuo ingresso.",
   "toast.inviteStale": "Link non valido o scaduto. Chiedi un nuovo invito.",

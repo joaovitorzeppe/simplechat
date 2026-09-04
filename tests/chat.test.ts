@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CHAT_GROUP_MS,
+  cooledDown,
   groupChatMessages,
   hrefForLabel,
   isPreviewableImage,
@@ -16,6 +17,14 @@ const message = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   text: "oi",
   at: 1_700_000_000_000,
   ...overrides,
+});
+
+describe("cooledDown", () => {
+  it("aceita a primeira vez e respeita o intervalo", () => {
+    expect(cooledDown(undefined, 1000, 250)).toBe(true);
+    expect(cooledDown(1000, 1249, 250)).toBe(false);
+    expect(cooledDown(1000, 1250, 250)).toBe(true);
+  });
 });
 
 describe("hrefForLabel", () => {

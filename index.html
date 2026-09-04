@@ -38,13 +38,7 @@
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "BRL" }
     }
   </script>
-  <script>
-    try {
-      var s = localStorage.getItem("simplechat.theme");
-      var light = s === "light" || (s !== "dark" && matchMedia("(prefers-color-scheme: light)").matches);
-      if (light) document.documentElement.classList.add("light");
-    } catch (e) { }
-  </script>
+  <script src="/theme-boot.js"></script>
 </head>
 
 <body>

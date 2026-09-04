@@ -151,6 +151,8 @@ export const insertCommand = (text: string, caret: number, name: string) => {
 
 export type Rng = () => number;
 
+/** RNG local do remetente. Em P2P o peer escolhe os valores do fio; o
+ * wire-guard só confere consistência (soma === total), não honestidade. */
 export const defaultRng: Rng = () => {
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);

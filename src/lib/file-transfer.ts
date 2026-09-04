@@ -21,6 +21,8 @@ export class FileBridge {
   >();
   private sends = new Map<string, File>();
   private recvs = new Map<string, IncomingBuffer>();
+  /** OPFS ainda no disco depois do finish, até revoke/abort. */
+  private kept = new Map<string, IncomingBuffer>();
 
   constructor() {
     this.worker = this.spawn();
@@ -147,7 +149,18 @@ export class FileBridge {
     }
     const incoming = this.recvs.get(peerId);
     this.recvs.delete(peerId);
-    return incoming ? incoming.finish() : null;
+    if (!incoming) return null;
+    const blob = await incoming.finish();
+    if (blob) this.kept.set(incoming.meta.localId, incoming);
+    else await incoming.dispose();
+    return blob;
+  }
+
+  async release(localId: string) {
+    const incoming = this.kept.get(localId);
+    if (!incoming) return;
+    this.kept.delete(localId);
+    await incoming.dispose();
   }
 
   async abort(peerId: string) {
@@ -165,12 +178,15 @@ export class FileBridge {
     if (remote) {
       await remote.catch(() => undefined);
       this.sends.clear();
+      this.kept.clear();
       return;
     }
-    await Promise.all(
-      [...this.recvs.values()].map((incoming) => incoming.dispose()),
-    );
+    await Promise.all([
+      ...[...this.recvs.values()].map((incoming) => incoming.dispose()),
+      ...[...this.kept.values()].map((incoming) => incoming.dispose()),
+    ]);
     this.recvs.clear();
+    this.kept.clear();
     this.sends.clear();
   }
 }

@@ -4,6 +4,18 @@ import { truncateText } from "./text";
 import type { ChatMessage } from "./types";
 
 export const CHAT_GROUP_MS = 60_000;
+/** Espaço mínimo entre chats de um mesmo peer (anti-flood). */
+export const CHAT_COOLDOWN_MS = 250;
+/** Não empilha toast de @ a cada mensagem. */
+export const MENTION_TOAST_COOLDOWN_MS = 2500;
+/** Tetos de timers ativos (cada um é um setTimeout). */
+export const MAX_TIMER_ALARMS = 24;
+
+export const cooledDown = (
+  lastAt: number | undefined,
+  now: number,
+  ms: number,
+) => lastAt === undefined || now - lastAt >= ms;
 
 export type ChatGroup = {
   fromPeerId: string;

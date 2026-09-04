@@ -14,7 +14,13 @@ import type { MessageKey } from "@i18n/locales";
 import { t } from "@i18n/i18n";
 import { playCallEnded } from "./sounds";
 import { showToast } from "./toast";
-import { safeFileName } from "./chat";
+import {
+  CHAT_COOLDOWN_MS,
+  cooledDown,
+  MAX_TIMER_ALARMS,
+  MENTION_TOAST_COOLDOWN_MS,
+  safeFileName,
+} from "./chat";
 import {
   formatCommandText,
   mentionsForCommand,
@@ -92,6 +98,7 @@ const FILE_BUFFER_HIGH = 2_000_000;
 const MAX_MESSAGES = 500;
 const MAX_CONCURRENT_INCOMING = 3;
 const FILE_START_COOLDOWN = 2000;
+const FILE_SEND_CONCURRENCY = 3;
 const FLUSH_MS = 80;
 const MAX_ICE_RETRIES = 2;
 const ICE_RECOVERY_MS = 4000;
@@ -196,6 +203,8 @@ export class PeerSession {
   >();
   private incomingByteTail = new Map<string, Promise<void>>();
   private lastFileStart = new Map<string, number>();
+  private lastChatAt = new Map<string, number>();
+  private lastMentionToastAt = 0;
   private timerAlarms = new Map<string, number>();
 
   subscribe = (listener: Listener) => {
@@ -208,6 +217,14 @@ export class PeerSession {
   getState = () => this.state;
 
   private patch(partial: Partial<SessionState>) {
+    let changed = false;
+    for (const key of Object.keys(partial) as (keyof SessionState)[]) {
+      if (!Object.is(this.state[key], partial[key])) {
+        changed = true;
+        break;
+      }
+    }
+    if (!changed) return;
     this.state = { ...this.state, ...partial };
     if (partial.callStatus && partial.callStatus !== "connecting") {
       this.clearConnectWatch();
@@ -442,6 +459,8 @@ export class PeerSession {
     const me = this.selfInfo();
     this.roomMembers = me ? [me] : [];
     this.joinSecret = null;
+    // Sala nova ⇒ link novo: quem tinha o convite antigo não bate na porta.
+    this.hostSecret = rotateRoomSecret();
     this.beginCall(true, me?.peerId ?? "");
     this.patch({ callStatus: "in-call", roomSecret: this.hostSecret });
   }
@@ -735,13 +754,20 @@ export class PeerSession {
         setFileProgress(id, Math.min(1, slowest / file.size));
       };
 
-      await Promise.all(
-        peers.map((conn) =>
-          this.streamFileTo(conn, id, file.size, sent, report),
-        ),
+      const results = await this.mapLimited(
+        peers,
+        FILE_SEND_CONCURRENCY,
+        (conn) => this.streamFileTo(conn, id, file.size, sent, report),
       );
+      const ok = results.filter(Boolean).length;
+      if (ok === 0) {
+        this.patchFile(id, { status: "error" });
+        this.toast("toast.fileFailed");
+        return;
+      }
       setFileProgress(id, 1);
       this.patchFile(id, { status: "ready" });
+      if (ok < peers.length) this.toast("toast.filePartial");
     } catch {
       this.patchFile(id, { status: "error" });
       this.toast("toast.fileFailed");
@@ -784,7 +810,11 @@ export class PeerSession {
     });
   }
 
-  /** Host: silencia (ou libera) áudio/vídeo de alguém para a sala inteira. */
+  /** Host: pede silêncio de áudio/vídeo na sala.
+   * Viewers já aplicam `roomMutes` na tile (não tocam o stream). O alvo é
+   * pedido a cortar as tracks via `enforceSelfLocks` — cliente modificado
+   * pode ignorar e continuar enviando (só gasta banda). Em P2P puro não há
+   * corte no remetente. */
   setRoomMute(peerId: string, kind: MuteKind, muted: boolean) {
     if (!this.state.isHost || !this.inRoom() || !this.canControlMute(peerId))
       return;
@@ -850,11 +880,19 @@ export class PeerSession {
     this.applyLimitsToAll();
   }
 
-  private helloPayload() {
+  /** Só o que o broker pode ver: nunca o secret da sala. */
+  private signalMeta(extra?: Record<string, string>) {
     const me = this.state.identity;
     return {
       displayName: clampDisplayName(me?.displayName ?? t("common.someone")),
       peerId: me?.peerId ?? "",
+      ...extra,
+    };
+  }
+
+  private helloPayload() {
+    return {
+      ...this.signalMeta(),
       ...(this.joinSecret ? { secret: this.joinSecret } : {}),
     };
   }
@@ -1003,7 +1041,7 @@ export class PeerSession {
     if (!this.peer || this.data.has(peerId)) return;
     const conn = this.peer.connect(peerId, {
       reliable: true,
-      metadata: this.helloPayload(),
+      metadata: this.signalMeta(),
     });
     this.attachData(conn, true, first);
   }
@@ -1011,7 +1049,7 @@ export class PeerSession {
   private openMedia(peerId: string) {
     if (!this.peer || this.media.has(peerId)) return;
     const call = this.peer.call(peerId, this.outboundStream(), {
-      metadata: { ...this.helloPayload(), kind: "camera" },
+      metadata: this.signalMeta({ kind: "camera" }),
     });
     this.attachMedia(call);
     if (this.state.sharingScreen) this.openScreen(peerId);
@@ -1021,7 +1059,7 @@ export class PeerSession {
     const stream = this.state.localScreenStream;
     if (!this.peer || this.screenOut.has(peerId) || !stream) return;
     const call = this.peer.call(peerId, stream, {
-      metadata: { ...this.helloPayload(), kind: "screen" },
+      metadata: this.signalMeta({ kind: "screen" }),
     });
     this.screenOut.set(peerId, call);
     call.on("close", () => this.screenOut.delete(peerId));
@@ -1112,6 +1150,7 @@ export class PeerSession {
     const meta = call.metadata as
       | { displayName?: string; kind?: string }
       | undefined;
+    const metaName = this.nameFromMeta(meta?.displayName, call.peer);
     if (meta?.kind === "screen") {
       if (
         this.state.callStatus === "idle" ||
@@ -1123,10 +1162,11 @@ export class PeerSession {
       }
       call.answer();
       this.attachIncomingScreen(call);
-      const displayName =
-        meta.displayName || this.names.get(call.peer) || t("common.someone");
-      this.names.set(call.peer, displayName);
-      this.upsertRemote(call.peer, { displayName, sharingScreen: true });
+      this.names.set(call.peer, metaName);
+      this.upsertRemote(call.peer, {
+        displayName: metaName,
+        sharingScreen: true,
+      });
       this.rememberShare(call.peer);
       return;
     }
@@ -1162,10 +1202,15 @@ export class PeerSession {
     this.patch({
       incoming: {
         peerId: call.peer,
-        displayName:
-          meta?.displayName || this.names.get(call.peer) || t("common.someone"),
+        displayName: metaName,
       },
     });
+  }
+
+  private nameFromMeta(raw: unknown, peerId: string) {
+    const clamped =
+      typeof raw === "string" ? clampDisplayName(raw.trim()) : "";
+    return clamped || this.names.get(peerId) || t("common.someone");
   }
 
   private attachIncomingScreen(call: MediaConnection) {
@@ -1297,6 +1342,9 @@ export class PeerSession {
 
     if (msg.type === "chat") {
       if (!this.inRoom()) return;
+      const now = Date.now();
+      if (!cooledDown(this.lastChatAt.get(from), now, CHAT_COOLDOWN_MS)) return;
+      this.lastChatAt.set(from, now);
       const mentions = (msg.mentions ?? []).filter(
         (id) =>
           id === ALL_MENTION ||
@@ -1307,12 +1355,17 @@ export class PeerSession {
         fromPeerId: from,
         fromName: this.names.get(from) ?? t("common.someone"),
         text: msg.text,
-        at: Date.now(),
+        at: now,
         ...(mentions.length ? { mentions } : {}),
         ...(msg.command ? { command: msg.command } : {}),
       });
       const me = this.state.identity?.peerId;
-      if (me && isPinged(mentions, me, from)) {
+      if (
+        me &&
+        isPinged(mentions, me, from) &&
+        cooledDown(this.lastMentionToastAt, now, MENTION_TOAST_COOLDOWN_MS)
+      ) {
+        this.lastMentionToastAt = now;
         showToast(
           mentions.includes(ALL_MENTION)
             ? "toast.mentionedAll"
@@ -1510,6 +1563,7 @@ export class PeerSession {
         this.clearTimerAlarm(old.id);
         if (!old.file) continue;
         if (old.file.blobUrl) URL.revokeObjectURL(old.file.blobUrl);
+        void this.files.release(old.file.id);
         clearFileProgress(old.file.id);
       }
     }
@@ -1538,6 +1592,7 @@ export class PeerSession {
   private scheduleTimerAlarm(message: ChatMessage) {
     if (message.command?.kind !== "timer") return;
     this.clearTimerAlarm(message.id);
+    if (this.timerAlarms.size >= MAX_TIMER_ALARMS) return;
     const remaining = message.at + message.command.ms - Date.now();
     if (remaining <= 0) {
       showToast("chat.command.timerDone");
@@ -1766,6 +1821,16 @@ export class PeerSession {
       sharingScreen: patch.sharingScreen ?? current?.sharingScreen ?? false,
       cameraOff: patch.cameraOff ?? current?.cameraOff ?? false,
     };
+    if (
+      current &&
+      current.displayName === next.displayName &&
+      current.stream === next.stream &&
+      current.screenStream === next.screenStream &&
+      current.sharingScreen === next.sharingScreen &&
+      current.cameraOff === next.cameraOff
+    ) {
+      return;
+    }
     const remotes = current
       ? this.state.remotes.map((r) => (r.peerId === peerId ? next : r))
       : [...this.state.remotes.filter((r) => r.peerId !== peerId), next];
@@ -1816,6 +1881,8 @@ export class PeerSession {
     this.screenOut.delete(peerId);
     this.screenIn.delete(peerId);
     this.failIncomingFile(peerId);
+    this.lastChatAt.delete(peerId);
+    this.lastFileStart.delete(peerId);
     const remotes = this.state.remotes.filter((r) => r.peerId !== peerId);
     this.roomMembers = this.roomMembers.filter((p) => p.peerId !== peerId);
     this.patch({
@@ -1865,6 +1932,7 @@ export class PeerSession {
   /**
    * Lê o arquivo em fatias no worker. O canal continua aqui: só mandamos o
    * próximo pedaço quando o buffer do DataChannel esvazia.
+   * @returns false se o peer caiu antes do file-end.
    */
   private async streamFileTo(
     conn: DataConnection,
@@ -1872,21 +1940,44 @@ export class PeerSession {
     size: number,
     sent: Map<DataConnection, number>,
     report: () => void,
-  ) {
+  ): Promise<boolean> {
     // O sequencial aqui é o ponto: cada pedaço só é lido depois que o canal
     // tem espaço, e é isso que segura a memória em um pedaço por vez.
     // oxlint-disable no-await-in-loop
     for (let offset = 0; offset < size; offset += FILE_CHUNK) {
       if (this.tearingDown) throw new Error("ended");
       await this.waitForFileBuffer(conn);
-      if (!conn.open) return;
+      if (!conn.open) return false;
       const chunk = await this.files.readSlice(id, offset, FILE_CHUNK);
       conn.send(chunk);
       sent.set(conn, offset + chunk.byteLength);
       report();
     }
     // oxlint-enable no-await-in-loop
-    if (conn.open) conn.send({ type: "file-end", id });
+    if (!conn.open) return false;
+    conn.send({ type: "file-end", id });
+    return true;
+  }
+
+  private async mapLimited<T, R>(
+    items: T[],
+    limit: number,
+    fn: (item: T) => Promise<R>,
+  ): Promise<R[]> {
+    const results = new Array<R>(items.length);
+    let next = 0;
+    const workers = Array.from(
+      { length: Math.min(limit, items.length) },
+      async () => {
+        while (next < items.length) {
+          const index = next;
+          next += 1;
+          results[index] = await fn(items[index]!);
+        }
+      },
+    );
+    await Promise.all(workers);
+    return results;
   }
 
   private waitForFileBuffer(conn: DataConnection) {
@@ -2063,7 +2154,9 @@ export class PeerSession {
 
   private revokeMessageFiles() {
     for (const message of this.state.messages) {
-      if (message.file?.blobUrl) URL.revokeObjectURL(message.file.blobUrl);
+      if (!message.file) continue;
+      if (message.file.blobUrl) URL.revokeObjectURL(message.file.blobUrl);
+      void this.files.release(message.file.id);
     }
   }
 
@@ -2124,6 +2217,8 @@ export class PeerSession {
     this.incomingFiles.clear();
     this.incomingByteTail.clear();
     this.lastFileStart.clear();
+    this.lastChatAt.clear();
+    this.lastMentionToastAt = 0;
     this.clearAllTimerAlarms();
     this.sendingFile = false;
     void this.files.abortAll();
