@@ -6,7 +6,25 @@ O formato segue a ideia de [Keep a Changelog](https://keepachangelog.com/pt-BR/1
 
 ## [Não publicado]
 
-Tudo o que entrou depois do primeiro CHANGELOG, ainda neste dia.
+Tudo o que entrou depois do primeiro CHANGELOG.
+
+### Tema, idiomas e observabilidade
+
+Commits: `7cc65eb`, `93158ed`, `082bfea`.
+
+- Francês e italiano. Dicionários em `src/i18n/locales/`; o português continua a fonte das chaves.
+- Tema claro e escuro, com persistência (`simplechat.theme`) e fallback para `prefers-color-scheme`.
+- Path desconhecido na Vercel reescreve para o `index.html` (exceto `/_vercel/`). O cliente joga o pathname para `/` e mantém query e hash do convite.
+- Web Analytics e Speed Insights. Antes de enviar, query e hash saem da URL — o `#k=` do convite não vai para a Vercel. O service worker não intercepta `/_vercel/`.
+
+### UI
+
+Commits: `c452ad2`, `efdb20f`, `085b2a7`, `c909fbc`.
+
+- Tooltip nos botões; em toque, controle desabilitado mostra o motivo num toast.
+- Anel no tile de quem está falando, proporcional ao volume.
+- Mic e câmera desligados usam o mesmo vermelho do encerrar chamada.
+- Removido o protótipo de desfoque de fundo (MediaPipe).
 
 ### Sala, convite e host
 
@@ -53,15 +71,12 @@ Commits: `872b2f8`, `395ac4c`, `2732ee2`, `1f4e155`.
 
 ### App
 
-- Protótipo de desfoque de fundo só no preview local (MediaPipe Selfie Segmenter). FPS no tile. O vídeo enviado aos peers continua cru.
-
 Commits: `01ca868`, `190e4ac`.
 
 - Lobby na chamada, Error Boundary, fontes Outfit e IBM Plex Mono (latino; o resto cai na fonte do sistema).
 - Imports entre pastas usam alias: `@i18n/*`, `@libs/*`, `@components/*`, `@screens/*`.
 - TURN opcional por `VITE_TURN_URL`, `VITE_TURN_USERNAME` e `VITE_TURN_CREDENTIAL`. Sem as três, segue só STUN.
-- Vitest (`npm test`); testes em `tests/` (wire, convite, identidade, arquivo, recents, chat, menções, mute, mídia, sessão, texto).
-- Removido `@vercel/speed-insights`.
+- Vitest (`npm test`); testes em `tests/` (wire, convite, identidade, arquivo, recents, chat, menções, mute, mídia, sessão, texto, tema, path SPA, observabilidade).
 
 ### Removido
 
@@ -102,7 +117,7 @@ Commits: `5adfeab`, `0da6f4f`, `301199c`, `525ff4f`, `66c11df`, `2fa69fa`, `f842
 
 Commits: `2db48ec`, `3ec626e`, `ab3249e`.
 
-- Português, inglês e espanhol, com seletor de idioma.
+- Português, inglês e espanhol, com seletor de idioma. Francês e italiano entram em Não publicado.
 - Identidade com opt-in para lembrar neste navegador. O formato do `peerId` depois virou opaco (ver Não publicado).
 
 ### Infra

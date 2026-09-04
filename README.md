@@ -15,7 +15,9 @@ npm test
 
 Para testar duas pessoas no mesmo computador, abra uma janela anônima (o mesmo origin compartilha `localStorage` e a chave).
 
-Idiomas: português, inglês e espanhol (`LanguageSwitcher`). Em produção o app é instalável (PWA); o service worker não registra em `npm run dev`.
+Idiomas: português, inglês, espanhol, francês e italiano (`LanguageSwitcher`). Tema claro e escuro (`ThemeToggle`): na primeira visita segue o sistema; depois a escolha fica neste navegador. Em produção o app é instalável (PWA); o service worker não registra em `npm run dev`.
+
+Na Vercel, um path sem arquivo (ex.: `/foo`) devolve o SPA — onboarding se não houver identidade, home se houver. Query e hash do convite (`?room=` e `#k=`) são preservados. Web Analytics e Speed Insights medem visitas e Core Web Vitals; o envio tira query e hash para o segredo da sala não ir para a Vercel. Os dois precisam estar ligados no painel do projeto.
 
 ## Como funciona
 
