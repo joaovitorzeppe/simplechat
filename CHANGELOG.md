@@ -8,6 +8,16 @@ O formato segue a ideia de [Keep a Changelog](https://keepachangelog.com/pt-BR/1
 
 Tudo o que entrou depois do primeiro CHANGELOG.
 
+### Comandos do chat
+
+Commits: `c5264d3`, `183c5e1`, `8cc398a`.
+
+- `/` no começo da mensagem (ou depois de espaço) abre o seletor. URLs e frações (`https://`, `1/2`) não disparam. O resultado viaja como payload; cada cliente formata no próprio idioma. `/ajuda` não vai para a rede.
+- `/dado`: 1d20 sem argumentos, `2d6`, intervalo (`1-100`) e expressões (`5d10+7d4+3`, `*` `/` com precedência, repetição `2 5d10+7d4+3`). Tetos de dados, faces, termos e repetições.
+- `/sortear` marca alguém da sala. `/escolher` sorteia entre opções (vírgula ou espaço, 2 a 12). `/ordem` embaralha a sala. `/moeda` cara ou coroa. `/me` ação no chat (`@` na frase conta como menção).
+- `/timer`: `5` = minutos; também `30s`, `5m`/`5min`, `1h`, `1h30m`. Mínimo 5 s, máximo 2 h. Card com contagem; ao acabar, toast mesmo com o chat fechado. Cada cliente conta a partir do horário local da mensagem, sem relógio do remetente.
+- `/voto`: enquete clicável com as mesmas regras de opções do `/escolher`. Trocar de opção vale; o mesmo voto não reenvia. No fio, `poll-vote` com identidade em `conn.peer` — votos no payload do chat são ignorados.
+
 ### Tema, idiomas e observabilidade
 
 Commits: `7cc65eb`, `93158ed`, `082bfea`.
@@ -76,7 +86,7 @@ Commits: `01ca868`, `190e4ac`.
 - Lobby na chamada, Error Boundary, fontes Outfit e IBM Plex Mono (latino; o resto cai na fonte do sistema).
 - Imports entre pastas usam alias: `@i18n/*`, `@libs/*`, `@components/*`, `@screens/*`.
 - TURN opcional por `VITE_TURN_URL`, `VITE_TURN_USERNAME` e `VITE_TURN_CREDENTIAL`. Sem as três, segue só STUN.
-- Vitest (`npm test`); testes em `tests/` (wire, convite, identidade, arquivo, recents, chat, menções, mute, mídia, sessão, texto, tema, path SPA, observabilidade).
+- Vitest (`npm test`); testes em `tests/` (wire, convite, identidade, arquivo, recents, chat, menções, comandos, mute, mídia, sessão, texto, tema, path SPA, observabilidade).
 
 ### Removido
 

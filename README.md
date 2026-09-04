@@ -34,6 +34,11 @@ Toda chamada é uma sala em mesh. Quem inicia é o **host**; quem entra é convi
 - **Entrar sem mídia:** a entrada tenta áudio+vídeo, depois só áudio, só vídeo, e por fim só ouvir e chat. Sem câmera ou microfone (dispositivo ausente ou permissão recusada) você ainda entra; um toast avisa o que faltou. Religar mic ou câmera na barra pede o dispositivo de novo.
 - **Silenciar outros:** nos tiles, qualquer um pode desligar o áudio ou o vídeo de outra pessoa **só para si**. O host não pode ser silenciado. O host também pode silenciar para a **sala inteira** (`room-mute`); aí ninguém reativa — nem a pessoa alvo — até ele liberar.
 - **Chat e menções:** `@` depois de espaço (ou no começo) abre o seletor; `@all` marca todo mundo. O fio leva `peerId`, não o nome. Quem foi marcado vê a bolha em destaque e um toast. E-mails (`ana@site.com`) não abrem o seletor.
+- **Comandos:** `/` no começo da mensagem (ou depois de espaço) abre o seletor. O resultado viaja estruturado; cada cliente formata no próprio idioma. `/ajuda` só aparece para quem digitou. Nomes no seletor seguem o idioma da interface (`/dado`, `/roll`, `/dé`…).
+  - `/dado` — 1d20, `2d6`, intervalo (`1-100`) ou expressão (`2d6*3`, `2 5d10+7d4+3`).
+  - `/sortear` — escolhe alguém da sala. `/escolher pizza, sushi` — sorteia entre opções. `/ordem` — embaralha a sala. `/moeda` — cara ou coroa. `/me acena` — ação no chat (`@` na frase conta como menção).
+  - `/timer 5m` — cronômetro visível para a sala (`5` = minutos; também `30s`, `1h`, `1h30m`). Mínimo 5 segundos, máximo 2 horas. Ao acabar, um toast avisa mesmo com o chat fechado.
+  - `/voto pizza, sushi` — votação clicável (2 a 12 opções). Dá para trocar de opção. O voto no fio é `poll-vote`; a identidade vem da conexão, não do payload.
 - **Arquivo:** clipe no chat. Vai P2P no data channel, em pedaços. A montagem e a leitura das fatias rodam num worker (com fallback na thread da UI). Imagens (jpeg/png/gif/webp) têm prévia; o resto só baixa. Some ao sair da chamada.
 - **Recentes:** quem já esteve numa chamada com você aparece na home para Ligar de novo. Não reabre a sala antiga: o segredo do convite gira.
 
@@ -77,7 +82,7 @@ VITE_TURN_CREDENTIAL=senha
 O link chega a qualquer um, então **todo participante é tratado como potencialmente hostil**. Três regras sustentam isso:
 
 - **Nada que chega pelo data channel é confiável.** `parseWire` (`wire-guard.ts`) valida formato, tipo e tamanho de cada campo antes de a mensagem chegar à sessão. O que não bate com o contrato é descartado, não corrigido.
-- **A identidade vem da conexão, nunca do payload.** O remetente de um chat ou arquivo é sempre `conn.peer`. Encerrar a sala, anunciar a lista de peers, silenciar na sala (`room-mute`) ou transferir o papel de host só é aceito do host (ou, antes do host existir, do peer que você discou). Silenciar o host, mesmo forjado no fio, é ignorado.
+- **A identidade vem da conexão, nunca do payload.** O remetente de um chat, arquivo ou voto é sempre `conn.peer`. Encerrar a sala, anunciar a lista de peers, silenciar na sala (`room-mute`) ou transferir o papel de host só é aceito do host (ou, antes do host existir, do peer que você discou). Silenciar o host, mesmo forjado no fio, é ignorado.
 - **A sala é a lista que o host anuncia, e não há entrada por fora dela.** Isso vale inclusive entre convidados: como todos conhecem o `peerId` de todos pela lista da sala, um convidado que aceitasse conexão de qualquer um seria uma porta lateral sem tranca. Quem não está na lista não é atendido, não entra em broadcast e tem toda mensagem além do `hello` descartada.
 - **A entrada exige o segredo do link.** O host guarda um segredo de sala e o link de convite o carrega no fragmento (`#k=`), que o navegador não envia ao servidor nem repassa no `Referer`. Sem o segredo certo, o pedido nem chega a incomodar o host.
 
