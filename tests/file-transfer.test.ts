@@ -17,6 +17,7 @@ describe("IncomingBuffer", () => {
     expect(ok).toBe(true);
     const blob = await incoming.finish();
     expect(blob).not.toBeNull();
+    expect(blob?.type).toBe("text/plain");
     expect(await blob?.text()).toBe("hello");
   });
 

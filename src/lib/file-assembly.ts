@@ -68,11 +68,13 @@ export class IncomingBuffer {
     if (this.writable && this.handle) {
       await this.writable.close();
       this.writable = null;
-      // File do OPFS: o blob URL pode apontar pro disco. Quem chama é
-      // responsável por dispose() depois de soltar o URL (release/abortAll).
       const file = await this.handle.getFile();
-      this.chunks = [];
-      return file;
+      // Cópia em RAM: blob URL / download não dependem do OPFS. O worker
+      // apagava o arquivo logo após o postMessage e o link morria.
+      const buffer = await file.arrayBuffer();
+      const blob = new Blob([buffer], { type: this.meta.mime });
+      await this.dispose();
+      return blob;
     }
     return new Blob(this.chunks as BlobPart[], { type: this.meta.mime });
   }

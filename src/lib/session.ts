@@ -2194,9 +2194,13 @@ export class PeerSession {
           return;
         }
         setFileProgress(incoming.localId, 1);
+        const typed =
+          blob.type && blob.type !== "application/octet-stream"
+            ? blob
+            : new Blob([blob], { type: incoming.mime });
         this.patchFile(incoming.localId, {
           status: "ready",
-          blobUrl: URL.createObjectURL(blob),
+          blobUrl: URL.createObjectURL(typed),
         });
       } catch {
         this.patchFile(incoming.localId, { status: "error" });

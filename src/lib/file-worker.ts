@@ -86,7 +86,7 @@ const onMessage = async (event: MessageEvent<InMessage>) => {
           await incoming.dispose();
           throw new Error("incomplete");
         }
-        // postMessage clona os bytes; aí o OPFS no worker pode sumir.
+        // finish() já devolve Blob em memória com mime; dispose é no-op se OPFS.
         reply({ id: msg.id, type: "ok", blob });
         await incoming.dispose();
         return;

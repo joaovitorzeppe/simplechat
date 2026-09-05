@@ -93,13 +93,31 @@ const MessageBody = ({
 
 const saveFile = (file: ChatFile) => {
   if (!file.blobUrl) return;
-  const link = document.createElement("a");
-  link.href = file.blobUrl;
-  link.download = file.name;
-  link.rel = "noopener";
-  document.body.append(link);
-  link.click();
-  link.remove();
+  void (async () => {
+    try {
+      const data = await fetch(file.blobUrl!).then((response) => {
+        if (!response.ok) throw new Error("blob");
+        return response.blob();
+      });
+      const blob =
+        data.type && data.type !== "application/octet-stream"
+          ? data
+          : new Blob([data], {
+              type: file.mime || "application/octet-stream",
+            });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = file.name || "file";
+      link.rel = "noopener";
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 2_000);
+    } catch {
+      // Blob morto (OPFS/revoke): não navega pra URL inválida.
+    }
+  })();
 };
 
 const FileCard = ({ file }: { file: ChatFile }) => {
