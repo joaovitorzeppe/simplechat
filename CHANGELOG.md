@@ -149,7 +149,7 @@ Commits: `3295717`, `00c2a5b`.
 - Um link só: `/?room=`. `?call=` continua sendo lido.
 - Home com Iniciar / Ligar / Entrar. Ligar cria a sala com você de host e convoca a outra pessoa; Entrar junta você à chamada existente.
 - Parser de convite aceita chave, URL, query, hash e texto colado com aspas.
-- Limite de participantes no host: **5 no free**, **12 no Pro (demo)**. O 6º recebe `room-full` e volta para a home.
+- Limite de participantes no host: **12**. Quem passa do teto recebe `room-full` e volta para a home.
 - Cabeçalho da chamada mostra `n/máx`.
 - Câmera desligada: `replaceTrack(null)`, para o track local (LED apaga) e avisa os outros (`media-meta`). Não envia vídeo preto. Ao religar, pede a câmera de novo.
 - Tiles remotos mostram avatar quando a pessoa está sem câmera.
@@ -184,4 +184,4 @@ Commits: `cad373c`, `0d7e722`, `a7eac26`, `1729043`.
 
 Commit: `06b3e81`.
 
-- Onboarding com nome e chave, chamada P2P (áudio/vídeo + chat), compartilhamento de tela, mesh, tiers de qualidade e UI “Pro em breve”.
+- Onboarding com nome e chave, chamada P2P (áudio/vídeo + chat), compartilhamento de tela, mesh e limites de qualidade.
