@@ -1001,6 +1001,35 @@ describe("timer e voto no chat", () => {
     vi.useRealTimers();
   });
 
+  it("timer-control remoto acha a mensagem pelo id do fio", () => {
+    asGuest();
+    core.onWire(conn(HOST), {
+      type: "chat",
+      id: "t-shared",
+      text: "Timer: 0:10",
+      fromPeerId: HOST,
+      fromName: "Host",
+      at: Date.now(),
+      command: { kind: "timer", ms: 10_000 },
+    });
+    expect(core.state.messages.at(-1)?.id).toBe("t-shared");
+    core.onWire(conn(HOST), {
+      type: "timer-control",
+      id: "t-shared",
+      timer: { status: "paused", remainingMs: 4_000 },
+    });
+    expect(core.state.messages.at(-1)?.timer).toEqual({
+      status: "paused",
+      remainingMs: 4_000,
+    });
+    core.onWire(conn(HOST), {
+      type: "timer-control",
+      id: "t-shared",
+      timer: { status: "cancelled" },
+    });
+    expect(core.state.messages.at(-1)?.timer).toEqual({ status: "cancelled" });
+  });
+
   it("host cancela timer de outra pessoa; convidado estranho não", () => {
     vi.useFakeTimers();
     asGuest();

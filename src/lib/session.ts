@@ -1351,7 +1351,8 @@ export class PeerSession {
           this.roomMembers.some((member) => member.peerId === id),
       );
       this.appendMessage({
-        id: crypto.randomUUID(),
+        // Mesmo id do fio: poll-vote/timer-control apontam pra ele.
+        id: msg.id,
         fromPeerId: from,
         fromName: this.names.get(from) ?? t("common.someone"),
         text: msg.text,
