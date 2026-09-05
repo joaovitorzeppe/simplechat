@@ -33,8 +33,14 @@ export const detectLocale = (): Locale => {
   } catch {
     // ignore
   }
-  const lang = (navigator.language || "en").toLowerCase();
-  return supportedLocales.find((code) => lang.startsWith(code)) ?? "en";
+  const candidates = [navigator.language, ...(navigator.languages ?? [])]
+    .filter(Boolean)
+    .map((lang) => lang.toLowerCase());
+  for (const lang of candidates) {
+    const hit = supportedLocales.find((code) => lang.startsWith(code));
+    if (hit) return hit;
+  }
+  return "en";
 };
 
 let locale: Locale = detectLocale();
@@ -45,7 +51,7 @@ export const translate = (
   key: MessageKey,
   vars?: Record<string, string | number>,
 ) => {
-  let text = dictionaries[current][key] ?? dictionaries.pt[key];
+  let text = dictionaries[current][key] ?? dictionaries.en[key];
   if (vars) {
     for (const [name, value] of Object.entries(vars)) {
       text = text.replaceAll(`{${name}}`, String(value));
