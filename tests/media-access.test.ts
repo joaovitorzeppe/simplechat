@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { acquireLocalMedia } from "@libs/media-access";
+import { acquireLocalMedia, canShareScreen } from "@libs/media-access";
 
 const track = (kind: "audio" | "video") =>
   ({
@@ -88,5 +88,20 @@ describe("acquireLocalMedia", () => {
     expect(media.fallback).toBe("audio");
     expect(media.cameraOff).toBe(true);
     expect(gum).toHaveBeenCalledOnce();
+  });
+});
+
+describe("canShareScreen", () => {
+  it("é true quando getDisplayMedia existe", () => {
+    expect(
+      canShareScreen({
+        getDisplayMedia: vi.fn(),
+      } as unknown as MediaDevices),
+    ).toBe(true);
+  });
+
+  it("é false sem mediaDevices ou sem getDisplayMedia", () => {
+    expect(canShareScreen(undefined)).toBe(false);
+    expect(canShareScreen({} as MediaDevices)).toBe(false);
   });
 });

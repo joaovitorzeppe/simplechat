@@ -7,6 +7,12 @@ export type AcquiredMedia = {
   fallback: MediaFallback;
 };
 
+/** Sem `getDisplayMedia` (comum em mobile) o botão de tela não serve. */
+export const canShareScreen = (
+  devices: Pick<MediaDevices, "getDisplayMedia"> | null | undefined =
+    typeof navigator !== "undefined" ? navigator.mediaDevices : undefined,
+) => typeof devices?.getDisplayMedia === "function";
+
 type GetUserMedia = (
   constraints: MediaStreamConstraints,
 ) => Promise<MediaStream>;

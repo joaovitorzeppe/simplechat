@@ -21,12 +21,15 @@ import { VideoTile } from "@components/VideoTile";
 import { useI18n } from "@i18n/use-i18n";
 import { cn } from "@libs/cn";
 import { inviteLink } from "@libs/invite";
+import { canShareScreen } from "@libs/media-access";
 import { maxParticipants } from "@libs/quality";
 import { isDev } from "@libs/env";
 import { muteOf } from "@libs/mutes";
 import { electHost, session } from "@libs/session";
 import type { PeerInfo } from "@libs/types";
 import { useSession, useSessionSelector } from "@libs/use-session";
+
+const canDisplay = canShareScreen();
 
 type ScreenItem = {
   id: string;
@@ -372,16 +375,20 @@ export const Call = () => {
           >
             {state.cameraOff ? <CameraOffIcon /> : <CameraIcon />}
           </Button>
-          <Button
-            variant="icon"
-            className={state.sharingScreen ? "border-accent text-accent" : ""}
-            onClick={() => void peerSession.shareScreen()}
-            title={
-              state.sharingScreen ? t("call.stopScreen") : t("call.shareScreen")
-            }
-          >
-            <ScreenIcon />
-          </Button>
+          {canDisplay && (
+            <Button
+              variant="icon"
+              className={state.sharingScreen ? "border-accent text-accent" : ""}
+              onClick={() => void peerSession.shareScreen()}
+              title={
+                state.sharingScreen
+                  ? t("call.stopScreen")
+                  : t("call.shareScreen")
+              }
+            >
+              <ScreenIcon />
+            </Button>
+          )}
           <Button
             variant="icon"
             className={
