@@ -144,7 +144,7 @@ const MuteButton = ({
         locked ? "cursor-not-allowed opacity-70" : "cursor-pointer",
         off
           ? "border-red-500 bg-red-500 text-white"
-          : "border-line bg-black/60 text-zinc-100",
+          : "border-white/20 bg-black/60 text-white",
       )}
     >
       <Icon width={14} height={14} />

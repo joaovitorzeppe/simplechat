@@ -97,7 +97,7 @@ export const VideoTile = memo(function VideoTile({
               type="button"
               aria-label={`${t("call.remove")}: ${name}`}
               onClick={() => onRemove(id)}
-              className="grid size-8 place-items-center rounded-full border border-line bg-black/60 text-zinc-100 hover:bg-red-500/80 cursor-pointer"
+              className="grid size-8 place-items-center rounded-full border border-white/20 bg-black/60 text-white hover:bg-red-500/80 cursor-pointer"
             >
               <UserRemoveIcon width={16} height={16} />
             </button>
@@ -109,21 +109,21 @@ export const VideoTile = memo(function VideoTile({
               type="button"
               aria-label={`${t("call.pinScreen")}: ${name}`}
               onClick={() => onPin(id)}
-              className="grid size-8 place-items-center rounded-full border border-line bg-black/60 text-zinc-100 hover:bg-zinc-800 cursor-pointer"
+              className="grid size-8 place-items-center rounded-full border border-white/20 bg-black/60 text-white hover:bg-black/80 cursor-pointer"
             >
               <ExpandIcon width={16} height={16} />
             </button>
           </Tooltip>
         )}
       </div>
-      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-linear-to-t from-black/70 to-transparent px-3 py-2 text-xs">
+      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-linear-to-t from-black/70 to-transparent px-3 py-2 text-xs text-white">
         <span className="font-medium truncate">
           {name}
           {local ? t("common.youSuffix") : ""}
         </span>
         <div className="flex shrink-0 items-center gap-1">
           {badge && (
-            <span className="rounded-full bg-black/50 px-1.5 py-0.5 font-mono text-[10px] text-zinc-300">
+            <span className="rounded-full bg-black/50 px-1.5 py-0.5 font-mono text-[10px] text-white/80">
               {badge}
             </span>
           )}
