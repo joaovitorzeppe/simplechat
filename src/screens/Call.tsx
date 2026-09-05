@@ -25,6 +25,7 @@ import { canShareScreen } from "@libs/media-access";
 import { maxParticipants } from "@libs/quality";
 import { isDev } from "@libs/env";
 import { muteOf } from "@libs/mutes";
+import { screenStageKind } from "@libs/screen-layout";
 import { electHost, session } from "@libs/session";
 import type { PeerInfo } from "@libs/types";
 import { useSession, useSessionSelector } from "@libs/use-session";
@@ -99,7 +100,6 @@ const CallStage = memo(function CallStage({
   const isHost = useSessionSelector((s) => s.isHost);
   const localMutes = useSessionSelector((s) => s.localMutes);
   const roomMutes = useSessionSelector((s) => s.roomMutes);
-  const screenShareOrder = useSessionSelector((s) => s.screenShareOrder);
 
   const screens = useMemo(() => {
     const items: ScreenItem[] = [];
@@ -123,16 +123,12 @@ const CallStage = memo(function CallStage({
     return items;
   }, [remotes, localScreenStream, identity]);
 
-  const focusedId =
-    (pinnedId && screens.some((item) => item.id === pinnedId)
+  const userPinned =
+    pinnedId && screens.some((item) => item.id === pinnedId)
       ? pinnedId
-      : null) ??
-    screenShareOrder.find((id) => screens.some((item) => item.id === id)) ??
-    screens[0]?.id ??
-    null;
-  const focused = screens.find((item) => item.id === focusedId);
-  const others = screens.filter((item) => item.id !== focused?.id);
-  const hideCameras = screens.length >= 2 && !showCameras;
+      : null;
+  const kind = screenStageKind(screens.length, !!userPinned, showCameras);
+  const pinHandler = screens.length >= 2 ? onPin : undefined;
   const count = remotes.length + 1;
   const grid =
     count === 1
@@ -140,6 +136,12 @@ const CallStage = memo(function CallStage({
       : count === 2
         ? "grid-cols-1 md:grid-cols-2"
         : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+  const screenGrid =
+    screens.length <= 1
+      ? "grid-cols-1"
+      : screens.length === 2
+        ? "grid-cols-1 md:grid-cols-2"
+        : "grid-cols-1 sm:grid-cols-2";
 
   const cameraTiles = (compact: boolean) => (
     <>
@@ -178,47 +180,70 @@ const CallStage = memo(function CallStage({
     </>
   );
 
-  if (focused) {
+  const screenTile = (item: ScreenItem, className: string) => (
+    <VideoTile
+      key={item.id}
+      peerId={item.id}
+      stream={item.stream}
+      name={item.name}
+      local={item.local}
+      sharingScreen
+      onPin={pinHandler}
+      className={className}
+    />
+  );
+
+  if (kind === "cameras") {
+    return (
+      <div className={cn("min-h-0 flex-1 grid gap-3 overflow-y-auto p-3", grid)}>
+        {cameraTiles(false)}
+      </div>
+    );
+  }
+
+  if (kind === "pinned-solo" && userPinned) {
+    const focused = screens.find((item) => item.id === userPinned);
+    if (!focused) return null;
+    return (
+      <div className="flex min-h-0 flex-1 flex-col p-3">
+        {screenTile(focused, "min-h-0 flex-1")}
+      </div>
+    );
+  }
+
+  if (kind === "pinned-strip" && userPinned) {
+    const focused = screens.find((item) => item.id === userPinned);
+    if (!focused) return null;
+    const others = screens.filter((item) => item.id !== userPinned);
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
         <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
-          <VideoTile
-            peerId={focused.id}
-            stream={focused.stream}
-            name={focused.name}
-            local={focused.local}
-            sharingScreen
-            className="min-h-52 flex-1"
-          />
+          {screenTile(focused, "min-h-52 flex-1")}
           {others.length > 0 && (
             <div className="flex shrink-0 gap-2 overflow-x-auto lg:w-52 lg:flex-col lg:overflow-y-auto">
-              {others.map((item) => (
-                <VideoTile
-                  key={item.id}
-                  peerId={item.id}
-                  stream={item.stream}
-                  name={item.name}
-                  local={item.local}
-                  sharingScreen
-                  onPin={onPin}
-                  className="h-28 w-44 shrink-0 min-h-24 lg:h-32 lg:w-full"
-                />
-              ))}
+              {others.map((item) =>
+                screenTile(item, "h-28 w-44 shrink-0 min-h-24 lg:h-32 lg:w-full"),
+              )}
             </div>
           )}
         </div>
-        {!hideCameras && (
-          <div className="flex shrink-0 gap-2 overflow-x-auto">
-            {cameraTiles(true)}
-          </div>
-        )}
+        <div className="flex shrink-0 gap-2 overflow-x-auto">
+          {cameraTiles(true)}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={cn("min-h-0 flex-1 grid gap-3 overflow-y-auto p-3", grid)}>
-      {cameraTiles(false)}
+    <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
+      <div className={cn("min-h-0 flex-1 grid gap-3", screenGrid)}>
+        {screens.map((item) => screenTile(item, "min-h-0"))}
+      </div>
+      {showCameras && (
+        <div className="flex shrink-0 gap-2 overflow-x-auto">
+          {cameraTiles(true)}
+        </div>
+      )}
     </div>
   );
 });
@@ -311,7 +336,7 @@ export const Call = () => {
                 <span className="hidden sm:inline">{t("call.copyInvite")}</span>
               </Button>
             )}
-            {screenCount >= 2 && (
+            {screenCount >= 1 && (
               <Button
                 variant="secondary"
                 className="px-2.5 text-xs py-1.5 sm:px-4"
@@ -341,7 +366,7 @@ export const Call = () => {
         <CallStage
           pinnedId={pinnedId}
           showCameras={showCameras}
-          onPin={setPinnedId}
+          onPin={(id) => setPinnedId((cur) => (cur === id ? null : id))}
         />
 
         <div className="safe-bottom flex shrink-0 flex-wrap items-center justify-center gap-2 px-4 pt-4">
