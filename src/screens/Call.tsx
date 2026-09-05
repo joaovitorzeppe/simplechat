@@ -179,6 +179,18 @@ const CallStage = memo(function CallStage({
     </>
   );
 
+  /** Mantém os `<video>` montados (áudio remoto) mesmo com a faixa oculta. */
+  const cameraStrip = (visible: boolean) => (
+    <div
+      className={
+        visible ? "flex shrink-0 gap-2 overflow-x-auto" : "sr-only"
+      }
+      aria-hidden={!visible}
+    >
+      {cameraTiles(true)}
+    </div>
+  );
+
   const screenTile = (item: ScreenItem, className: string) => (
     <VideoTile
       key={item.id}
@@ -211,6 +223,7 @@ const CallStage = memo(function CallStage({
     return (
       <div className="flex min-h-0 flex-1 flex-col p-3">
         {screenTile(focused, "min-h-0 flex-1")}
+        {cameraStrip(false)}
       </div>
     );
   }
@@ -234,9 +247,7 @@ const CallStage = memo(function CallStage({
             </div>
           )}
         </div>
-        <div className="flex shrink-0 gap-2 overflow-x-auto">
-          {cameraTiles(true)}
-        </div>
+        {cameraStrip(true)}
       </div>
     );
   }
@@ -246,11 +257,7 @@ const CallStage = memo(function CallStage({
       <div className={cn("min-h-0 flex-1 grid gap-3", screenGrid)}>
         {screens.map((item) => screenTile(item, "min-h-0"))}
       </div>
-      {showCameras && (
-        <div className="flex shrink-0 gap-2 overflow-x-auto">
-          {cameraTiles(true)}
-        </div>
-      )}
+      {cameraStrip(showCameras)}
     </div>
   );
 });
