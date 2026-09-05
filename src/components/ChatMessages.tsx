@@ -13,6 +13,13 @@ import {
   peopleForCommandMentions,
 } from "@libs/commands";
 import {
+  canControlTimer,
+  initialTimerState,
+  resolveTimerState,
+  timerRemaining,
+  type TimerAction,
+} from "@libs/timer";
+import {
   CODE_LANGUAGE_LABELS,
   highlightCode,
   type CodeLanguage,
@@ -28,8 +35,10 @@ import { LinkWarning } from "./LinkWarning";
 type Props = {
   messages: ChatMessage[];
   selfId: string;
+  hostPeerId: string | null;
   people: MentionPerson[];
   onVote: (pollId: string, option: number) => void;
+  onTimerControl: (id: string, action: TimerAction) => void;
 };
 
 const MessageBody = ({
@@ -219,23 +228,92 @@ const CodeCard = ({
   );
 };
 
-const TimerCard = ({ ms, startedAt }: { ms: number; startedAt: number }) => {
+const TimerCard = ({
+  message,
+  selfId,
+  hostPeerId,
+  onControl,
+}: {
+  message: ChatMessage;
+  selfId: string;
+  hostPeerId: string | null;
+  onControl: (id: string, action: TimerAction) => void;
+}) => {
   const { t } = useI18n();
+  const state =
+    resolveTimerState(message) ??
+    initialTimerState(
+      message.command?.kind === "timer" ? message.command.ms : 0,
+      message.at,
+    );
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (startedAt + ms - Date.now() <= 0) return;
+    if (state.status !== "running") return;
+    if (timerRemaining(state, Date.now()) <= 0) return;
     const id = window.setInterval(() => {
       const next = Date.now();
       setNow(next);
-      if (startedAt + ms - next <= 0) window.clearInterval(id);
+      if (timerRemaining(state, next) <= 0) window.clearInterval(id);
     }, 250);
     return () => window.clearInterval(id);
-  }, [ms, startedAt]);
-  const left = Math.max(0, startedAt + ms - now);
+  }, [state]);
+  const left = timerRemaining(state, now);
+  const canControl =
+    canControlTimer(message.fromPeerId, selfId, hostPeerId) &&
+    (state.status === "paused" || (state.status === "running" && left > 0));
+
+  const label =
+    state.status === "cancelled"
+      ? t("chat.command.timerCancelled")
+      : left <= 0
+        ? t("chat.command.timerEnded")
+        : formatTimerClock(left);
+
   return (
-    <p className="min-w-28 text-center font-mono text-2xl tabular-nums tracking-tight">
-      {left <= 0 ? t("chat.command.timerEnded") : formatTimerClock(left)}
-    </p>
+    <div className="space-y-2">
+      <p
+        className={cn(
+          "min-w-28 text-center font-mono text-2xl tabular-nums tracking-tight",
+          state.status === "paused" && "text-amber-200",
+          state.status === "cancelled" && "text-zinc-500",
+        )}
+      >
+        {label}
+      </p>
+      {state.status === "paused" && left > 0 && (
+        <p className="text-center text-[11px] text-amber-200/80">
+          {t("chat.command.timerPaused")}
+        </p>
+      )}
+      {canControl && (
+        <div className="flex justify-center gap-1.5">
+          {state.status === "running" ? (
+            <Button
+              variant="secondary"
+              className="px-2.5 py-1 text-xs"
+              onClick={() => onControl(message.id, "pause")}
+            >
+              {t("chat.command.timerPause")}
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              className="px-2.5 py-1 text-xs"
+              onClick={() => onControl(message.id, "resume")}
+            >
+              {t("chat.command.timerResume")}
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            className="px-2.5 py-1 text-xs"
+            onClick={() => onControl(message.id, "cancel")}
+          >
+            {t("chat.command.timerCancel")}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -285,7 +363,14 @@ const PollCard = ({
   );
 };
 
-export const ChatMessages = ({ messages, selfId, people, onVote }: Props) => {
+export const ChatMessages = ({
+  messages,
+  selfId,
+  hostPeerId,
+  people,
+  onVote,
+  onTimerControl,
+}: Props) => {
   const { locale, t } = useI18n();
   const groups = useMemo(() => groupChatMessages(messages), [messages]);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -340,7 +425,12 @@ export const ChatMessages = ({ messages, selfId, people, onVote }: Props) => {
                   >
                     {msg.file && <FileCard file={msg.file} />}
                     {msg.command?.kind === "timer" ? (
-                      <TimerCard ms={msg.command.ms} startedAt={msg.at} />
+                      <TimerCard
+                        message={msg}
+                        selfId={selfId}
+                        hostPeerId={hostPeerId}
+                        onControl={onTimerControl}
+                      />
                     ) : msg.command?.kind === "poll" ? (
                       <PollCard
                         poll={msg.command}

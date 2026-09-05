@@ -9,6 +9,7 @@ import type {
   RollExprTerm,
   WireMessage,
 } from "./types";
+import type { TimerState } from "./timer";
 import {
   exprPassTotal,
   MAX_COMMAND_CHOICE_LENGTH,
@@ -239,7 +240,14 @@ const parseChatCommandPayload = (
   if (value.kind === "choice") {
     const option = str(value.option, MAX_COMMAND_CHOICE_LENGTH);
     if (!option) return false;
-    return { kind: "choice", option };
+    const options = parsePollOptions(value.options);
+    if (options) {
+      if (!options.includes(option)) return false;
+      return { kind: "choice", option, options };
+    }
+    // Legado: só vinha a opção sorteada.
+    if (value.options !== undefined) return false;
+    return { kind: "choice", option, options: [option] };
   }
   if (value.kind === "order") {
     const people = parseOrderPeople(value.people);
@@ -491,9 +499,32 @@ export const parseWire = (raw: unknown): WireMessage | null => {
       return { type: "poll-vote", id, option };
     }
 
+    case "timer-control": {
+      const id = str(raw.id, MAX_TRANSFER_ID);
+      const timer = parseTimerState(raw.timer);
+      if (!id || !timer) return null;
+      return { type: "timer-control", id, timer };
+    }
+
     default:
       return null;
   }
+};
+
+const parseTimerState = (value: unknown): TimerState | null => {
+  if (!isRecord(value) || typeof value.status !== "string") return null;
+  if (value.status === "cancelled") return { status: "cancelled" };
+  if (value.status === "paused") {
+    const remainingMs = int(value.remainingMs, 0, MAX_TIMER_MS);
+    if (remainingMs === null) return null;
+    return { status: "paused", remainingMs };
+  }
+  if (value.status === "running") {
+    const endsAt = timestamp(value.endsAt);
+    if (endsAt === null) return null;
+    return { status: "running", endsAt };
+  }
+  return null;
 };
 
 export const clampDisplayName = (value: string) => {

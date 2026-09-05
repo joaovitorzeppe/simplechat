@@ -131,7 +131,7 @@ export const en: Messages = {
   "chat.command.chooseName": "choose",
   "chat.command.chooseHint": "Pick among options you type",
   "chat.command.chooseExample": "/choose pizza, sushi, taco",
-  "chat.command.chooseResult": "Chose: {option}",
+  "chat.command.chooseResult": "Options: {options}\nPicked option: {option}",
   "chat.command.chooseInvalid":
     "Give at least two options. e.g. /choose pizza, sushi",
   "chat.command.orderName": "order",
@@ -143,7 +143,7 @@ export const en: Messages = {
   "chat.command.coinExample": "/coin",
   "chat.command.coinHeads": "heads",
   "chat.command.coinTails": "tails",
-  "chat.command.coinResult": "Coin: {face}",
+  "chat.command.coinResult": "@{name} flipped a coin: {face}",
   "chat.command.emoteName": "me",
   "chat.command.emoteHint": "Act something out in chat",
   "chat.command.emoteExample": "/me waves",
@@ -159,6 +159,13 @@ export const en: Messages = {
   "chat.command.timerResult": "Timer: {clock}",
   "chat.command.timerEnded": "Done",
   "chat.command.timerDone": "The timer is up.",
+  "chat.command.timerPaused": "Paused",
+  "chat.command.timerCancelled": "Cancelled",
+  "chat.command.timerPause": "Pause",
+  "chat.command.timerResume": "Resume",
+  "chat.command.timerCancel": "Cancel",
+  "chat.command.timerBusy":
+    "A timer is already running. Pause, cancel, or wait for it to end.",
   "chat.command.timerInvalid":
     "Could not parse that. Try /timer 5m, /timer 30s or /timer 1h.",
   "chat.command.pollName": "vote",

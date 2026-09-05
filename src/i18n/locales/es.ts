@@ -131,7 +131,7 @@ export const es: Messages = {
   "chat.command.chooseName": "elegir",
   "chat.command.chooseHint": "Elige entre opciones que tú escribas",
   "chat.command.chooseExample": "/elegir pizza, sushi, taco",
-  "chat.command.chooseResult": "Salió: {option}",
+  "chat.command.chooseResult": "Opciones: {options}\nOpción sorteada: {option}",
   "chat.command.chooseInvalid":
     "Pon al menos dos opciones. Ej.: /elegir pizza, sushi",
   "chat.command.orderName": "orden",
@@ -143,7 +143,7 @@ export const es: Messages = {
   "chat.command.coinExample": "/moneda",
   "chat.command.coinHeads": "cara",
   "chat.command.coinTails": "cruz",
-  "chat.command.coinResult": "Moneda: {face}",
+  "chat.command.coinResult": "@{name} lanzó una moneda: {face}",
   "chat.command.emoteName": "me",
   "chat.command.emoteHint": "Hace una acción en el chat",
   "chat.command.emoteExample": "/me saluda",
@@ -159,6 +159,13 @@ export const es: Messages = {
   "chat.command.timerResult": "Temporizador: {clock}",
   "chat.command.timerEnded": "Listo",
   "chat.command.timerDone": "Se acabó el temporizador.",
+  "chat.command.timerPaused": "Pausado",
+  "chat.command.timerCancelled": "Cancelado",
+  "chat.command.timerPause": "Pausar",
+  "chat.command.timerResume": "Continuar",
+  "chat.command.timerCancel": "Cancelar",
+  "chat.command.timerBusy":
+    "Ya hay un temporizador activo. Pausa, cancela o espera a que termine.",
   "chat.command.timerInvalid":
     "No entendí el tiempo. Prueba /temporizador 5m, /temporizador 30s o /temporizador 1h.",
   "chat.command.pollName": "votar",

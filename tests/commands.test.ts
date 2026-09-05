@@ -306,11 +306,15 @@ describe("runChatCommand", () => {
       runChatCommand("/escolher pizza, sushi", people, rngOf([0.6])),
     ).toEqual({
       ok: true,
-      command: { kind: "choice", option: "sushi" },
+      command: { kind: "choice", option: "sushi", options: ["pizza", "sushi"] },
     });
     expect(runChatCommand("/escolher pizza sushi taco", people, rngOf([0]))).toEqual({
       ok: true,
-      command: { kind: "choice", option: "pizza" },
+      command: {
+        kind: "choice",
+        option: "pizza",
+        options: ["pizza", "sushi", "taco"],
+      },
     });
     expect(runChatCommand("/escolher pizza", people)).toEqual({
       ok: false,
@@ -491,14 +495,31 @@ describe("formatCommandText", () => {
     ).toBe("Rolou 2d6*3: (1 + 6) * 3 = 21");
     expect(formatCommandText(pick, t)).toBe("Sorteou: @Bruno");
     expect(formatCommandText(pick, en)).toBe("Picked: @Bruno");
-    expect(formatCommandText({ kind: "choice", option: "pizza" }, t)).toBe(
-      "Escolheu: pizza",
+    expect(
+      formatCommandText(
+        {
+          kind: "choice",
+          option: "pizza",
+          options: ["pizza", "sushi", "taco"],
+        },
+        t,
+      ),
+    ).toBe("Opções: pizza, sushi, taco\nOpção sorteada: pizza");
+    expect(
+      formatCommandText(
+        {
+          kind: "choice",
+          option: "sushi",
+          options: ["pizza", "sushi"],
+        },
+        en,
+      ),
+    ).toBe("Options: pizza, sushi\nPicked option: sushi");
+    expect(formatCommandText({ kind: "coin", face: "heads" }, t, "Ana")).toBe(
+      "@Ana jogou uma moeda: cara",
     );
-    expect(formatCommandText({ kind: "coin", face: "heads" }, t)).toBe(
-      "Moeda: cara",
-    );
-    expect(formatCommandText({ kind: "coin", face: "heads" }, en)).toBe(
-      "Coin: heads",
+    expect(formatCommandText({ kind: "coin", face: "heads" }, en, "Ana")).toBe(
+      "@Ana flipped a coin: heads",
     );
     expect(formatCommandText({ kind: "emote", action: "acena" }, t, "João")).toBe(
       "João acena",

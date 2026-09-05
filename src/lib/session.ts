@@ -22,6 +22,15 @@ import {
   safeFileName,
 } from "./chat";
 import {
+  applyTimerAction,
+  canControlTimer,
+  hasActiveTimer,
+  initialTimerState,
+  resolveTimerState,
+  type TimerAction,
+  type TimerState,
+} from "./timer";
+import {
   formatCommandText,
   mentionsForCommand,
   runChatCommand,
@@ -618,24 +627,35 @@ export class PeerSession {
         showToast(command.error);
         return false;
       }
+      if (command.command.kind === "timer") {
+        if (hasActiveTimer(this.state.messages, Date.now())) {
+          showToast("chat.command.timerBusy");
+          return false;
+        }
+      }
       const mentions = mentionsForCommand(command.command);
       if (command.command.kind === "emote") {
         for (const id of resolveMentions(command.command.action, this.roomMembers)) {
           if (!mentions.includes(id)) mentions.push(id);
         }
       }
+      const at = Date.now();
       const message: ChatMessage = {
         id: crypto.randomUUID(),
         fromPeerId: me.peerId,
         fromName: me.displayName,
         text: formatCommandText(command.command, t, me.displayName),
-        at: Date.now(),
+        at,
         command: command.command,
+        ...(command.command.kind === "timer"
+          ? { timer: initialTimerState(command.command.ms, at) }
+          : {}),
         ...(mentions.length ? { mentions } : {}),
       };
       this.appendMessage(message);
       if (command.command.kind !== "help") {
-        this.broadcast({ type: "chat", ...message });
+        const { timer: _timer, ...chat } = message;
+        this.broadcast({ type: "chat", ...chat });
       }
       return true;
     }
@@ -658,6 +678,14 @@ export class PeerSession {
     if (!me || !this.inRoom()) return;
     if (!this.applyPollVote(pollId, me.peerId, option)) return;
     this.broadcast({ type: "poll-vote", id: pollId, option });
+  }
+
+  controlTimer(messageId: string, action: TimerAction) {
+    const me = this.state.identity;
+    if (!me || !this.inRoom()) return;
+    const next = this.applyTimerControl(messageId, me.peerId, action, Date.now());
+    if (!next) return;
+    this.broadcast({ type: "timer-control", id: messageId, timer: next });
   }
 
   async sendFile(file: File) {
@@ -1352,6 +1380,12 @@ export class PeerSession {
       return;
     }
 
+    if (msg.type === "timer-control") {
+      if (!this.inRoom()) return;
+      this.applyTimerControl(msg.id, from, null, Date.now(), msg.timer);
+      return;
+    }
+
     if (msg.type === "file-start") {
       if (!this.inRoom()) return;
       this.beginIncomingFile(from, msg);
@@ -1526,7 +1560,14 @@ export class PeerSession {
   }
 
   private appendMessage(message: ChatMessage) {
-    const messages = [...this.state.messages, message];
+    const withTimer =
+      message.command?.kind === "timer" && !message.timer
+        ? {
+            ...message,
+            timer: initialTimerState(message.command.ms, message.at),
+          }
+        : message;
+    const messages = [...this.state.messages, withTimer];
     if (messages.length > MAX_MESSAGES) {
       const dropped = messages.splice(0, messages.length - MAX_MESSAGES);
       for (const old of dropped) {
@@ -1538,7 +1579,50 @@ export class PeerSession {
       }
     }
     this.patch({ messages });
-    this.scheduleTimerAlarm(message);
+    this.scheduleTimerAlarm(withTimer);
+  }
+
+  /**
+   * Aplica pausa/retomada/cancelamento. Se `remoteTimer` vier do fio, usa esse
+   * estado (relógio de quem controlou); senão calcula a ação localmente.
+   */
+  private applyTimerControl(
+    messageId: string,
+    actorId: string,
+    action: TimerAction | null,
+    now: number,
+    remoteTimer?: TimerState,
+  ) {
+    const index = this.state.messages.findIndex((msg) => msg.id === messageId);
+    if (index < 0) return null;
+    const message = this.state.messages[index];
+    if (!message || message.command?.kind !== "timer") return null;
+    if (!canControlTimer(message.fromPeerId, actorId, this.state.hostPeerId)) {
+      return null;
+    }
+    const current = resolveTimerState(message);
+    if (!current) return null;
+    const next =
+      remoteTimer ?? (action ? applyTimerAction(current, action, now) : null);
+    if (!next) return null;
+    if (
+      current.status === next.status &&
+      ((current.status === "running" &&
+        next.status === "running" &&
+        current.endsAt === next.endsAt) ||
+        (current.status === "paused" &&
+          next.status === "paused" &&
+          current.remainingMs === next.remainingMs) ||
+        current.status === "cancelled")
+    ) {
+      return null;
+    }
+    const updated = { ...message, timer: next };
+    const messages = [...this.state.messages];
+    messages[index] = updated;
+    this.patch({ messages });
+    this.scheduleTimerAlarm(updated);
+    return next;
   }
 
   private applyPollVote(pollId: string, peerId: string, option: number) {
@@ -1562,8 +1646,10 @@ export class PeerSession {
   private scheduleTimerAlarm(message: ChatMessage) {
     if (message.command?.kind !== "timer") return;
     this.clearTimerAlarm(message.id);
+    const state = resolveTimerState(message);
+    if (!state || state.status !== "running") return;
     if (this.timerAlarms.size >= MAX_TIMER_ALARMS) return;
-    const remaining = message.at + message.command.ms - Date.now();
+    const remaining = state.endsAt - Date.now();
     if (remaining <= 0) {
       showToast("chat.command.timerDone");
       return;

@@ -133,7 +133,7 @@ export const fr: Messages = {
   "chat.command.chooseName": "choisir",
   "chat.command.chooseHint": "Choisit parmi des options que vous écrivez",
   "chat.command.chooseExample": "/choisir pizza, sushi, taco",
-  "chat.command.chooseResult": "A choisi : {option}",
+  "chat.command.chooseResult": "Options : {options}\nOption tirée : {option}",
   "chat.command.chooseInvalid":
     "Indiquez au moins deux options. Ex. : /choisir pizza, sushi",
   "chat.command.orderName": "ordre",
@@ -145,7 +145,7 @@ export const fr: Messages = {
   "chat.command.coinExample": "/pièce",
   "chat.command.coinHeads": "face",
   "chat.command.coinTails": "pile",
-  "chat.command.coinResult": "Pièce : {face}",
+  "chat.command.coinResult": "@{name} a lancé une pièce : {face}",
   "chat.command.emoteName": "me",
   "chat.command.emoteHint": "Fait une action dans le chat",
   "chat.command.emoteExample": "/me salue",
@@ -161,6 +161,13 @@ export const fr: Messages = {
   "chat.command.timerResult": "Minuteur : {clock}",
   "chat.command.timerEnded": "Terminé",
   "chat.command.timerDone": "Le minuteur est terminé.",
+  "chat.command.timerPaused": "En pause",
+  "chat.command.timerCancelled": "Annulé",
+  "chat.command.timerPause": "Pause",
+  "chat.command.timerResume": "Reprendre",
+  "chat.command.timerCancel": "Annuler",
+  "chat.command.timerBusy":
+    "Un minuteur est déjà en cours. Mettez-le en pause, annulez-le ou attendez la fin.",
   "chat.command.timerInvalid":
     "Durée incomprise. Essayez /minuteur 5m, /minuteur 30s ou /minuteur 1h.",
   "chat.command.pollName": "vote",

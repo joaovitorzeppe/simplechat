@@ -22,6 +22,7 @@ import {
   insertCommand,
 } from "@libs/commands";
 import type { ChatMessage } from "@libs/types";
+import type { TimerAction } from "@libs/timer";
 import { MAX_CHAT_TEXT } from "@libs/wire-guard";
 import { Button } from "./Button";
 import { ChatMessages } from "./ChatMessages";
@@ -36,20 +37,24 @@ type PickerItem =
 type Props = {
   messages: ChatMessage[];
   selfId: string;
+  hostPeerId: string | null;
   people: MentionPerson[];
   onSend: (text: string) => boolean | void;
   onSendFile: (file: File) => void;
   onVote: (pollId: string, option: number) => void;
+  onTimerControl: (id: string, action: TimerAction) => void;
   onClose: () => void;
 };
 
 export const ChatPanel = ({
   messages,
   selfId,
+  hostPeerId,
   people,
   onSend,
   onSendFile,
   onVote,
+  onTimerControl,
   onClose,
 }: Props) => {
   const { t } = useI18n();
@@ -225,8 +230,10 @@ export const ChatPanel = ({
         <ChatMessages
           messages={messages}
           selfId={selfId}
+          hostPeerId={hostPeerId}
           people={people}
           onVote={onVote}
+          onTimerControl={onTimerControl}
         />
       </div>
       <form

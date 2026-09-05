@@ -53,6 +53,7 @@ const CallChatDock = memo(function CallChatDock({
 }) {
   const messages = useSessionSelector((s) => s.messages);
   const selfId = useSessionSelector((s) => s.identity?.peerId ?? "");
+  const hostPeerId = useSessionSelector((s) => s.hostPeerId);
   if (!open || !selfId) return null;
   return (
     <>
@@ -70,10 +71,12 @@ const CallChatDock = memo(function CallChatDock({
         <ChatPanel
           messages={messages}
           selfId={selfId}
+          hostPeerId={hostPeerId}
           people={people}
           onSend={(text) => session.sendChat(text)}
           onSendFile={(file) => void session.sendFile(file)}
           onVote={(pollId, option) => session.votePoll(pollId, option)}
+          onTimerControl={(id, action) => session.controlTimer(id, action)}
           onClose={onClose}
         />
       </div>
@@ -124,9 +127,7 @@ const CallStage = memo(function CallStage({
   }, [remotes, localScreenStream, identity]);
 
   const userPinned =
-    pinnedId && screens.some((item) => item.id === pinnedId)
-      ? pinnedId
-      : null;
+    pinnedId && screens.some((item) => item.id === pinnedId) ? pinnedId : null;
   const kind = screenStageKind(screens.length, !!userPinned, showCameras);
   const pinHandler = screens.length >= 2 ? onPin : undefined;
   const count = remotes.length + 1;
@@ -170,9 +171,7 @@ const CallStage = memo(function CallStage({
             localMute={localMute}
             roomMute={roomMute}
             onToggleLocal={isHostTile ? undefined : session.toggleLocalMute}
-            onSetRoom={
-              isHost && !isHostTile ? session.setRoomMute : undefined
-            }
+            onSetRoom={isHost && !isHostTile ? session.setRoomMute : undefined}
             className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
           />
         );
@@ -195,7 +194,9 @@ const CallStage = memo(function CallStage({
 
   if (kind === "cameras") {
     return (
-      <div className={cn("min-h-0 flex-1 grid gap-3 overflow-y-auto p-3", grid)}>
+      <div
+        className={cn("min-h-0 flex-1 grid gap-3 overflow-y-auto p-3", grid)}
+      >
         {cameraTiles(false)}
       </div>
     );
@@ -222,7 +223,10 @@ const CallStage = memo(function CallStage({
           {others.length > 0 && (
             <div className="flex shrink-0 gap-2 overflow-x-auto lg:w-52 lg:flex-col lg:overflow-y-auto">
               {others.map((item) =>
-                screenTile(item, "h-28 w-44 shrink-0 min-h-24 lg:h-32 lg:w-full"),
+                screenTile(
+                  item,
+                  "h-28 w-44 shrink-0 min-h-24 lg:h-32 lg:w-full",
+                ),
               )}
             </div>
           )}

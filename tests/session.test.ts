@@ -942,6 +942,77 @@ describe("timer e voto no chat", () => {
     vi.useRealTimers();
   });
 
+  it("recusa um segundo timer enquanto o primeiro está ativo", () => {
+    vi.useFakeTimers();
+    asGuest();
+    expect(session.sendChat("/timer 30s")).toBe(true);
+    expect(session.sendChat("/timer 5s")).toBe(false);
+    expect(getToast()?.key).toBe("chat.command.timerBusy");
+    vi.useRealTimers();
+  });
+
+  it("pausa e retoma o timer, e só autor ou host controlam", () => {
+    vi.useFakeTimers();
+    asGuest();
+    const c = conn(HOST);
+    core.data.set(HOST, c);
+    expect(session.sendChat("/timer 10s")).toBe(true);
+    const id = core.state.messages.at(-1)?.id;
+    expect(id).toBeTruthy();
+    vi.advanceTimersByTime(3_000);
+    session.controlTimer(id!, "pause");
+    expect(core.state.messages.at(-1)?.timer).toEqual({
+      status: "paused",
+      remainingMs: 7_000,
+    });
+    expect(c.sent.at(-1)).toEqual({
+      type: "timer-control",
+      id,
+      timer: { status: "paused", remainingMs: 7_000 },
+    });
+    vi.advanceTimersByTime(60_000);
+    expect(getToast()?.key).not.toBe("chat.command.timerDone");
+    session.controlTimer(id!, "resume");
+    expect(core.state.messages.at(-1)?.timer?.status).toBe("running");
+    vi.advanceTimersByTime(7_000);
+    expect(getToast()?.key).toBe("chat.command.timerDone");
+    vi.useRealTimers();
+  });
+
+  it("host cancela timer de outra pessoa; convidado estranho não", () => {
+    vi.useFakeTimers();
+    asGuest();
+    core.onWire(conn(HOST), {
+      type: "chat",
+      id: "t-host",
+      text: "Timer: 0:10",
+      fromPeerId: HOST,
+      fromName: "Host",
+      at: Date.now(),
+      command: { kind: "timer", ms: 10_000 },
+    });
+    session.controlTimer("t-host", "cancel");
+    expect(core.state.messages.at(-1)?.timer?.status).not.toBe("cancelled");
+
+    asHost();
+    core.patch({
+      messages: [
+        {
+          id: "t-guest",
+          text: "Timer: 0:10",
+          fromPeerId: ZECA,
+          fromName: "Zeca",
+          at: Date.now(),
+          command: { kind: "timer", ms: 10_000 },
+          timer: { status: "running", endsAt: Date.now() + 10_000 },
+        },
+      ],
+    });
+    session.controlTimer("t-guest", "cancel");
+    expect(core.state.messages.at(-1)?.timer).toEqual({ status: "cancelled" });
+    vi.useRealTimers();
+  });
+
   it("aplica o voto local e anuncia só se mudou", () => {
     asGuest();
     const c = conn(HOST);

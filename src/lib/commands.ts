@@ -524,7 +524,10 @@ export const formatCommandText = (
     });
   }
   if (command.kind === "choice") {
-    return translate("chat.command.chooseResult", { option: command.option });
+    return translate("chat.command.chooseResult", {
+      options: command.options.join(", "),
+      option: command.option,
+    });
   }
   if (command.kind === "order") {
     const names = command.people.map((person) => `@${person.name}`).join(", ");
@@ -535,7 +538,10 @@ export const formatCommandText = (
       command.face === "heads"
         ? translate("chat.command.coinHeads")
         : translate("chat.command.coinTails");
-    return translate("chat.command.coinResult", { face });
+    return translate("chat.command.coinResult", {
+      name: fromName || translate("common.someone"),
+      face,
+    });
   }
   if (command.kind === "emote") {
     return translate("chat.command.emoteResult", {
@@ -678,7 +684,7 @@ export const runChatCommand = (
     if (!options) return { ok: false, error: "chat.command.chooseInvalid" };
     const option = options[randomInt(0, options.length - 1, rng)];
     if (!option) return { ok: false, error: "chat.command.chooseInvalid" };
-    return { ok: true, command: { kind: "choice", option } };
+    return { ok: true, command: { kind: "choice", option, options } };
   }
   if (parsed.id === "order") {
     if (people.length === 0) {

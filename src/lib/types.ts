@@ -1,5 +1,6 @@
 import type { RoomMuteEntry } from "./mutes";
 import type { CodeLanguage } from "./code";
+import type { TimerState } from "./timer";
 
 export type QualityTier = "free" | "pro";
 export type CallMode = "direct" | "room";
@@ -55,7 +56,7 @@ export type ChatCommandPayload =
       total: number;
     }
   | { kind: "pick"; name: string; peerId: string }
-  | { kind: "choice"; option: string }
+  | { kind: "choice"; option: string; options: string[] }
   | {
       kind: "order";
       people: Array<{ name: string; peerId: string }>;
@@ -80,6 +81,8 @@ export type ChatMessage = {
   command?: ChatCommandPayload;
   /** Votos em `/voto`: peerId → índice da opção. Só local; o fio usa poll-vote. */
   pollVotes?: Record<string, number>;
+  /** Estado de `/timer` (pausa/cancel). Só local; o fio usa timer-control. */
+  timer?: TimerState;
 };
 
 export type IncomingInvite = {
@@ -120,6 +123,7 @@ export type WireMessage =
       command?: ChatCommandPayload;
     }
   | { type: "poll-vote"; id: string; option: number }
+  | { type: "timer-control"; id: string; timer: TimerState }
   | { type: "room-ended" }
   | { type: "room-full" }
   | { type: "host-transfer"; hostPeerId: string }

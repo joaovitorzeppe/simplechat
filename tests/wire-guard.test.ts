@@ -193,8 +193,28 @@ describe("parseWire", () => {
     expect(parseWire(chat({ command: { kind: "help" } }))).toBeNull();
     expect(
       parseWire(chat({ command: { kind: "choice", option: "pizza" } })),
-    ).toEqual(chat({ command: { kind: "choice", option: "pizza" } }));
+    ).toEqual(
+      chat({ command: { kind: "choice", option: "pizza", options: ["pizza"] } }),
+    );
     expect(
+      parseWire(
+        chat({
+          command: {
+            kind: "choice",
+            option: "sushi",
+            options: ["pizza", "sushi"],
+          },
+        }),
+      ),
+    ).toEqual(
+      chat({
+        command: {
+          kind: "choice",
+          option: "sushi",
+          options: ["pizza", "sushi"],
+        },
+      }),
+    );    expect(
       parseWire(chat({ command: { kind: "coin", face: "tails" } })),
     ).toEqual(chat({ command: { kind: "coin", face: "tails" } }));
     expect(
@@ -212,6 +232,24 @@ describe("parseWire", () => {
         chat({ command: { kind: "timer", ms: 30_000, startedAt: 1 } }),
       ),
     ).toEqual(chat({ command: timer }));
+    expect(
+      parseWire({
+        type: "timer-control",
+        id: "t1",
+        timer: { status: "paused", remainingMs: 4_000 },
+      }),
+    ).toEqual({
+      type: "timer-control",
+      id: "t1",
+      timer: { status: "paused", remainingMs: 4_000 },
+    });
+    expect(
+      parseWire({
+        type: "timer-control",
+        id: "t1",
+        timer: { status: "nope" },
+      }),
+    ).toBeNull();
     const poll = {
       kind: "poll",
       id: "poll-1",
