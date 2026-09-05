@@ -214,6 +214,8 @@ export class PeerSession {
   private lastChatAt = new Map<string, number>();
   private lastMentionToastAt = 0;
   private timerAlarms = new Map<string, number>();
+  /** Evita toast/aviso duplicados quando `close()` reentra em `onPeerLeft`. */
+  private departing = new Set<string>();
 
   subscribe = (listener: Listener) => {
     this.listeners.add(listener);
@@ -1912,6 +1914,16 @@ export class PeerSession {
 
   private onPeerLeft(peerId: string, opts?: { silent?: boolean }) {
     if (this.tearingDown) return;
+    if (this.departing.has(peerId)) return;
+    this.departing.add(peerId);
+    try {
+      this.finishPeerLeft(peerId, opts);
+    } finally {
+      this.departing.delete(peerId);
+    }
+  }
+
+  private finishPeerLeft(peerId: string, opts?: { silent?: boolean }) {
     const wasInCall = this.state.remotes.some((r) => r.peerId === peerId);
     this.iceRetries.delete(peerId);
     this.iceEverConnected.delete(peerId);
@@ -2315,6 +2327,7 @@ export class PeerSession {
     });
     this.iceRetries.clear();
     this.iceEverConnected.clear();
+    this.departing.clear();
     this.clearConnectWatch();
     this.tearingDown = false;
     clearInviteLocation();

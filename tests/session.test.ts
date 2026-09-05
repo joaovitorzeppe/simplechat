@@ -885,6 +885,26 @@ describe("falha de caminho ICE", () => {
       false,
     );
   });
+
+  it("não duplica aviso se close() reentra em onPeerLeft", () => {
+    asGuest();
+    core.names.set(ZECA, "Zeca");
+    core.roomMembers = [
+      { peerId: HOST, displayName: "Host" },
+      { peerId: ME, displayName: "Eu" },
+      { peerId: ZECA, displayName: "Zeca" },
+    ];
+    core.patch({ remotes: [remote(ZECA, "Zeca")] });
+    const c = conn(ZECA);
+    c.close = () => {
+      core.onPeerLeft(ZECA);
+    };
+    core.data.set(ZECA, c);
+    core.onPeerLeft(ZECA);
+    const left = core.state.messages.filter((msg) => msg.system === "left");
+    expect(left).toHaveLength(1);
+    expect(getToast()?.key).toBe("toast.peerLeft");
+  });
 });
 
 describe("envio de arquivo", () => {
