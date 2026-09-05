@@ -3,11 +3,20 @@ export const CODE_LANGUAGES = [
   "ts",
   "python",
   "java",
+  "kotlin",
+  "swift",
+  "c",
+  "cpp",
+  "csharp",
+  "go",
+  "rust",
+  "php",
   "sql",
   "shell",
   "html",
   "css",
   "json",
+  "markdown",
   "text",
 ] as const;
 
@@ -20,11 +29,20 @@ export const CODE_LANGUAGE_LABELS: Record<CodeLanguage, string> = {
   ts: "TypeScript",
   python: "Python",
   java: "Java",
+  kotlin: "Kotlin",
+  swift: "Swift",
+  c: "C",
+  cpp: "C++",
+  csharp: "C#",
+  go: "Go",
+  rust: "Rust",
+  php: "PHP",
   sql: "SQL",
   shell: "Shell",
   html: "HTML",
   css: "CSS",
   json: "JSON",
+  markdown: "Markdown",
   text: "Text",
 };
 
@@ -39,6 +57,23 @@ const LANGUAGE_ALIASES: Record<string, CodeLanguage> = {
   python: "python",
   py: "python",
   java: "java",
+  kotlin: "kotlin",
+  kt: "kotlin",
+  kts: "kotlin",
+  swift: "swift",
+  c: "c",
+  cpp: "cpp",
+  "c++": "cpp",
+  cxx: "cpp",
+  cc: "cpp",
+  csharp: "csharp",
+  "c#": "csharp",
+  cs: "csharp",
+  go: "go",
+  golang: "go",
+  rust: "rust",
+  rs: "rust",
+  php: "php",
   sql: "sql",
   mysql: "sql",
   postgres: "sql",
@@ -53,6 +88,8 @@ const LANGUAGE_ALIASES: Record<string, CodeLanguage> = {
   xml: "html",
   css: "css",
   json: "json",
+  markdown: "markdown",
+  md: "markdown",
   text: "text",
   txt: "text",
   plain: "text",
@@ -95,11 +132,20 @@ export const detectCodeLanguage = (source: string): CodeLanguage => {
     ts: 0,
     python: 0,
     java: 0,
+    kotlin: 0,
+    swift: 0,
+    c: 0,
+    cpp: 0,
+    csharp: 0,
+    go: 0,
+    rust: 0,
+    php: 0,
     sql: 0,
     shell: 0,
     html: 0,
     css: 0,
     json: 0,
+    markdown: 0,
   };
 
   if (text.startsWith("{") || text.startsWith("[")) {
@@ -134,6 +180,84 @@ export const detectCodeLanguage = (source: string): CodeLanguage => {
       /\bpublic\s+static\s+void\b/,
       /System\.out/,
       /\b@Override\b/,
+    ]) * 2;
+
+  scores.kotlin +=
+    countHits(text, [
+      /\bfun\s+\w+/,
+      /\b(val|var)\s+\w+/,
+      /\bcompanion\s+object\b/,
+      /\bdata\s+class\b/,
+      /\bsuspend\s+fun\b/,
+      /\?\.|\?:/,
+    ]) * 2;
+
+  scores.swift +=
+    countHits(text, [
+      /\bimport\s+Foundation\b/,
+      /\bfunc\s+\w+/,
+      /\bguard\s+/,
+      /\b(let|var)\s+\w+\s*[:=]/,
+      /\bUIView|SwiftUI|@State\b/,
+      /->\s*(Void|String|Int|Bool)\b/,
+    ]) * 2;
+
+  scores.php +=
+    countHits(text, [
+      /<\?php\b/,
+      /\$\w+/,
+      /\becho\s+/,
+      /\bfunction\s+\w+\s*\(/,
+      /->\w+\s*\(/,
+      /\brequire(_once)?\s*\(/,
+    ]) * 2;
+
+  scores.csharp +=
+    countHits(text, [
+      /\busing\s+System\b/,
+      /\bnamespace\s+\w/,
+      /\bConsole\.(Write|WriteLine)\b/,
+      /\basync\s+Task\b/,
+      /\bstring\[\]\s+args\b/,
+    ]) * 2;
+
+  scores.cpp +=
+    countHits(text, [
+      /#include\s*<[\w./]+>/,
+      /\bstd::/,
+      /\bnullptr\b/,
+      /\btemplate\s*</,
+      /\bcout\s*<</,
+      /\bnamespace\s+\w+\s*\{/,
+    ]) * 2;
+
+  scores.c +=
+    countHits(text, [
+      /#include\s*[<"]/,
+      /\bprintf\s*\(/,
+      /\bint\s+main\s*\(/,
+      /\bsizeof\s*\(/,
+      /\bNULL\b/,
+    ]) * 2;
+
+  scores.go +=
+    countHits(text, [
+      /\bpackage\s+\w+/,
+      /\bfunc\s+(\w+\s*)?\(/,
+      /:=/,
+      /\bfmt\./,
+      /\bgo\s+func\b/,
+      /\bdefer\b/,
+    ]) * 2;
+
+  scores.rust +=
+    countHits(text, [
+      /\bfn\s+\w+/,
+      /\blet\s+mut\b/,
+      /\bimpl\b/,
+      /\bprintln!\s*\(/,
+      /\buse\s+\w[\w:]*::/,
+      /\bpub\s+(fn|struct|enum|mod)\b/,
     ]) * 2;
 
   scores.ts += countHits(text, [
@@ -171,9 +295,26 @@ export const detectCodeLanguage = (source: string): CodeLanguage => {
     /@(media|import|keyframes)\b/,
   ]);
 
+  scores.markdown += countHits(text, [
+    /^#{1,6}\s+\S/m,
+    /^\s*[-*+]\s+\S/m,
+    /\[[^\]]+\]\([^)]+\)/,
+    /^\s*```/m,
+    /\*\*[^*\n]+\*\*/,
+  ]);
+
   if (scores.json >= 6) return "json";
+  if (scores.rust >= 2) return "rust";
+  if (scores.go >= 2 && scores.go >= scores.swift) return "go";
+  if (scores.swift >= 2) return "swift";
+  if (scores.kotlin >= 2) return "kotlin";
+  if (scores.csharp >= 2) return "csharp";
+  if (scores.php >= 2) return "php";
+  if (scores.cpp >= scores.c && scores.cpp >= 2) return "cpp";
+  if (scores.c >= 2 && scores.c > scores.java) return "c";
   if (scores.java >= scores.js && scores.java >= 2) return "java";
   if (scores.ts > 0 && scores.ts >= scores.js) return "ts";
+  if (scores.markdown >= 3 && scores.html < 2) return "markdown";
 
   let best: CodeLanguage = "text";
   let bestScore = 0;
@@ -227,7 +368,10 @@ export type CodeToken = {
   value: string;
 };
 
-const KEYWORDS: Record<Exclude<CodeLanguage, "text" | "html" | "css">, Set<string>> =
+const KEYWORDS: Record<
+  Exclude<CodeLanguage, "text" | "html" | "css" | "markdown">,
+  Set<string>
+> =
   {
     js: new Set([
       "async",
@@ -427,6 +571,594 @@ const KEYWORDS: Record<Exclude<CodeLanguage, "text" | "html" | "css">, Set<strin
       "void",
       "volatile",
       "while",
+    ]),
+    kotlin: new Set([
+      "abstract",
+      "actual",
+      "annotation",
+      "as",
+      "break",
+      "by",
+      "catch",
+      "class",
+      "companion",
+      "const",
+      "constructor",
+      "continue",
+      "crossinline",
+      "data",
+      "delegate",
+      "do",
+      "dynamic",
+      "else",
+      "enum",
+      "expect",
+      "external",
+      "false",
+      "field",
+      "file",
+      "final",
+      "finally",
+      "for",
+      "fun",
+      "get",
+      "if",
+      "import",
+      "in",
+      "infix",
+      "init",
+      "inline",
+      "inner",
+      "interface",
+      "internal",
+      "is",
+      "lateinit",
+      "noinline",
+      "null",
+      "object",
+      "open",
+      "operator",
+      "out",
+      "override",
+      "package",
+      "param",
+      "private",
+      "property",
+      "protected",
+      "public",
+      "receiver",
+      "reified",
+      "return",
+      "sealed",
+      "set",
+      "setparam",
+      "super",
+      "suspend",
+      "tailrec",
+      "this",
+      "throw",
+      "true",
+      "try",
+      "typealias",
+      "typeof",
+      "val",
+      "var",
+      "vararg",
+      "when",
+      "where",
+      "while",
+    ]),
+    swift: new Set([
+      "associatedtype",
+      "class",
+      "deinit",
+      "enum",
+      "extension",
+      "fileprivate",
+      "func",
+      "import",
+      "init",
+      "inout",
+      "internal",
+      "let",
+      "open",
+      "operator",
+      "private",
+      "protocol",
+      "public",
+      "rethrows",
+      "static",
+      "struct",
+      "subscript",
+      "typealias",
+      "var",
+      "break",
+      "case",
+      "continue",
+      "default",
+      "defer",
+      "do",
+      "else",
+      "fallthrough",
+      "for",
+      "guard",
+      "if",
+      "in",
+      "repeat",
+      "return",
+      "switch",
+      "where",
+      "while",
+      "as",
+      "Any",
+      "catch",
+      "false",
+      "is",
+      "nil",
+      "super",
+      "self",
+      "Self",
+      "throw",
+      "throws",
+      "true",
+      "try",
+      "associativity",
+      "convenience",
+      "dynamic",
+      "didSet",
+      "final",
+      "get",
+      "infix",
+      "indirect",
+      "lazy",
+      "left",
+      "mutating",
+      "none",
+      "nonmutating",
+      "optional",
+      "override",
+      "postfix",
+      "precedence",
+      "prefix",
+      "Protocol",
+      "required",
+      "right",
+      "set",
+      "Type",
+      "unowned",
+      "weak",
+      "willSet",
+      "async",
+      "await",
+      "actor",
+      "some",
+      "opaque",
+    ]),
+    c: new Set([
+      "auto",
+      "break",
+      "case",
+      "char",
+      "const",
+      "continue",
+      "default",
+      "do",
+      "double",
+      "else",
+      "enum",
+      "extern",
+      "float",
+      "for",
+      "goto",
+      "if",
+      "inline",
+      "int",
+      "long",
+      "register",
+      "restrict",
+      "return",
+      "short",
+      "signed",
+      "sizeof",
+      "static",
+      "struct",
+      "switch",
+      "typedef",
+      "union",
+      "unsigned",
+      "void",
+      "volatile",
+      "while",
+      "_Bool",
+      "_Complex",
+      "_Imaginary",
+      "NULL",
+    ]),
+    cpp: new Set([
+      "alignas",
+      "alignof",
+      "and",
+      "and_eq",
+      "asm",
+      "auto",
+      "bitand",
+      "bitor",
+      "bool",
+      "break",
+      "case",
+      "catch",
+      "char",
+      "char8_t",
+      "char16_t",
+      "char32_t",
+      "class",
+      "compl",
+      "concept",
+      "const",
+      "consteval",
+      "constexpr",
+      "constinit",
+      "const_cast",
+      "continue",
+      "co_await",
+      "co_return",
+      "co_yield",
+      "decltype",
+      "default",
+      "delete",
+      "do",
+      "double",
+      "dynamic_cast",
+      "else",
+      "enum",
+      "explicit",
+      "export",
+      "extern",
+      "false",
+      "float",
+      "for",
+      "friend",
+      "goto",
+      "if",
+      "inline",
+      "int",
+      "long",
+      "mutable",
+      "namespace",
+      "new",
+      "noexcept",
+      "not",
+      "not_eq",
+      "nullptr",
+      "operator",
+      "or",
+      "or_eq",
+      "private",
+      "protected",
+      "public",
+      "register",
+      "reinterpret_cast",
+      "requires",
+      "return",
+      "short",
+      "signed",
+      "sizeof",
+      "static",
+      "static_assert",
+      "static_cast",
+      "struct",
+      "switch",
+      "template",
+      "this",
+      "thread_local",
+      "throw",
+      "true",
+      "try",
+      "typedef",
+      "typeid",
+      "typename",
+      "union",
+      "unsigned",
+      "using",
+      "virtual",
+      "void",
+      "volatile",
+      "wchar_t",
+      "while",
+      "xor",
+      "xor_eq",
+    ]),
+    csharp: new Set([
+      "abstract",
+      "as",
+      "base",
+      "bool",
+      "break",
+      "byte",
+      "case",
+      "catch",
+      "char",
+      "checked",
+      "class",
+      "const",
+      "continue",
+      "decimal",
+      "default",
+      "delegate",
+      "do",
+      "double",
+      "else",
+      "enum",
+      "event",
+      "explicit",
+      "extern",
+      "false",
+      "finally",
+      "fixed",
+      "float",
+      "for",
+      "foreach",
+      "goto",
+      "if",
+      "implicit",
+      "in",
+      "int",
+      "interface",
+      "internal",
+      "is",
+      "lock",
+      "long",
+      "namespace",
+      "new",
+      "null",
+      "object",
+      "operator",
+      "out",
+      "override",
+      "params",
+      "private",
+      "protected",
+      "public",
+      "readonly",
+      "ref",
+      "return",
+      "sbyte",
+      "sealed",
+      "short",
+      "sizeof",
+      "stackalloc",
+      "static",
+      "string",
+      "struct",
+      "switch",
+      "this",
+      "throw",
+      "true",
+      "try",
+      "typeof",
+      "uint",
+      "ulong",
+      "unchecked",
+      "unsafe",
+      "ushort",
+      "using",
+      "virtual",
+      "void",
+      "volatile",
+      "while",
+      "async",
+      "await",
+      "var",
+      "dynamic",
+      "nameof",
+      "when",
+      "where",
+      "yield",
+      "record",
+      "init",
+      "required",
+      "nint",
+      "nuint",
+      "file",
+      "scoped",
+    ]),
+    go: new Set([
+      "break",
+      "case",
+      "chan",
+      "const",
+      "continue",
+      "default",
+      "defer",
+      "else",
+      "fallthrough",
+      "for",
+      "func",
+      "go",
+      "goto",
+      "if",
+      "import",
+      "interface",
+      "map",
+      "package",
+      "range",
+      "return",
+      "select",
+      "struct",
+      "switch",
+      "type",
+      "var",
+      "true",
+      "false",
+      "iota",
+      "nil",
+      "make",
+      "new",
+      "append",
+      "cap",
+      "close",
+      "complex",
+      "copy",
+      "delete",
+      "imag",
+      "len",
+      "panic",
+      "print",
+      "println",
+      "real",
+      "recover",
+      "any",
+      "bool",
+      "byte",
+      "comparable",
+      "error",
+      "int",
+      "int8",
+      "int16",
+      "int32",
+      "int64",
+      "rune",
+      "string",
+      "uint",
+      "uint8",
+      "uint16",
+      "uint32",
+      "uint64",
+      "uintptr",
+      "float32",
+      "float64",
+      "complex64",
+      "complex128",
+    ]),
+    rust: new Set([
+      "as",
+      "async",
+      "await",
+      "break",
+      "const",
+      "continue",
+      "crate",
+      "dyn",
+      "else",
+      "enum",
+      "extern",
+      "false",
+      "fn",
+      "for",
+      "if",
+      "impl",
+      "in",
+      "let",
+      "loop",
+      "match",
+      "mod",
+      "move",
+      "mut",
+      "pub",
+      "ref",
+      "return",
+      "self",
+      "Self",
+      "static",
+      "struct",
+      "super",
+      "trait",
+      "true",
+      "type",
+      "unsafe",
+      "use",
+      "where",
+      "while",
+      "abstract",
+      "become",
+      "box",
+      "do",
+      "final",
+      "macro",
+      "override",
+      "priv",
+      "typeof",
+      "unsized",
+      "virtual",
+      "yield",
+      "try",
+      "union",
+    ]),
+    php: new Set([
+      "abstract",
+      "and",
+      "array",
+      "as",
+      "break",
+      "callable",
+      "case",
+      "catch",
+      "class",
+      "clone",
+      "const",
+      "continue",
+      "declare",
+      "default",
+      "die",
+      "do",
+      "echo",
+      "else",
+      "elseif",
+      "empty",
+      "enddeclare",
+      "endfor",
+      "endforeach",
+      "endif",
+      "endswitch",
+      "endwhile",
+      "eval",
+      "exit",
+      "extends",
+      "final",
+      "finally",
+      "fn",
+      "for",
+      "foreach",
+      "function",
+      "global",
+      "goto",
+      "if",
+      "implements",
+      "include",
+      "include_once",
+      "instanceof",
+      "insteadof",
+      "interface",
+      "isset",
+      "list",
+      "match",
+      "namespace",
+      "new",
+      "or",
+      "print",
+      "private",
+      "protected",
+      "public",
+      "readonly",
+      "require",
+      "require_once",
+      "return",
+      "static",
+      "switch",
+      "throw",
+      "trait",
+      "try",
+      "unset",
+      "use",
+      "var",
+      "while",
+      "xor",
+      "yield",
+      "true",
+      "false",
+      "null",
+      "self",
+      "parent",
     ]),
     sql: new Set([
       "add",
@@ -798,6 +1530,68 @@ const scanHtml = (source: string): CodeToken[] => {
   return tokens;
 };
 
+const scanMarkdown = (source: string): CodeToken[] => {
+  const tokens: CodeToken[] = [];
+  const n = source.length;
+  let i = 0;
+  while (i < n) {
+    if (source.startsWith("```", i)) {
+      const end = source.indexOf("```", i + 3);
+      const stop = end < 0 ? n : end + 3;
+      pushToken(tokens, "string", source.slice(i, stop));
+      i = stop;
+      continue;
+    }
+    if (source[i] === "`") {
+      const end = source.indexOf("`", i + 1);
+      const stop = end < 0 ? n : end + 1;
+      pushToken(tokens, "string", source.slice(i, stop));
+      i = stop;
+      continue;
+    }
+    const atLine = i === 0 || source[i - 1] === "\n";
+    if (atLine && source[i] === "#") {
+      let j = i;
+      while (j < n && source[j] === "#") j += 1;
+      if (j < n && /\s/.test(source[j] ?? "")) {
+        let end = source.indexOf("\n", i);
+        if (end < 0) end = n;
+        pushToken(tokens, "keyword", source.slice(i, end));
+        i = end;
+        continue;
+      }
+    }
+    if (source[i] === "[") {
+      const close = source.indexOf("]", i + 1);
+      if (close > i && source[close + 1] === "(") {
+        const endParen = source.indexOf(")", close + 2);
+        if (endParen > close) {
+          pushToken(tokens, "keyword", source.slice(i, close + 1));
+          pushToken(tokens, "string", source.slice(close + 1, endParen + 1));
+          i = endParen + 1;
+          continue;
+        }
+      }
+    }
+    if (atLine && /^[-*+]\s/.test(source.slice(i, i + 2))) {
+      pushToken(tokens, "punct", source[i] ?? "");
+      i += 1;
+      continue;
+    }
+    if (source.startsWith("**", i)) {
+      const end = source.indexOf("**", i + 2);
+      if (end > i) {
+        pushToken(tokens, "keyword", source.slice(i, end + 2));
+        i = end + 2;
+        continue;
+      }
+    }
+    pushToken(tokens, "plain", source[i] ?? "");
+    i += 1;
+  }
+  return tokens;
+};
+
 export const highlightCode = (
   source: string,
   language: CodeLanguage,
@@ -806,6 +1600,7 @@ export const highlightCode = (
   if (language === "python") return scanPython(source);
   if (language === "sql") return scanSql(source);
   if (language === "html") return scanHtml(source);
+  if (language === "markdown") return scanMarkdown(source);
   if (language === "js") {
     return scanCLike(source, KEYWORDS.js, { template: true });
   }
@@ -814,6 +1609,20 @@ export const highlightCode = (
   }
   if (language === "java") {
     return scanCLike(source, KEYWORDS.java, {});
+  }
+  if (language === "php") {
+    return scanCLike(source, KEYWORDS.php, { hashes: true });
+  }
+  if (
+    language === "c" ||
+    language === "cpp" ||
+    language === "csharp" ||
+    language === "go" ||
+    language === "rust" ||
+    language === "kotlin" ||
+    language === "swift"
+  ) {
+    return scanCLike(source, KEYWORDS[language], {});
   }
   if (language === "shell") {
     return scanCLike(source, KEYWORDS.shell, { hashes: true });

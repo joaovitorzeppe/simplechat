@@ -24,6 +24,41 @@ describe("detectCodeLanguage", () => {
     ).toBe("ts");
   });
 
+  it("reconhece c, c++, c#, go e rust", () => {
+    expect(detectCodeLanguage("#include <stdio.h>\nint main(void) { printf(\"x\"); }")).toBe(
+      "c",
+    );
+    expect(
+      detectCodeLanguage("#include <iostream>\nint main() { std::cout << 1; }"),
+    ).toBe("cpp");
+    expect(
+      detectCodeLanguage("using System;\nnamespace App { class P { static void Main() { Console.WriteLine(1); } } }"),
+    ).toBe("csharp");
+    expect(detectCodeLanguage("package main\nfunc main() { fmt.Println(1) }")).toBe(
+      "go",
+    );
+    expect(detectCodeLanguage("fn main() { let mut x = 1; println!(\"{}\", x); }")).toBe(
+      "rust",
+    );
+  });
+
+  it("reconhece kotlin, swift, php e markdown", () => {
+    expect(
+      detectCodeLanguage("fun main() {\n  val x = 1\n  println(x)\n}"),
+    ).toBe("kotlin");
+    expect(
+      detectCodeLanguage(
+        "import Foundation\nfunc hello() -> String { guard true else { return \"\" }; return \"oi\" }",
+      ),
+    ).toBe("swift");
+    expect(
+      detectCodeLanguage("<?php\n$x = 1;\necho $x;\nfunction hi() { return 1; }"),
+    ).toBe("php");
+    expect(
+      detectCodeLanguage("# Título\n\n- item\n\n[link](https://ex.com)\n\n**negrito**"),
+    ).toBe("markdown");
+  });
+
   it("cai em texto quando não dá para cravar", () => {
     expect(detectCodeLanguage("oi, tudo bem?")).toBe("text");
   });
@@ -42,6 +77,30 @@ describe("parseCodeArgs", () => {
     expect(parseCodeArgs("bash echo oi")).toEqual({
       language: "shell",
       source: "echo oi",
+    });
+    expect(parseCodeArgs("c++ int x = 1;")).toEqual({
+      language: "cpp",
+      source: "int x = 1;",
+    });
+    expect(parseCodeArgs("c# Console.WriteLine(1);")).toEqual({
+      language: "csharp",
+      source: "Console.WriteLine(1);",
+    });
+    expect(parseCodeArgs("golang fmt.Println(1)")).toEqual({
+      language: "go",
+      source: "fmt.Println(1)",
+    });
+    expect(parseCodeArgs("rs fn main() {}")).toEqual({
+      language: "rust",
+      source: "fn main() {}",
+    });
+    expect(parseCodeArgs("kt fun main() {}")).toEqual({
+      language: "kotlin",
+      source: "fun main() {}",
+    });
+    expect(parseCodeArgs("md # Olá")).toEqual({
+      language: "markdown",
+      source: "# Olá",
     });
   });
 
@@ -90,5 +149,13 @@ describe("highlightCode", () => {
     const source = "SELECT id FROM t -- x";
     const tokens = highlightCode(source, "sql");
     expect(tokens.map((token) => token.value).join("")).toBe(source);
+  });
+
+  it("destaca headings e links em markdown", () => {
+    const source = "# Título\n[site](https://ex.com)";
+    const tokens = highlightCode(source, "markdown");
+    expect(tokens.map((token) => token.value).join("")).toBe(source);
+    expect(tokens.some((token) => token.type === "keyword")).toBe(true);
+    expect(tokens.some((token) => token.type === "string")).toBe(true);
   });
 });
