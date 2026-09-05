@@ -1,3 +1,5 @@
+import { canonicalizePath } from "./spa-path";
+
 export type Invite = {
   peerId: string;
   /** Segredo da sala, quando o link traz um. */
@@ -106,4 +108,39 @@ export const deepLinkJoinArg = (
 export const inviteLink = (peerId: string, secret: string | null) => {
   const base = `${window.location.origin}/?room=${encodeURIComponent(peerId)}`;
   return secret ? `${base}#k=${encodeURIComponent(secret)}` : base;
+};
+
+/**
+ * Tira `room`/`call`/`k` da URL. `null` se não havia convite.
+ * Usado ao sair da chamada para não reentrar no refresh nem no histórico atual.
+ */
+export const hrefWithoutInvite = (href: string): string | null => {
+  if (!parseInvite(href)) return null;
+  let url: URL;
+  try {
+    url = new URL(href);
+  } catch {
+    return null;
+  }
+  const params = new URLSearchParams(url.search);
+  params.delete("room");
+  params.delete("call");
+  params.delete("k");
+  const hash = hashParams(url.hash);
+  hash.delete("k");
+  hash.delete("room");
+  hash.delete("call");
+  const path = canonicalizePath(url.pathname);
+  const search = params.toString();
+  const hashStr = hash.toString();
+  return `${path}${search ? `?${search}` : ""}${hashStr ? `#${hashStr}` : ""}`;
+};
+
+/** Substitui a entrada atual do histórico, sem empilhar outra. */
+export const clearInviteLocation = () => {
+  const next = hrefWithoutInvite(window.location.href);
+  if (next === null) return;
+  const current = `${canonicalizePath(window.location.pathname)}${window.location.search}${window.location.hash}`;
+  if (next === current) return;
+  window.history.replaceState(null, "", next);
 };

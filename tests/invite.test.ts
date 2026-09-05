@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deepLinkJoinArg, inviteJoinArg, inviteLink, invitePeerId, parseInvite } from "@libs/invite";
+import { deepLinkJoinArg, hrefWithoutInvite, inviteJoinArg, inviteLink, invitePeerId, parseInvite } from "@libs/invite";
 
 describe("parseInvite", () => {
   it("aceita a chave crua", () => {
@@ -107,5 +107,27 @@ describe("deep link para join automático", () => {
 
   it("devolve nulo sem room na URL", () => {
     expect(deepLinkJoinArg("https://www.simplechat.me/", "me-1")).toBeNull();
+  });
+});
+
+describe("hrefWithoutInvite", () => {
+  it("tira room e segredo da URL", () => {
+    expect(
+      hrefWithoutInvite("https://www.simplechat.me/?room=host-1#k=abc"),
+    ).toBe("/");
+    expect(
+      hrefWithoutInvite("https://www.simplechat.me/?call=host-1&lang=pt#k=abc"),
+    ).toBe("/?lang=pt");
+  });
+
+  it("devolve nulo sem convite", () => {
+    expect(hrefWithoutInvite("https://www.simplechat.me/")).toBeNull();
+    expect(hrefWithoutInvite("https://www.simplechat.me/?lang=pt")).toBeNull();
+  });
+
+  it("mantém path legal limpo", () => {
+    expect(
+      hrefWithoutInvite("https://www.simplechat.me/privacy/?room=host-1#k=1"),
+    ).toBe("/privacy");
   });
 });

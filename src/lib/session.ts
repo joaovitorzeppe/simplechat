@@ -1,6 +1,6 @@
 import type { DataConnection, MediaConnection, Peer } from "peerjs";
 import { loadRoomSecret, rotateRoomSecret } from "./identity";
-import { parseInvite } from "./invite";
+import { clearInviteLocation, parseInvite } from "./invite";
 import {
   applySenderLimits,
   applyTrackConstraints,
@@ -2317,6 +2317,7 @@ export class PeerSession {
     this.iceEverConnected.clear();
     this.clearConnectWatch();
     this.tearingDown = false;
+    clearInviteLocation();
   }
 
   private destroyPeer() {
