@@ -20,25 +20,25 @@ export const fr: Messages = {
 
   "onboarding.title": "Comment voulez-vous apparaître ?",
   "onboarding.subtitle":
-    "Si vous ne demandez pas à être mémorisé, nous générons une nouvelle clé à chaque visite.",
+    "Si vous ne demandez pas à être mémorisé, la prochaine fois vous arrivez comme quelqu’un de nouveau.",
   "onboarding.inviteSubtitle":
     "Vous avez une invitation. Après le nom, on vous emmène dans l’appel.",
   "onboarding.name": "Nom",
   "onboarding.namePlaceholder": "ex. : Ana",
   "onboarding.rememberTitle": "Se souvenir de qui je suis",
   "onboarding.rememberBody":
-    "Nous enregistrons votre nom et la clé dans ce navigateur pour la prochaine visite. Sinon, une nouvelle clé est générée à l’entrée.",
+    "Nous enregistrons votre nom dans ce navigateur pour la prochaine visite. Sinon, vous vous présentez à nouveau à l’entrée.",
   "onboarding.enter": "Entrer",
 
   "home.hello": "Bonjour, {name}",
   "home.ready": "Prêt à appeler.",
-  "home.connecting": "Connexion au broker PeerJS…",
+  "home.connecting": "Préparation de la connexion…",
   "home.switchIdentity": "Changer d’identité",
   "home.inviteBody":
-    "Démarrez un appel et partagez le lien. Vous êtes l’hôte : vous approuvez qui entre, vous pouvez retirer quelqu’un et, en partant, vous choisissez entre transmettre le rôle d’hôte ou terminer pour tout le monde.",
+    "Démarrez un appel et partagez le lien. Qui démarre approuve qui entre, peut retirer quelqu’un et, en partant, choisit entre transmettre la conduite de l’appel ou terminer pour tout le monde.",
   "home.startCall": "Démarrer l’appel",
   "home.disabledConnecting":
-    "Toujours en connexion au broker. Attendez quelques secondes.",
+    "Toujours en préparation de la connexion. Attendez quelques secondes.",
   "home.install": "Installer l’app",
   "home.installIos":
     "Dans Safari : appuyez sur Partager, puis sur Ajouter à l’écran d’accueil.",
@@ -48,7 +48,7 @@ export const fr: Messages = {
   "call.guest": "Appel",
   "call.connecting": "Connexion…",
   "call.networkHint":
-    "Ce réseau bloque peut-être l’appel P2P. Passez du Wi‑Fi aux données mobiles (ou l’inverse) et réessayez.",
+    "Ce réseau bloque peut-être l’appel. Passez du Wi‑Fi aux données mobiles (ou l’inverse) et réessayez.",
   "call.inCall": "{count}/{max} dans l’appel",
   "call.copyInvite": "Copier l’invitation",
   "call.endForEveryone": "Terminer pour tout le monde",
@@ -186,7 +186,7 @@ export const fr: Messages = {
   "chat.command.codeCopied": "Copié",
 
   "incoming.title": "Appel entrant",
-  "incoming.body": "Audio, vidéo et chat P2P.",
+  "incoming.body": "Audio, vidéo et chat.",
   "incoming.reject": "Refuser",
   "incoming.accept": "Répondre",
 
@@ -196,19 +196,20 @@ export const fr: Messages = {
     "Pro bientôt — 720p, fichiers dans le chat et plus de bitrate",
 
   "error.unavailableId":
-    "Cette clé est encore occupée sur le broker. Rechargez dans quelques secondes.",
-  "error.peerjs": "Échec de PeerJS",
+    "Impossible d’entrer pour le moment. Rechargez dans quelques secondes.",
+  "error.peerjs": "Impossible de se connecter. Réessayez.",
   "error.crashTitle": "Quelque chose a cassé ici",
   "error.crashBody":
     "L’écran s’est figé à cause d’une erreur inattendue. Recharger règle souvent le problème ; votre appel devra être relancé.",
   "error.crashReload": "Recharger",
   "error.insecureContext":
-    "Ouvrez en HTTPS ou en localhost. La caméra et le micro ne fonctionnent pas sur cette origine.",
+    "Ouvrez le site de façon sécurisée (adresse en https). La caméra et le micro ne fonctionnent pas sur cette adresse.",
   "toast.networkPath":
-    "Impossible de se connecter sur ce réseau. Passez du Wi‑Fi aux données mobiles (ou l’inverse) et réessayez — certains réseaux bloquent les appels P2P.",
+    "Impossible de se connecter sur ce réseau. Passez du Wi‑Fi aux données mobiles (ou l’inverse) et réessayez — certains réseaux bloquent ce type d’appel.",
   "toast.networkPathPeer":
     "Impossible d’atteindre {name} sur ce réseau. Passez du Wi‑Fi aux données mobiles (ou l’inverse).",
-  "toast.peerUnavailable": "Personne introuvable. Vérifiez la clé.",
+  "toast.peerUnavailable":
+    "Personne introuvable. Demandez un nouveau lien d’invitation.",
   "toast.mediaCall": "Autorisez la caméra et le micro pour appeler.",
   "toast.mediaRoom": "Autorisez la caméra et le micro pour créer la salle.",
   "toast.mediaJoin": "Autorisez la caméra et le micro pour rejoindre la salle.",

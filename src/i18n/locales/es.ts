@@ -20,24 +20,25 @@ export const es: Messages = {
 
   "onboarding.title": "¿Cómo quieres aparecer?",
   "onboarding.subtitle":
-    "Si no pides que te recordemos, generamos una clave nueva en cada visita.",
+    "Si no pides que te recordemos, la próxima vez entras como alguien nuevo.",
   "onboarding.inviteSubtitle":
     "Tienes una invitación. Después del nombre, entramos a la llamada.",
   "onboarding.name": "Nombre",
   "onboarding.namePlaceholder": "ej.: Ana",
   "onboarding.rememberTitle": "Recordar quién soy",
   "onboarding.rememberBody":
-    "Guardamos tu nombre y la clave en este navegador para la próxima visita. Si no, se genera una clave nueva al entrar.",
+    "Guardamos tu nombre en este navegador para la próxima visita. Si no, te presentas de nuevo al entrar.",
   "onboarding.enter": "Entrar",
 
   "home.hello": "Hola, {name}",
   "home.ready": "Listo para llamar.",
-  "home.connecting": "Conectando al broker de PeerJS…",
+  "home.connecting": "Preparando la conexión…",
   "home.switchIdentity": "Cambiar identidad",
   "home.inviteBody":
-    "Inicia una llamada y comparte el enlace. Eres el anfitrión: apruebas quién entra, puedes quitar a alguien y, al salir, eliges entre pasar el anfitrión o terminar para todos.",
+    "Inicia una llamada y comparte el enlace. Quien inicia aprueba quién entra, puede quitar a alguien y, al salir, elige entre pasar el mando de la llamada o terminar para todos.",
   "home.startCall": "Iniciar llamada",
-  "home.disabledConnecting": "Aún conectando al broker. Espera unos segundos.",
+  "home.disabledConnecting":
+    "Aún preparando la conexión. Espera unos segundos.",
   "home.install": "Instalar app",
   "home.installIos":
     "En Safari: toca Compartir y luego Añadir a pantalla de inicio.",
@@ -47,7 +48,7 @@ export const es: Messages = {
   "call.guest": "Llamada",
   "call.connecting": "Conectando…",
   "call.networkHint":
-    "Esta red puede estar bloqueando la llamada P2P. Cambia Wi‑Fi por datos móviles (o al revés) e inténtalo de nuevo.",
+    "Esta red puede estar bloqueando la llamada. Cambia Wi‑Fi por datos móviles (o al revés) e inténtalo de nuevo.",
   "call.inCall": "{count}/{max} en la llamada",
   "call.copyInvite": "Copiar invitación",
   "call.endForEveryone": "Terminar para todos",
@@ -185,7 +186,7 @@ export const es: Messages = {
   "chat.command.codeCopied": "Copiado",
 
   "incoming.title": "Llamada entrante",
-  "incoming.body": "Audio, vídeo y chat P2P.",
+  "incoming.body": "Audio, vídeo y chat.",
   "incoming.reject": "Rechazar",
   "incoming.accept": "Contestar",
 
@@ -194,19 +195,20 @@ export const es: Messages = {
   "quality.proSoon": "Pro pronto — 720p, archivos en el chat y más bitrate",
 
   "error.unavailableId":
-    "Esta clave sigue ocupada en el broker. Recarga en unos segundos.",
-  "error.peerjs": "Fallo de PeerJS",
+    "No se pudo entrar ahora. Recarga en unos segundos.",
+  "error.peerjs": "No se pudo conectar. Inténtalo de nuevo.",
   "error.crashTitle": "Algo se rompió por aquí",
   "error.crashBody":
     "La pantalla falló por un error inesperado. Recargar suele resolverlo; tendrás que rehacer tu llamada.",
   "error.crashReload": "Recargar",
   "error.insecureContext":
-    "Abre por HTTPS o localhost. La cámara y el micrófono no funcionan en este origen.",
+    "Abre el sitio de forma segura (dirección con https). La cámara y el micrófono no funcionan en esta dirección.",
   "toast.networkPath":
-    "No se pudo conectar en esta red. Cambia Wi‑Fi por datos móviles (o al revés) e inténtalo de nuevo — algunas redes bloquean llamadas P2P.",
+    "No se pudo conectar en esta red. Cambia Wi‑Fi por datos móviles (o al revés) e inténtalo de nuevo — algunas redes bloquean este tipo de llamada.",
   "toast.networkPathPeer":
     "No se pudo llegar a {name} en esta red. Cambia Wi‑Fi por datos móviles (o al revés).",
-  "toast.peerUnavailable": "Persona no encontrada. Revisa la clave.",
+  "toast.peerUnavailable":
+    "No encontramos a esa persona. Pide un enlace de invitación nuevo.",
   "toast.mediaCall": "Permite la cámara y el micrófono para llamar.",
   "toast.mediaRoom": "Permite la cámara y el micrófono para crear la sala.",
   "toast.mediaJoin": "Permite la cámara y el micrófono para entrar a la sala.",

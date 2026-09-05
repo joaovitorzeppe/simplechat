@@ -23,7 +23,7 @@ export const privacy: Record<Locale, LegalDocument> = {
       {
         heading: "Dados neste aparelho",
         paragraphs: [
-          "Se você pedir para lembrar quem é, gravamos o nome e a chave neste navegador. Também podemos guardar idioma e tema.",
+          "Se você pedir para lembrar quem é, gravamos o nome neste navegador. Também podemos guardar idioma e tema.",
         ],
       },
       {
@@ -41,7 +41,7 @@ export const privacy: Record<Locale, LegalDocument> = {
       {
         heading: "Identidade",
         paragraphs: [
-          "A chave é um identificador. Ela e o nome chegam às outras pessoas da sala. O nome não vai embutido na chave.",
+          "As outras pessoas da sala veem o nome que você escolheu. Não há cadastro nem documento.",
         ],
       },
       {
@@ -103,7 +103,7 @@ export const privacy: Record<Locale, LegalDocument> = {
       {
         heading: "Data on this device",
         paragraphs: [
-          "If you ask us to remember who you are, we store your name and key in this browser. We may also store language and theme.",
+          "If you ask us to remember who you are, we store your name in this browser. We may also store language and theme.",
         ],
       },
       {
@@ -121,7 +121,7 @@ export const privacy: Record<Locale, LegalDocument> = {
       {
         heading: "Identity",
         paragraphs: [
-          "The key is an identifier. It and your name reach the other people in the room. The name is not embedded in the key.",
+          "Other people in the room see the name you chose. There is no account and no ID document.",
         ],
       },
       {
@@ -183,7 +183,7 @@ export const privacy: Record<Locale, LegalDocument> = {
       {
         heading: "Datos en este dispositivo",
         paragraphs: [
-          "Si pides que recordemos quién eres, guardamos el nombre y la clave en este navegador. También podemos guardar idioma y tema.",
+          "Si pides que recordemos quién eres, guardamos el nombre en este navegador. También podemos guardar idioma y tema.",
         ],
       },
       {
@@ -201,7 +201,7 @@ export const privacy: Record<Locale, LegalDocument> = {
       {
         heading: "Identidad",
         paragraphs: [
-          "La clave es un identificador. Ella y el nombre llegan a las demás personas de la sala. El nombre no va incrustado en la clave.",
+          "Las demás personas de la sala ven el nombre que elegiste. No hay cuenta ni documento de identidad.",
         ],
       },
       {
@@ -263,7 +263,7 @@ export const privacy: Record<Locale, LegalDocument> = {
       {
         heading: "Données sur cet appareil",
         paragraphs: [
-          "Si vous demandez à ce que l’on se souvienne de vous, nous enregistrons le nom et la clé dans ce navigateur. Nous pouvons aussi enregistrer la langue et le thème.",
+          "Si vous demandez à ce que l’on se souvienne de vous, nous enregistrons le nom dans ce navigateur. Nous pouvons aussi enregistrer la langue et le thème.",
         ],
       },
       {
@@ -281,7 +281,7 @@ export const privacy: Record<Locale, LegalDocument> = {
       {
         heading: "Identité",
         paragraphs: [
-          "La clé est un identifiant. Elle et le nom parviennent aux autres personnes de la salle. Le nom n’est pas intégré dans la clé.",
+          "Les autres personnes de la salle voient le nom que vous avez choisi. Il n’y a ni compte ni document d’identité.",
         ],
       },
       {
@@ -343,7 +343,7 @@ export const privacy: Record<Locale, LegalDocument> = {
       {
         heading: "Dati su questo dispositivo",
         paragraphs: [
-          "Se chiedi di ricordare chi sei, salviamo il nome e la chiave in questo browser. Possiamo anche salvare lingua e tema.",
+          "Se chiedi di ricordare chi sei, salviamo il nome in questo browser. Possiamo anche salvare lingua e tema.",
         ],
       },
       {
@@ -361,7 +361,7 @@ export const privacy: Record<Locale, LegalDocument> = {
       {
         heading: "Identità",
         paragraphs: [
-          "La chiave è un identificatore. Essa e il nome arrivano alle altre persone della stanza. Il nome non è incorporato nella chiave.",
+          "Le altre persone della stanza vedono il nome che hai scelto. Non c’è account né documento d’identità.",
         ],
       },
       {

@@ -20,25 +20,25 @@ export const en: Messages = {
 
   "onboarding.title": "How do you want to appear?",
   "onboarding.subtitle":
-    "If you don’t ask us to remember you, we generate a new key on every visit.",
+    "If you don’t ask us to remember you, next time you join as someone new.",
   "onboarding.inviteSubtitle":
     "You have an invite. After your name, we take you into the call.",
   "onboarding.name": "Name",
   "onboarding.namePlaceholder": "e.g. Ana",
   "onboarding.rememberTitle": "Remember who I am",
   "onboarding.rememberBody":
-    "We store your name and key in this browser for the next visit. Otherwise, a new key is generated when you enter.",
+    "We store your name in this browser for the next visit. Otherwise, you introduce yourself again when you enter.",
   "onboarding.enter": "Enter",
 
   "home.hello": "Hi, {name}",
   "home.ready": "Ready to call.",
-  "home.connecting": "Connecting to the PeerJS broker…",
+  "home.connecting": "Getting ready to connect…",
   "home.switchIdentity": "Switch identity",
   "home.inviteBody":
-    "Start a call and share the link. You are the host: you approve who joins, you can remove someone, and when you leave you choose between handing the host over or ending it for everyone.",
+    "Start a call and share the link. Whoever starts approves who joins, can remove someone, and when leaving chooses between handing the call over or ending it for everyone.",
   "home.startCall": "Start call",
   "home.disabledConnecting":
-    "Still connecting to the broker. Wait a few seconds.",
+    "Still getting ready to connect. Wait a few seconds.",
   "home.install": "Install app",
   "home.installIos": "In Safari: tap Share, then Add to Home Screen.",
   "home.simulatePro": "Simulate Pro (this browser only)",
@@ -47,7 +47,7 @@ export const en: Messages = {
   "call.guest": "Call",
   "call.connecting": "Connecting…",
   "call.networkHint":
-    "This network may be blocking the P2P call. Switch Wi‑Fi to mobile data (or the other way around) and try again.",
+    "This network may be blocking the call. Switch Wi‑Fi to mobile data (or the other way around) and try again.",
   "call.inCall": "{count}/{max} in the call",
   "call.copyInvite": "Copy invite",
   "call.endForEveryone": "End for everyone",
@@ -184,7 +184,7 @@ export const en: Messages = {
   "chat.command.codeCopied": "Copied",
 
   "incoming.title": "Incoming call",
-  "incoming.body": "Audio, video and P2P chat.",
+  "incoming.body": "Audio, video and chat.",
   "incoming.reject": "Decline",
   "incoming.accept": "Answer",
 
@@ -193,19 +193,20 @@ export const en: Messages = {
   "quality.proSoon": "Pro coming soon — 720p, chat files and higher bitrate",
 
   "error.unavailableId":
-    "This key is still taken on the broker. Reload in a few seconds.",
-  "error.peerjs": "PeerJS failed",
+    "Could not join right now. Reload in a few seconds.",
+  "error.peerjs": "Could not connect. Try again.",
   "error.crashTitle": "Something broke here",
   "error.crashBody":
     "The screen crashed on an unexpected error. Reloading usually fixes it; you will need to start your call again.",
   "error.crashReload": "Reload",
   "error.insecureContext":
-    "Open this over HTTPS or localhost. Camera and microphone will not work on this origin.",
+    "Open the site securely (an address that starts with https). Camera and microphone will not work on this address.",
   "toast.networkPath":
-    "Could not connect on this network. Switch Wi‑Fi to mobile data (or the other way around) and try again — some networks block P2P calls.",
+    "Could not connect on this network. Switch Wi‑Fi to mobile data (or the other way around) and try again — some networks block this kind of call.",
   "toast.networkPathPeer":
     "Could not reach {name} on this network. Switch Wi‑Fi to mobile data (or the other way around).",
-  "toast.peerUnavailable": "Person not found. Check the key.",
+  "toast.peerUnavailable":
+    "We could not find that person. Ask for a new invite link.",
   "toast.mediaCall": "Allow camera and microphone to call.",
   "toast.mediaRoom": "Allow camera and microphone to create a room.",
   "toast.mediaJoin": "Allow camera and microphone to join the room.",

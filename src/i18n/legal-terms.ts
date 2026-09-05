@@ -16,7 +16,7 @@ export const terms: Record<Locale, LegalDocument> = {
       {
         heading: "Sem cadastro",
         paragraphs: [
-          "Você escolhe um nome. A chave identifica você. “Lembrar quem eu sou” só grava isso neste navegador.",
+          "Você escolhe um nome. “Lembrar quem eu sou” só grava isso neste navegador.",
         ],
       },
       {
@@ -34,7 +34,7 @@ export const terms: Record<Locale, LegalDocument> = {
       {
         heading: "Convites",
         paragraphs: [
-          "Quem tem o link pode tentar entrar. Você inicia a chamada e compartilha o convite depois — a chave não aparece na interface. O host aprova, recusa ou remove. Recusar ou remover gira o segredo da sala; links antigos deixam de valer. Trate o link como senha.",
+          "Quem tem o link pode tentar entrar. Você inicia a chamada e compartilha o convite depois. Quem criou a chamada aprova, recusa ou remove. Recusar ou remover invalida links antigos; só um link novo vale. Trate o link como senha.",
         ],
       },
       {
@@ -77,7 +77,7 @@ export const terms: Record<Locale, LegalDocument> = {
       {
         heading: "No account",
         paragraphs: [
-          "You choose a name. The key identifies you. “Remember who I am” only stores that in this browser.",
+          "You choose a name. “Remember who I am” only stores that in this browser.",
         ],
       },
       {
@@ -95,7 +95,7 @@ export const terms: Record<Locale, LegalDocument> = {
       {
         heading: "Invites",
         paragraphs: [
-          "Anyone with the link can try to join. You start the call and share the invite afterward — the key is not shown in the UI. The host admits, refuses, or removes people. Refusing or removing rotates the room secret; old links stop working. Treat the link like a password.",
+          "Anyone with the link can try to join. You start the call and share the invite afterward. Whoever started the call admits, refuses, or removes people. Refusing or removing invalidates old links; only a new link works. Treat the link like a password.",
         ],
       },
       {
@@ -138,7 +138,7 @@ export const terms: Record<Locale, LegalDocument> = {
       {
         heading: "Sin registro",
         paragraphs: [
-          "Eliges un nombre. La clave te identifica. “Recordar quién soy” solo guarda eso en este navegador.",
+          "Eliges un nombre. “Recordar quién soy” solo guarda eso en este navegador.",
         ],
       },
       {
@@ -156,7 +156,7 @@ export const terms: Record<Locale, LegalDocument> = {
       {
         heading: "Invitaciones",
         paragraphs: [
-          "Quien tiene el enlace puede intentar entrar. Inicias la llamada y compartes la invitación después — la clave no aparece en la interfaz. El anfitrión aprueba, rechaza o quita. Rechazar o quitar rota el secreto de la sala; los enlaces antiguos dejan de valer. Trata el enlace como una contraseña.",
+          "Quien tiene el enlace puede intentar entrar. Inicias la llamada y compartes la invitación después. Quien creó la llamada aprueba, rechaza o quita. Rechazar o quitar invalida los enlaces antiguos; solo vale un enlace nuevo. Trata el enlace como una contraseña.",
         ],
       },
       {
@@ -199,7 +199,7 @@ export const terms: Record<Locale, LegalDocument> = {
       {
         heading: "Pas de compte",
         paragraphs: [
-          "Vous choisissez un nom. La clé vous identifie. « Se souvenir de qui je suis » n’enregistre cela que dans ce navigateur.",
+          "Vous choisissez un nom. « Se souvenir de qui je suis » n’enregistre cela que dans ce navigateur.",
         ],
       },
       {
@@ -217,7 +217,7 @@ export const terms: Record<Locale, LegalDocument> = {
       {
         heading: "Invitations",
         paragraphs: [
-          "Quiconque a le lien peut tenter d’entrer. Vous démarrez l’appel puis partagez l’invitation — la clé n’apparaît pas dans l’interface. L’hôte admet, refuse ou retire. Refuser ou retirer fait tourner le secret de salle ; les anciens liens cessent de valoir. Traitez le lien comme un mot de passe.",
+          "Quiconque a le lien peut tenter d’entrer. Vous démarrez l’appel puis partagez l’invitation. La personne qui a créé l’appel admet, refuse ou retire. Refuser ou retirer invalide les anciens liens ; seul un nouveau lien fonctionne. Traitez le lien comme un mot de passe.",
         ],
       },
       {
@@ -260,7 +260,7 @@ export const terms: Record<Locale, LegalDocument> = {
       {
         heading: "Nessun account",
         paragraphs: [
-          "Scegli un nome. La chiave ti identifica. “Ricorda chi sono” salva solo questo in questo browser.",
+          "Scegli un nome. “Ricorda chi sono” salva solo questo in questo browser.",
         ],
       },
       {
@@ -278,7 +278,7 @@ export const terms: Record<Locale, LegalDocument> = {
       {
         heading: "Inviti",
         paragraphs: [
-          "Chi ha il link può tentare di entrare. Avvii la chiamata e condividi l’invito dopo — la chiave non compare nell’interfaccia. L’host ammette, rifiuta o rimuove. Rifiutare o rimuovere ruota il segreto della stanza; i link vecchi smettono di valere. Tratta il link come una password.",
+          "Chi ha il link può tentare di entrare. Avvii la chiamata e condividi l’invito dopo. Chi ha creato la chiamata ammette, rifiuta o rimuove. Rifiutare o rimuovere invalida i link vecchi; vale solo un link nuovo. Tratta il link come una password.",
         ],
       },
       {
