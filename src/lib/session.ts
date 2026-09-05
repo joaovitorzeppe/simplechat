@@ -641,6 +641,13 @@ export class PeerSession {
           if (!mentions.includes(id)) mentions.push(id);
         }
       }
+      // /me e /moeda mostram @nome — precisa estar em mentions pra pintar.
+      if (
+        (command.command.kind === "emote" || command.command.kind === "coin") &&
+        !mentions.includes(me.peerId)
+      ) {
+        mentions.push(me.peerId);
+      }
       const at = Date.now();
       const message: ChatMessage = {
         id: crypto.randomUUID(),

@@ -1,0 +1,17 @@
+# SimpleChat
+
+> Free browser calls with audio, video, screen share, and text chat. No accounts. You start a call, share an invite link, and talk peer-to-peer in the browser.
+
+SimpleChat runs entirely in the browser. There is no user database and no hosted call recording. Camera, microphone, screen, chat, and files go to the other people in the call. The site is available in Portuguese, English, Spanish, French, and Italian, with light and dark theme.
+
+## Pages
+
+- [Home](https://www.simplechat.me/): Start a call and copy an invite link
+- [Privacy policy](https://www.simplechat.me/privacy): What the site stores and what stays on your device
+- [Terms of use](https://www.simplechat.me/terms): Acceptable use and service limits
+
+## Notes
+
+- Invite links look like `https://www.simplechat.me/?room=…#k=…`. Treat them like passwords.
+- Prefer https://www.simplechat.me over https://simplechat.me (the apex redirects).
+- Do not treat URLs with query strings as public pages; they are private invite or room links.

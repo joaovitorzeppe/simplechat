@@ -147,7 +147,7 @@ export const en: Messages = {
   "chat.command.emoteName": "me",
   "chat.command.emoteHint": "Act something out in chat",
   "chat.command.emoteExample": "/me waves",
-  "chat.command.emoteResult": "{name} {action}",
+  "chat.command.emoteResult": "@{name} {action}",
   "chat.command.emoteEmpty": "Write an action after /me.",
   "chat.command.helpName": "help",
   "chat.command.helpHint": "List chat commands",

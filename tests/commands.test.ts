@@ -522,7 +522,7 @@ describe("formatCommandText", () => {
       "@Ana flipped a coin: heads",
     );
     expect(formatCommandText({ kind: "emote", action: "acena" }, t, "João")).toBe(
-      "João acena",
+      "@João acena",
     );
     expect(formatCommandText({ kind: "timer", ms: 90_000 }, t)).toBe(
       "Timer: 1:30",

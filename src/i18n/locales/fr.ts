@@ -149,7 +149,7 @@ export const fr: Messages = {
   "chat.command.emoteName": "me",
   "chat.command.emoteHint": "Fait une action dans le chat",
   "chat.command.emoteExample": "/me salue",
-  "chat.command.emoteResult": "{name} {action}",
+  "chat.command.emoteResult": "@{name} {action}",
   "chat.command.emoteEmpty": "Écrivez une action après /me.",
   "chat.command.helpName": "aide",
   "chat.command.helpHint": "Liste les commandes du chat",

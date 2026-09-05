@@ -202,6 +202,22 @@ describe("identidade das mensagens", () => {
     expect(message?.mentions).toEqual(["me-1", "all"]);
   });
 
+  it("/me e /moeda incluem o autor nas menções para pintar o @", () => {
+    asGuest();
+    core.roomMembers = [
+      ...core.roomMembers,
+      { peerId: ZECA, displayName: "Zeca" },
+    ];
+    expect(session.sendChat("/me acena para @Zeca")).toBe(true);
+    const emote = core.state.messages.at(-1);
+    expect(emote?.text).toBe("@Eu acena para @Zeca");
+    expect(emote?.mentions).toEqual(expect.arrayContaining([ME, ZECA]));
+    expect(session.sendChat("/moeda")).toBe(true);
+    const coin = core.state.messages.at(-1);
+    expect(coin?.text).toMatch(/^@Eu /);
+    expect(coin?.mentions).toEqual([ME]);
+  });
+
   it("não deixa forjar mensagem como se fosse do próprio usuário", () => {
     asGuest();
     core.onWire(conn(INTRUDER), {
