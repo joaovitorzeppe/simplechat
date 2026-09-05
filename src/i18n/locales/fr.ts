@@ -34,30 +34,15 @@ export const fr: Messages = {
   "home.ready": "Prêt à appeler.",
   "home.connecting": "Connexion au broker PeerJS…",
   "home.switchIdentity": "Changer d’identité",
-  "home.yourKey": "Votre clé",
-  "home.inviteLink": "Lien de votre appel",
-  "home.copy": "Copier",
   "home.inviteBody":
     "Démarrez un appel et partagez le lien. Vous êtes l’hôte : vous approuvez qui entre, vous pouvez retirer quelqu’un et, en partant, vous choisissez entre transmettre le rôle d’hôte ou terminer pour tout le monde.",
   "home.startCall": "Démarrer l’appel",
-  "home.joinTitle": "Rejoindre ou appeler",
-  "home.joinBody":
-    "Appeler sonne quelqu’un qui n’est pas encore en appel : vous êtes l’hôte. S’il a déjà commencé, Appeler rejoint en tant qu’invité. Rejoindre vous ajoute à un appel déjà commencé.",
-  "home.invitePlaceholder": "clé ou lien (?room=)",
-  "home.call": "Appeler",
-  "home.join": "Rejoindre",
   "home.disabledConnecting":
     "Toujours en connexion au broker. Attendez quelques secondes.",
-  "home.disabledNeedInvite": "Collez la clé ou le lien de l’appel.",
   "home.install": "Installer l’app",
   "home.installIos":
     "Dans Safari : appuyez sur Partager, puis sur Ajouter à l’écran d’accueil.",
   "home.simulatePro": "Simuler Pro (ce navigateur uniquement)",
-  "home.recentsTitle": "Récents",
-  "home.recentsBody":
-    "Personnes avec qui vous avez déjà été en appel. Appeler les sonne à nouveau ; une ancienne invitation ne rouvre pas la salle.",
-  "home.recentsCall": "Appeler",
-  "home.recentsForget": "Oublier",
 
   "call.host": "Appel · vous êtes l’hôte",
   "call.guest": "Appel",

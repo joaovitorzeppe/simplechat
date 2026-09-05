@@ -293,7 +293,7 @@ export const Call = () => {
             {invite && (
               <Button
                 variant="secondary"
-                className="hidden text-xs py-1.5 sm:inline-flex"
+                className="text-xs py-1.5"
                 onClick={async () => {
                   await navigator.clipboard.writeText(invite);
                   setCopied(true);
@@ -305,7 +305,7 @@ export const Call = () => {
                 }}
               >
                 {copied ? <CheckIcon /> : <CopyIcon />}
-                {t("call.copyInvite")}
+                <span className="hidden sm:inline">{t("call.copyInvite")}</span>
               </Button>
             )}
             {screenCount >= 2 && (

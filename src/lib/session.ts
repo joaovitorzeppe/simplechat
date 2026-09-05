@@ -1,6 +1,6 @@
 import type { DataConnection, MediaConnection, Peer } from "peerjs";
 import { loadRoomSecret, rotateRoomSecret } from "./identity";
-import { invitePeerId, parseInvite } from "./invite";
+import { parseInvite } from "./invite";
 import {
   applySenderLimits,
   applyTrackConstraints,
@@ -36,7 +36,6 @@ import {
 import { FileBridge } from "./file-transfer";
 import { CONNECT_GIVE_UP_MS, CONNECT_HINT_MS, iceGaveUpKind } from "./ice-path";
 import { acquireLocalMedia, mediaStreamOf } from "./media-access";
-import { rememberPeer } from "./recents";
 import {
   dropMute,
   muteOf,
@@ -419,33 +418,6 @@ export class PeerSession {
     if (me < peerId) this.openMedia(peerId);
   }
 
-  async callPeer(remoteId: string) {
-    const id = invitePeerId(remoteId);
-    if (!id || !this.peer || id === this.state.identity?.peerId) return;
-    try {
-      await this.ensureLocalStream();
-    } catch {
-      this.patch({
-        localStream: this.state.localStream ?? mediaStreamOf([]),
-        cameraOff: true,
-        muted: true,
-      });
-    }
-    const me = this.selfInfo();
-    this.roomMembers = me ? [me] : [];
-    this.joinSecret = null;
-    this.dialedPeerId = id;
-    this.beginCall(true, me?.peerId ?? id);
-    this.openData(id, {
-      type: "hello",
-      ...this.helloPayload(),
-      kind: "room-join",
-    });
-    this.openMedia(id);
-    this.patch({ callStatus: "connecting" });
-    this.armConnectWatch();
-  }
-
   async createRoom() {
     try {
       await this.ensureLocalStream();
@@ -516,7 +488,6 @@ export class PeerSession {
       });
     }
     this.patch({ incoming: null, callStatus: "in-call" });
-    this.rememberContact(incoming.peerId, incoming.displayName);
     this.applyLimitsToAll();
   }
 
@@ -1331,7 +1302,6 @@ export class PeerSession {
         if (peer.peerId === this.state.identity?.peerId) continue;
         this.names.set(peer.peerId, peer.displayName);
         this.upsertRemote(peer.peerId, { displayName: peer.displayName });
-        this.rememberContact(peer.peerId, peer.displayName);
         this.maybeConnect(peer.peerId);
         this.maybeCall(peer.peerId);
       }
@@ -1731,13 +1701,6 @@ export class PeerSession {
     if (!this.roomMembers.some((p) => p.peerId === info.peerId)) {
       this.roomMembers = [...this.roomMembers, info];
     }
-    this.rememberContact(info.peerId, info.displayName);
-  }
-
-  private rememberContact(peerId: string, displayName: string) {
-    const me = this.state.identity?.peerId;
-    if (!me || peerId === me) return;
-    rememberPeer(peerId, displayName);
   }
 
   private offerExistingHost(conn: DataConnection) {

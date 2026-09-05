@@ -34,29 +34,14 @@ export const it: Messages = {
   "home.ready": "Pronto a chiamare.",
   "home.connecting": "Connessione al broker PeerJS…",
   "home.switchIdentity": "Cambia identità",
-  "home.yourKey": "La tua chiave",
-  "home.inviteLink": "Link della tua chiamata",
-  "home.copy": "Copia",
   "home.inviteBody":
     "Avvia una chiamata e condividi il link. Sei l’host: approvi chi entra, puoi rimuovere qualcuno e, uscendo, scegli se passare l’host o chiudere per tutti.",
   "home.startCall": "Avvia chiamata",
-  "home.joinTitle": "Entra o chiama",
-  "home.joinBody":
-    "Chiama avvisa chi non è ancora in una chiamata: sei tu l’host. Se ha già iniziato, Chiama entra come ospite. Entra ti unisce a una chiamata già avviata.",
-  "home.invitePlaceholder": "chiave o link (?room=)",
-  "home.call": "Chiama",
-  "home.join": "Entra",
   "home.disabledConnecting":
     "Ancora in connessione al broker. Aspetta qualche secondo.",
-  "home.disabledNeedInvite": "Incolla la chiave o il link della chiamata.",
   "home.install": "Installa app",
   "home.installIos": "In Safari: tocca Condividi e poi Aggiungi a Home.",
   "home.simulatePro": "Simula Pro (solo in questo browser)",
-  "home.recentsTitle": "Recenti",
-  "home.recentsBody":
-    "Persone con cui sei già stato in una chiamata. Chiama le avvisa di nuovo; un invito vecchio non riapre la stanza.",
-  "home.recentsCall": "Chiama",
-  "home.recentsForget": "Dimentica",
 
   "call.host": "Chiamata · sei l’host",
   "call.guest": "Chiamata",

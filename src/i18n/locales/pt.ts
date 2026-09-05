@@ -32,30 +32,15 @@ export const pt = {
   "home.ready": "Pronto para ligar.",
   "home.connecting": "Conectando ao broker PeerJS…",
   "home.switchIdentity": "Trocar identidade",
-  "home.yourKey": "Sua chave",
-  "home.inviteLink": "Link da sua chamada",
-  "home.copy": "Copiar",
   "home.inviteBody":
     "Inicie uma chamada e compartilhe o link. Você é o host: aprova quem entra, pode remover alguém e, ao sair, escolhe entre passar o host adiante ou encerrar para todos.",
   "home.startCall": "Iniciar chamada",
-  "home.joinTitle": "Entrar ou ligar",
-  "home.joinBody":
-    "Ligar convoca quem ainda não está em chamada: você é o host. Se a pessoa já começou, Ligar entra como convidado. Entrar junta você à chamada que ela já iniciou.",
-  "home.invitePlaceholder": "chave ou link (?room=)",
-  "home.call": "Ligar",
-  "home.join": "Entrar",
   "home.disabledConnecting":
     "Ainda conectando ao broker. Espere alguns segundos.",
-  "home.disabledNeedInvite": "Cole a chave ou o link da chamada.",
   "home.install": "Instalar app",
   "home.installIos":
     "No Safari: toque em Compartilhar e depois em Adicionar à Tela de Início.",
   "home.simulatePro": "Simular Pro (só neste navegador)",
-  "home.recentsTitle": "Recentes",
-  "home.recentsBody":
-    "Pessoas com quem você já esteve numa chamada. Ligar convoca de novo; o convite antigo não reabre a sala.",
-  "home.recentsCall": "Ligar",
-  "home.recentsForget": "Esquecer",
 
   "call.host": "Chamada · você é o host",
   "call.guest": "Chamada",

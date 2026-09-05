@@ -34,29 +34,14 @@ export const es: Messages = {
   "home.ready": "Listo para llamar.",
   "home.connecting": "Conectando al broker de PeerJS…",
   "home.switchIdentity": "Cambiar identidad",
-  "home.yourKey": "Tu clave",
-  "home.inviteLink": "Enlace de tu llamada",
-  "home.copy": "Copiar",
   "home.inviteBody":
     "Inicia una llamada y comparte el enlace. Eres el anfitrión: apruebas quién entra, puedes quitar a alguien y, al salir, eliges entre pasar el anfitrión o terminar para todos.",
   "home.startCall": "Iniciar llamada",
-  "home.joinTitle": "Entrar o llamar",
-  "home.joinBody":
-    "Llamar avisa a quien aún no está en una llamada: tú eres el anfitrión. Si ya empezó, Llamar entra como invitado. Entrar te une a una llamada que ya empezó.",
-  "home.invitePlaceholder": "clave o enlace (?room=)",
-  "home.call": "Llamar",
-  "home.join": "Entrar",
   "home.disabledConnecting": "Aún conectando al broker. Espera unos segundos.",
-  "home.disabledNeedInvite": "Pega la clave o el enlace de la llamada.",
   "home.install": "Instalar app",
   "home.installIos":
     "En Safari: toca Compartir y luego Añadir a pantalla de inicio.",
   "home.simulatePro": "Simular Pro (solo en este navegador)",
-  "home.recentsTitle": "Recientes",
-  "home.recentsBody":
-    "Personas con las que ya estuviste en una llamada. Llamar las avisa de nuevo; la invitación vieja no reabre la sala.",
-  "home.recentsCall": "Llamar",
-  "home.recentsForget": "Olvidar",
 
   "call.host": "Llamada · eres el anfitrión",
   "call.guest": "Llamada",

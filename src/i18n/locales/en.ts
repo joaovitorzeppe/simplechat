@@ -34,29 +34,14 @@ export const en: Messages = {
   "home.ready": "Ready to call.",
   "home.connecting": "Connecting to the PeerJS broker…",
   "home.switchIdentity": "Switch identity",
-  "home.yourKey": "Your key",
-  "home.inviteLink": "Your call link",
-  "home.copy": "Copy",
   "home.inviteBody":
     "Start a call and share the link. You are the host: you approve who joins, you can remove someone, and when you leave you choose between handing the host over or ending it for everyone.",
   "home.startCall": "Start call",
-  "home.joinTitle": "Join or call",
-  "home.joinBody":
-    "Call rings someone who is not in a call yet: you are the host. If they already started, Call joins as a guest. Join puts you in a call they already started.",
-  "home.invitePlaceholder": "key or link (?room=)",
-  "home.call": "Call",
-  "home.join": "Join",
   "home.disabledConnecting":
     "Still connecting to the broker. Wait a few seconds.",
-  "home.disabledNeedInvite": "Paste the call key or link.",
   "home.install": "Install app",
   "home.installIos": "In Safari: tap Share, then Add to Home Screen.",
   "home.simulatePro": "Simulate Pro (this browser only)",
-  "home.recentsTitle": "Recent",
-  "home.recentsBody":
-    "People you already shared a call with. Call rings them again; an old invite will not reopen the room.",
-  "home.recentsCall": "Call",
-  "home.recentsForget": "Forget",
 
   "call.host": "Call · you are the host",
   "call.guest": "Call",
