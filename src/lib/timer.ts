@@ -2,8 +2,8 @@ import type { ChatMessage } from "./types";
 
 export type TimerState =
   | { status: "running"; endsAt: number }
-  | { status: "paused"; remainingMs: number }
-  | { status: "cancelled" };
+  | { status: "paused"; remainingMs: number; byHost?: true }
+  | { status: "cancelled"; byHost?: true };
 
 export type TimerAction = "pause" | "resume" | "cancel";
 
@@ -59,4 +59,22 @@ export const applyTimerAction = (
   if (state.status === "cancelled") return null;
   if (state.status === "running" && state.endsAt <= now) return null;
   return { status: "cancelled" };
+};
+
+/** Quem controlou: byHost vem do actor, não do payload do fio. */
+export const stampTimerActor = (
+  state: TimerState,
+  byHost: boolean,
+): TimerState => {
+  if (state.status === "paused") {
+    return byHost
+      ? { status: "paused", remainingMs: state.remainingMs, byHost: true }
+      : { status: "paused", remainingMs: state.remainingMs };
+  }
+  if (state.status === "cancelled") {
+    return byHost
+      ? { status: "cancelled", byHost: true }
+      : { status: "cancelled" };
+  }
+  return { status: "running", endsAt: state.endsAt };
 };

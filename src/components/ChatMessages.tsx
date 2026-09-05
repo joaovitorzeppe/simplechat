@@ -264,7 +264,11 @@ const TimerCard = ({
 
   const label =
     state.status === "cancelled"
-      ? t("chat.command.timerCancelled")
+      ? t(
+          state.byHost
+            ? "chat.command.timerCancelledByHost"
+            : "chat.command.timerCancelled",
+        )
       : left <= 0
         ? t("chat.command.timerEnded")
         : formatTimerClock(left);
@@ -282,7 +286,11 @@ const TimerCard = ({
       </p>
       {state.status === "paused" && left > 0 && (
         <p className="text-center text-[11px] text-amber-200/80">
-          {t("chat.command.timerPaused")}
+          {t(
+            state.byHost
+              ? "chat.command.timerPausedByHost"
+              : "chat.command.timerPaused",
+          )}
         </p>
       )}
       {canControl && (

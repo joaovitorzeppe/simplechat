@@ -5,6 +5,7 @@ import {
   hasActiveTimer,
   initialTimerState,
   isTimerActive,
+  stampTimerActor,
   timerRemaining,
 } from "@libs/timer";
 import type { ChatMessage } from "@libs/types";
@@ -45,6 +46,25 @@ describe("timer", () => {
       status: "cancelled",
     });
     expect(applyTimerAction(running, "resume", 1_000)).toBeNull();
+  });
+
+  it("marca byHost quando o host controla", () => {
+    const paused = stampTimerActor(
+      { status: "paused", remainingMs: 3_000 },
+      true,
+    );
+    expect(paused).toEqual({
+      status: "paused",
+      remainingMs: 3_000,
+      byHost: true,
+    });
+    expect(stampTimerActor({ status: "cancelled" }, true)).toEqual({
+      status: "cancelled",
+      byHost: true,
+    });
+    expect(stampTimerActor({ status: "cancelled", byHost: true }, false)).toEqual(
+      { status: "cancelled" },
+    );
   });
 
   it("só autor e host controlam", () => {

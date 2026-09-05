@@ -1037,13 +1037,17 @@ describe("timer e voto no chat", () => {
     expect(core.state.messages.at(-1)?.timer).toEqual({
       status: "paused",
       remainingMs: 4_000,
+      byHost: true,
     });
     core.onWire(conn(HOST), {
       type: "timer-control",
       id: "t-shared",
       timer: { status: "cancelled" },
     });
-    expect(core.state.messages.at(-1)?.timer).toEqual({ status: "cancelled" });
+    expect(core.state.messages.at(-1)?.timer).toEqual({
+      status: "cancelled",
+      byHost: true,
+    });
   });
 
   it("host cancela timer de outra pessoa; convidado estranho não", () => {
@@ -1076,7 +1080,10 @@ describe("timer e voto no chat", () => {
       ],
     });
     session.controlTimer("t-guest", "cancel");
-    expect(core.state.messages.at(-1)?.timer).toEqual({ status: "cancelled" });
+    expect(core.state.messages.at(-1)?.timer).toEqual({
+      status: "cancelled",
+      byHost: true,
+    });
     vi.useRealTimers();
   });
 

@@ -27,6 +27,7 @@ import {
   hasActiveTimer,
   initialTimerState,
   resolveTimerState,
+  stampTimerActor,
   type TimerAction,
   type TimerState,
 } from "./timer";
@@ -1612,9 +1613,13 @@ export class PeerSession {
     }
     const current = resolveTimerState(message);
     if (!current) return null;
-    const next =
+    const raw =
       remoteTimer ?? (action ? applyTimerAction(current, action, now) : null);
-    if (!next) return null;
+    if (!raw) return null;
+    const next = stampTimerActor(
+      raw,
+      !!this.state.hostPeerId && actorId === this.state.hostPeerId,
+    );
     if (
       current.status === next.status &&
       ((current.status === "running" &&
@@ -1622,8 +1627,11 @@ export class PeerSession {
         current.endsAt === next.endsAt) ||
         (current.status === "paused" &&
           next.status === "paused" &&
-          current.remainingMs === next.remainingMs) ||
-        current.status === "cancelled")
+          current.remainingMs === next.remainingMs &&
+          !!current.byHost === !!next.byHost) ||
+        (current.status === "cancelled" &&
+          next.status === "cancelled" &&
+          !!current.byHost === !!next.byHost))
     ) {
       return null;
     }

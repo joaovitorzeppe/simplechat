@@ -513,11 +513,18 @@ export const parseWire = (raw: unknown): WireMessage | null => {
 
 const parseTimerState = (value: unknown): TimerState | null => {
   if (!isRecord(value) || typeof value.status !== "string") return null;
-  if (value.status === "cancelled") return { status: "cancelled" };
+  const byHost = value.byHost === true ? (true as const) : undefined;
+  if (value.status === "cancelled") {
+    return byHost
+      ? { status: "cancelled", byHost }
+      : { status: "cancelled" };
+  }
   if (value.status === "paused") {
     const remainingMs = int(value.remainingMs, 0, MAX_TIMER_MS);
     if (remainingMs === null) return null;
-    return { status: "paused", remainingMs };
+    return byHost
+      ? { status: "paused", remainingMs, byHost }
+      : { status: "paused", remainingMs };
   }
   if (value.status === "running") {
     const endsAt = timestamp(value.endsAt);
