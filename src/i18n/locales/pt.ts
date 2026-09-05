@@ -40,7 +40,6 @@ export const pt = {
   "home.install": "Instalar app",
   "home.installIos":
     "No Safari: toque em Compartilhar e depois em Adicionar à Tela de Início.",
-  "home.simulatePro": "Simular Pro (só neste navegador)",
 
   "call.host": "Chamada · você é o host",
   "call.guest": "Chamada",
@@ -104,7 +103,6 @@ export const pt = {
   "chat.linkCancel": "Cancelar",
   "chat.linkOpen": "Abrir mesmo assim",
   "chat.attach": "Enviar arquivo",
-  "chat.attachPro": "Enviar arquivo é um recurso Pro",
   "chat.download": "Baixar",
   "chat.fileSending": "Enviando…",
   "chat.fileReceiving": "Recebendo…",
@@ -188,10 +186,6 @@ export const pt = {
   "incoming.reject": "Recusar",
   "incoming.accept": "Atender",
 
-  "quality.pro": "Qualidade Pro (demo)",
-  "quality.free": "Qualidade gratuita",
-  "quality.proSoon": "Pro em breve — 720p, arquivos no chat e mais bitrate",
-
   "error.unavailableId":
     "Não foi possível entrar agora. Recarregue em alguns segundos.",
   "error.peerjs": "Não foi possível conectar. Tente de novo.",
@@ -226,8 +220,6 @@ export const pt = {
   "toast.mediaListenOnly":
     "Entrou sem câmera e microfone. Você ouve e usa o chat.",
   "toast.fileTooBig": "Arquivo acima de {max} MB.",
-  "toast.fileTooBigPro": "Arquivo acima de 100 MB (plano Pro).",
-  "toast.fileProOnly": "Enviar arquivo é um recurso Pro.",
   "toast.fileFailed": "Não foi possível enviar ou receber o arquivo.",
   "toast.fileBusy": "Espere o arquivo atual terminar de enviar.",
   "toast.filePartial":

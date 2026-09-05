@@ -1,16 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Button } from "@components/Button";
 import { DownloadIcon } from "@components/Icons";
 import { LanguageSwitcher } from "@components/LanguageSwitcher";
 import { LegalLinks } from "@components/LegalLinks";
-import { QualityBadge } from "@components/QualityBadge";
 import { ThemeToggle } from "@components/ThemeToggle";
 import { useI18n } from "@i18n/use-i18n";
 import { clearIdentity } from "@libs/identity";
 import { deepLinkJoinArg } from "@libs/invite";
 import { useInstallPrompt } from "@libs/pwa";
-import { currentTier, setDemoTier } from "@libs/quality";
-import { isDev } from "@libs/env";
 import { showToast } from "@libs/toast";
 import { useSession } from "@libs/use-session";
 
@@ -21,7 +18,6 @@ export const Home = () => {
   const { t } = useI18n();
   const { state, session } = useSession();
   const { canInstall, showIosHelp, install } = useInstallPrompt();
-  const [tier, setTier] = useState(currentTier());
 
   const myId = state.identity?.peerId ?? "";
 
@@ -100,25 +96,6 @@ export const Home = () => {
             {t("home.startCall")}
           </Button>
         </section>
-
-        {isDev && (
-          <section className="rounded-3xl border border-line bg-panel p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <QualityBadge />
-            <label className="flex items-center gap-2 text-sm text-zinc-400">
-              <input
-                type="checkbox"
-                checked={tier === "pro"}
-                onChange={(e) => {
-                  const next = e.target.checked ? "pro" : "free";
-                  setDemoTier(next);
-                  setTier(next);
-                  void session.reapplyQuality();
-                }}
-              />
-              {t("home.simulatePro")}
-            </label>
-          </section>
-        )}
 
         <LegalLinks />
       </div>

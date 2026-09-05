@@ -1,59 +1,26 @@
-import type { QualityTier } from "./types";
-import { isDev } from "./env";
-
-const DEMO_KEY = "simplechat.demoTier";
-
 export type MediaKind = "camera" | "screen";
 
-export type TierLimits = {
+export type MediaLimits = {
   width: number;
   height: number;
   frameRate: number;
   maxBitrate: number;
 };
 
-export const TIERS: Record<QualityTier, Record<MediaKind, TierLimits>> = {
-  free: {
-    camera: { width: 640, height: 480, frameRate: 15, maxBitrate: 400_000 },
-    screen: { width: 1280, height: 720, frameRate: 15, maxBitrate: 800_000 },
-  },
-  pro: {
-    camera: { width: 1280, height: 720, frameRate: 30, maxBitrate: 2_500_000 },
-    screen: { width: 1920, height: 1080, frameRate: 30, maxBitrate: 4_000_000 },
-  },
+/** Limites únicos do app. */
+export const LIMITS: Record<MediaKind, MediaLimits> = {
+  camera: { width: 1280, height: 720, frameRate: 30, maxBitrate: 2_500_000 },
+  screen: { width: 1920, height: 1080, frameRate: 30, maxBitrate: 4_000_000 },
 };
 
-export const MAX_PARTICIPANTS: Record<QualityTier, number> = {
-  free: 5,
-  pro: 12,
-};
+export const MAX_PARTICIPANTS = 12;
+export const MAX_FILE_BYTES = 100 * 1024 * 1024;
 
-export const MAX_FILE_BYTES: Record<QualityTier, number> = {
-  free: 10 * 1024 * 1024,
-  pro: 100 * 1024 * 1024,
-};
+export const maxParticipants = () => MAX_PARTICIPANTS;
+export const maxFileBytes = () => MAX_FILE_BYTES;
 
-export const currentTier = (): QualityTier => {
-  if (!isDev) return "free";
-  return localStorage.getItem(DEMO_KEY) === "pro" ? "pro" : "free";
-};
-
-export const setDemoTier = (tier: QualityTier) => {
-  if (!isDev) return;
-  localStorage.setItem(DEMO_KEY, tier);
-};
-
-export const maxParticipants = () => MAX_PARTICIPANTS[currentTier()];
-
-export const maxFileBytes = () => MAX_FILE_BYTES[currentTier()];
-
-/** Envio liberado em todos os tiers; o teto é `maxFileBytes()`. */
-export const canSendFiles = () => true;
-
-export const getCameraConstraints = (
-  tier: QualityTier,
-): MediaStreamConstraints => {
-  const t = TIERS[tier].camera;
+export const getCameraConstraints = (): MediaStreamConstraints => {
+  const t = LIMITS.camera;
   return {
     audio: {
       echoCancellation: true,
@@ -67,10 +34,8 @@ export const getCameraConstraints = (
   };
 };
 
-export const getDisplayConstraints = (
-  tier: QualityTier,
-): DisplayMediaStreamOptions => {
-  const t = TIERS[tier].screen;
+export const getDisplayConstraints = (): DisplayMediaStreamOptions => {
+  const t = LIMITS.screen;
   return {
     audio: false,
     video: {
@@ -84,9 +49,8 @@ export const getDisplayConstraints = (
 export const applyTrackConstraints = async (
   stream: MediaStream,
   kind: MediaKind,
-  tier: QualityTier,
 ) => {
-  const t = TIERS[tier][kind];
+  const t = LIMITS[kind];
   const video = stream.getVideoTracks()[0];
   if (!video) return;
   try {
@@ -103,10 +67,9 @@ export const applyTrackConstraints = async (
 export const applySenderLimits = async (
   sender: RTCRtpSender,
   kind: MediaKind,
-  tier: QualityTier,
 ) => {
   if (sender.track?.kind !== "video") return;
-  const bitrate = TIERS[tier][kind].maxBitrate;
+  const bitrate = LIMITS[kind].maxBitrate;
   try {
     const params = sender.getParameters();
     if (!params.encodings || params.encodings.length === 0) {

@@ -43,20 +43,18 @@ Toda chamada é uma sala em mesh. Quem inicia é o **host**; quem entra é convi
   - `/voto pizza, sushi` — votação clicável (2 a 12 opções). Dá para trocar de opção. O voto no fio é `poll-vote`; a identidade vem da conexão, não do payload.
 - **Arquivo:** clipe no chat. Vai P2P no data channel, em pedaços. A montagem e a leitura das fatias rodam num worker (com fallback na thread da UI). Imagens (jpeg/png/gif/webp) têm prévia; o resto só baixa. Some ao sair da chamada.
 
-## Limites do plano
+## Limites
 
-O host aplica o teto de **pessoas** do plano dele. **Enviar arquivo** tem teto por quem manda (`quality.ts`); qualquer um na sala pode receber (até o limite Pro do fio):
+Tetos únicos para todo mundo (`quality.ts`):
 
-|                 | Free                         | Pro (demo)                   |
-| --------------- | ---------------------------- | ---------------------------- |
-| Pessoas         | 5                            | 12                           |
-| Arquivo no chat | envia até 10 MB              | envia até 100 MB             |
-| Câmera          | 640×480 @ 15 fps, ~400 kbps  | 1280×720 @ 30 fps, ~2.5 Mbps |
-| Tela            | 1280×720 @ 15 fps, ~800 kbps | 1920×1080 @ 30 fps, ~4 Mbps  |
+|                 | Valor                        |
+| --------------- | ---------------------------- |
+| Pessoas         | 12                           |
+| Arquivo no chat | até 100 MB                   |
+| Câmera          | 1280×720 @ 30 fps, ~2.5 Mbps |
+| Tela            | 1920×1080 @ 30 fps, ~4 Mbps  |
 
-O 6º no free recebe toast de sala cheia e volta para a home, sem derrubar a chamada. O toggle **Simular Pro** no `localStorage` só demonstra o tier — não há pagamento.
-
-Num app só frontend o paywall é burável (o JS roda no navegador). A UI mostra “qualidade gratuita” e “Pro em breve”.
+O 13º recebe toast de sala cheia e volta para a home, sem derrubar a chamada.
 
 Isso usa `getUserMedia` / `getDisplayMedia` e `RTCRtpSender.setParameters({ encodings: [{ maxBitrate }] })`.
 
@@ -103,7 +101,7 @@ As fontes embutidas (Outfit e IBM Plex Mono) cobrem só latino e latino estendid
 
 ## Fase 2 (fora deste MVP)
 
-- Stripe/Lemon Squeezy + custom claim para liberar o tier Pro de verdade.
+- Abrir o código (open source) e, depois, doações via Ko-fi (quando a conta estiver pronta).
 - TURN (Metered, Open Relay ou coturn) para NAT difícil — o código já lê as variáveis; faltam as credenciais.
 - SFU se salas passarem do que o mesh aguenta.
 

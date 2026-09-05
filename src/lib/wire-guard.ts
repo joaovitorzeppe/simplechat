@@ -33,7 +33,7 @@ export const MAX_MIME = 120;
 export const MAX_FILE_NAME = 260;
 export const MAX_TRANSFER_ID = 64;
 export const MAX_ROOM_SECRET = 64;
-export const MAX_PEERS = MAX_PARTICIPANTS.pro;
+export const MAX_PEERS = MAX_PARTICIPANTS;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null;
@@ -469,7 +469,7 @@ export const parseWire = (raw: unknown): WireMessage | null => {
       const id = str(raw.id, MAX_TRANSFER_ID);
       const name = str(raw.name, MAX_FILE_NAME);
       const mime = str(raw.mime, MAX_MIME);
-      const size = int(raw.size, 1, MAX_FILE_BYTES.pro);
+      const size = int(raw.size, 1, MAX_FILE_BYTES);
       const fromPeerId = str(raw.fromPeerId, MAX_PEER_ID);
       const fromName = str(raw.fromName, MAX_DISPLAY_NAME);
       const at = timestamp(raw.at);

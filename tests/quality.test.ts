@@ -1,29 +1,27 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  canSendFiles,
-  currentTier,
+  LIMITS,
+  MAX_FILE_BYTES,
+  MAX_PARTICIPANTS,
   maxFileBytes,
-  setDemoTier,
+  maxParticipants,
 } from "@libs/quality";
 
-describe("planos", () => {
-  afterEach(() => {
-    localStorage.removeItem("simplechat.demoTier");
-  });
-
-  it("permite envio de arquivo em qualquer plano", () => {
-    setDemoTier("free");
-    expect(canSendFiles()).toBe(true);
-  });
-
-  it("limita arquivos gratuitos a 10 MB", () => {
-    setDemoTier("free");
-    expect(currentTier()).toBe("free");
-    expect(maxFileBytes()).toBe(10 * 1024 * 1024);
-  });
-
-  it("mantém 100 MB no plano Pro de desenvolvimento", () => {
-    setDemoTier("pro");
+describe("limites", () => {
+  it("usa o teto único do sistema", () => {
+    expect(MAX_PARTICIPANTS).toBe(12);
+    expect(MAX_FILE_BYTES).toBe(100 * 1024 * 1024);
+    expect(maxParticipants()).toBe(12);
     expect(maxFileBytes()).toBe(100 * 1024 * 1024);
+    expect(LIMITS.camera).toMatchObject({
+      width: 1280,
+      height: 720,
+      frameRate: 30,
+    });
+    expect(LIMITS.screen).toMatchObject({
+      width: 1920,
+      height: 1080,
+      frameRate: 30,
+    });
   });
 });

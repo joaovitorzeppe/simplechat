@@ -8,6 +8,12 @@ O formato segue a ideia de [Keep a Changelog](https://keepachangelog.com/pt-BR/1
 
 Tudo o que entrou depois do primeiro CHANGELOG.
 
+### Open source e limites únicos
+
+- Removidos plano Free/Pro, toggle “Simular Pro”, badge de qualidade e chaves i18n ligadas a paywall.
+- Limites antigos do Pro passam a ser o padrão para todos: 12 pessoas, arquivo até 100 MB, câmera 720p @ 30 fps, tela 1080p @ 30 fps.
+- Direção: projeto open source; doações (Ko-fi) ficam para depois, quando a conta estiver pronta.
+
 ### Fluxo da home e convite
 
 - Home só com **Iniciar chamada**. Removidos chave/link próprios na UI, Ligar/Entrar por chave e a lista de Recentes (`recents` e `callPeer` saíram).
@@ -34,7 +40,7 @@ Auditoria do stack P2P (segurança, CPU/memória, bugs). Altos e médios fechado
 - **Segredo da sala:** sai do `metadata` do PeerJS (não ia para o broker); continua só no hello do data channel e em `room-peers`. Abrir sala (`createRoom`) gira o segredo — convite antigo morre.
 - **Call:** um `ChatPanel` (overlay só no mobile); `useSessionSelector` + `CallStage`/`CallChatDock`; `patch` no-op e `upsertRemote` sem reavisar se nada mudou.
 - **Speak-level:** um `SpeakBus` (rAF único) em vez de analyser por tile.
-- **Arquivos:** finish do OPFS devolve o `File` do disco (sem `arrayBuffer` completo) e `release` na revoke; envio com concurrency 3; se alguém cai no meio, toast `filePartial`; free envia até 10 MB, Pro até 100 MB (receber no teto Pro continua intencional).
+- **Arquivos:** finish do OPFS devolve o `File` do disco (sem `arrayBuffer` completo) e `release` na revoke; envio com concurrency 3; se alguém cai no meio, toast `filePartial`; envio até 100 MB.
 - **SW:** cache `simplechat-v2`; assets `/assets/*` hashed são network-only (não acumulam).
 - **Chat hostil:** cooldown por peer, toast de `@` coalescido, teto de timers ativos; `displayName` do metadata de call passa por `clampDisplayName`.
 - **Mídia/UI:** `video.play()` após `srcObject`; handlers estáveis no `VideoTile` (`peerId` + métodos da sessão); `NotAllowedError` para a cascata do `getUserMedia`; timeouts de “copiado” limpos no unmount.
@@ -90,7 +96,7 @@ Commits: `845b1ee`, `01ca868`, `a56b288`.
 Commits: `872b2f8`, `395ac4c`, `2732ee2`, `1f4e155`.
 
 - Links no chat viram texto clicável. Antes de abrir, um aviso mostra o endereço com Cancelar ou Abrir em nova aba.
-- Arquivos no chat via data channel P2P. **Free envia até 10 MB**, Pro até 100 MB; qualquer um na sala pode receber (até o teto Pro do fio). Preview de jpeg/png/gif/webp; o resto só baixa. Some ao sair da chamada.
+- Arquivos no chat via data channel P2P. Envio até **100 MB**. Preview de jpeg/png/gif/webp; o resto só baixa. Some ao sair da chamada.
 - Leitura e montagem das fatias no worker (fallback na UI). Com OPFS, os bytes recebidos vão para o disco do origin durante a transferência.
 - Quando alguém sai, os outros veem toast e uma linha no chat com o nome.
 - Menções no chat: `@` depois de espaço abre o seletor (roster + `@all`). O fio leva `peerId` (ou `"all"`), não o nome. E-mails não disparam o picker. Quem foi marcado vê a bolha em destaque e um toast; quem enviou, não.

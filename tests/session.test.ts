@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { electHost, PeerSession, type SessionState } from "@libs/session";
-import { setDemoTier } from "@libs/quality";
 import { getToast } from "@libs/toast";
 import type { PeerInfo, RemotePeer, WireMessage } from "@libs/types";
 
@@ -926,33 +925,19 @@ describe("falha de caminho ICE", () => {
 });
 
 describe("envio de arquivo", () => {
-  afterEach(() => {
-    setDemoTier("free");
-  });
-
-  it("aceita envio no plano gratuito até 10 MB", async () => {
-    setDemoTier("free");
+  it("aceita envio até o limite", async () => {
     asHost();
     await session.sendFile(new File(["ok"], "a.txt", { type: "text/plain" }));
     expect(core.state.messages.at(-1)?.file?.name).toBe("a.txt");
     expect(core.state.messages.at(-1)?.file?.status).toBe("ready");
   });
 
-  it("recusa arquivo acima do limite gratuito", async () => {
-    setDemoTier("free");
+  it("recusa arquivo acima do limite", async () => {
     asHost();
-    const big = new File([new Uint8Array(10 * 1024 * 1024 + 1)], "big.bin");
+    const big = new File([new Uint8Array(100 * 1024 * 1024 + 1)], "big.bin");
     await session.sendFile(big);
     expect(getToast()?.key).toBe("toast.fileTooBig");
     expect(core.state.messages).toHaveLength(0);
-  });
-
-  it("aceita envio no plano Pro", async () => {
-    setDemoTier("pro");
-    asHost();
-    await session.sendFile(new File(["ok"], "a.txt", { type: "text/plain" }));
-    expect(core.state.messages.at(-1)?.file?.name).toBe("a.txt");
-    expect(core.state.messages.at(-1)?.file?.status).toBe("ready");
   });
 });
 

@@ -372,8 +372,8 @@ describe("parseWire", () => {
   });
 
   it("rejeita file-start acima do teto absoluto", () => {
-    expect(parseWire(fileStart(MAX_FILE_BYTES.pro))).not.toBeNull();
-    expect(parseWire(fileStart(MAX_FILE_BYTES.pro + 1))).toBeNull();
+    expect(parseWire(fileStart(MAX_FILE_BYTES))).not.toBeNull();
+    expect(parseWire(fileStart(MAX_FILE_BYTES + 1))).toBeNull();
     expect(parseWire(fileStart(0))).toBeNull();
     expect(parseWire(fileStart(-5))).toBeNull();
     expect(parseWire(fileStart(1.5))).toBeNull();

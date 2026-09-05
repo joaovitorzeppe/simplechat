@@ -15,7 +15,6 @@ import {
 import { HostLeaveDialog } from "@components/HostLeaveDialog";
 import { LanguageSwitcher } from "@components/LanguageSwitcher";
 import { Lobby } from "@components/Lobby";
-import { QualityBadge } from "@components/QualityBadge";
 import { ThemeToggle } from "@components/ThemeToggle";
 import { VideoTile } from "@components/VideoTile";
 import { useI18n } from "@i18n/use-i18n";
@@ -23,7 +22,6 @@ import { cn } from "@libs/cn";
 import { inviteLink } from "@libs/invite";
 import { canShareScreen } from "@libs/media-access";
 import { maxParticipants } from "@libs/quality";
-import { isDev } from "@libs/env";
 import { muteOf } from "@libs/mutes";
 import { screenStageKind } from "@libs/screen-layout";
 import { electHost, session } from "@libs/session";
@@ -365,7 +363,6 @@ export const Call = () => {
                 </span>
               </Button>
             )}
-            {isDev && <QualityBadge compact className="hidden sm:flex" />}
           </div>
         </header>
         {state.pathHint && (

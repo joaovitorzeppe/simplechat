@@ -41,8 +41,6 @@ export const en: Messages = {
     "Still getting ready to connect. Wait a few seconds.",
   "home.install": "Install app",
   "home.installIos": "In Safari: tap Share, then Add to Home Screen.",
-  "home.simulatePro": "Simulate Pro (this browser only)",
-
   "call.host": "Call · you are the host",
   "call.guest": "Call",
   "call.connecting": "Connecting…",
@@ -105,7 +103,6 @@ export const en: Messages = {
   "chat.linkCancel": "Cancel",
   "chat.linkOpen": "Open anyway",
   "chat.attach": "Send file",
-  "chat.attachPro": "Sending files is a Pro feature",
   "chat.download": "Download",
   "chat.fileSending": "Sending…",
   "chat.fileReceiving": "Receiving…",
@@ -190,10 +187,6 @@ export const en: Messages = {
   "incoming.reject": "Decline",
   "incoming.accept": "Answer",
 
-  "quality.pro": "Pro quality (demo)",
-  "quality.free": "Free quality",
-  "quality.proSoon": "Pro coming soon — 720p, chat files and higher bitrate",
-
   "error.unavailableId":
     "Could not join right now. Reload in a few seconds.",
   "error.peerjs": "Could not connect. Try again.",
@@ -229,8 +222,6 @@ export const en: Messages = {
   "toast.mediaListenOnly":
     "Joined without camera or microphone. You can listen and use chat.",
   "toast.fileTooBig": "File is over {max} MB.",
-  "toast.fileTooBigPro": "File is over 100 MB (Pro plan).",
-  "toast.fileProOnly": "Sending files is a Pro feature.",
   "toast.fileFailed": "Could not send or receive the file.",
   "toast.fileBusy": "Wait for the current file to finish sending.",
   "toast.filePartial":

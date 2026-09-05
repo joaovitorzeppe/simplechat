@@ -41,8 +41,6 @@ export const it: Messages = {
     "Ancora in preparazione della connessione. Aspetta qualche secondo.",
   "home.install": "Installa app",
   "home.installIos": "In Safari: tocca Condividi e poi Aggiungi a Home.",
-  "home.simulatePro": "Simula Pro (solo in questo browser)",
-
   "call.host": "Chiamata · sei l’host",
   "call.guest": "Chiamata",
   "call.connecting": "Connessione…",
@@ -105,7 +103,6 @@ export const it: Messages = {
   "chat.linkCancel": "Annulla",
   "chat.linkOpen": "Apri comunque",
   "chat.attach": "Invia file",
-  "chat.attachPro": "Inviare file è una funzione Pro",
   "chat.download": "Scarica",
   "chat.fileSending": "Invio…",
   "chat.fileReceiving": "Ricezione…",
@@ -191,10 +188,6 @@ export const it: Messages = {
   "incoming.reject": "Rifiuta",
   "incoming.accept": "Rispondi",
 
-  "quality.pro": "Qualità Pro (demo)",
-  "quality.free": "Qualità gratuita",
-  "quality.proSoon": "Pro in arrivo — 720p, file in chat e più bitrate",
-
   "error.unavailableId":
     "Non è stato possibile entrare ora. Ricarica tra qualche secondo.",
   "error.peerjs": "Non è stato possibile connettersi. Riprova.",
@@ -230,8 +223,6 @@ export const it: Messages = {
   "toast.mediaListenOnly":
     "Sei entrato senza fotocamera né microfono. Puoi ascoltare e usare la chat.",
   "toast.fileTooBig": "File sopra i {max} MB.",
-  "toast.fileTooBigPro": "File sopra i 100 MB (piano Pro).",
-  "toast.fileProOnly": "Inviare file è una funzione Pro.",
   "toast.fileFailed": "Impossibile inviare o ricevere il file.",
   "toast.fileBusy": "Aspetta che finisca l’invio in corso.",
   "toast.filePartial":

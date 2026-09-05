@@ -42,8 +42,6 @@ export const fr: Messages = {
   "home.install": "Installer l’app",
   "home.installIos":
     "Dans Safari : appuyez sur Partager, puis sur Ajouter à l’écran d’accueil.",
-  "home.simulatePro": "Simuler Pro (ce navigateur uniquement)",
-
   "call.host": "Appel · vous êtes l’hôte",
   "call.guest": "Appel",
   "call.connecting": "Connexion…",
@@ -106,7 +104,6 @@ export const fr: Messages = {
   "chat.linkCancel": "Annuler",
   "chat.linkOpen": "Ouvrir quand même",
   "chat.attach": "Envoyer un fichier",
-  "chat.attachPro": "L’envoi de fichiers est une fonction Pro",
   "chat.download": "Télécharger",
   "chat.fileSending": "Envoi…",
   "chat.fileReceiving": "Réception…",
@@ -192,11 +189,6 @@ export const fr: Messages = {
   "incoming.reject": "Refuser",
   "incoming.accept": "Répondre",
 
-  "quality.pro": "Qualité Pro (démo)",
-  "quality.free": "Qualité gratuite",
-  "quality.proSoon":
-    "Pro bientôt — 720p, fichiers dans le chat et plus de bitrate",
-
   "error.unavailableId":
     "Impossible d’entrer pour le moment. Rechargez dans quelques secondes.",
   "error.peerjs": "Impossible de se connecter. Réessayez.",
@@ -232,8 +224,6 @@ export const fr: Messages = {
   "toast.mediaListenOnly":
     "Entrée sans caméra ni micro. Vous pouvez écouter et utiliser le chat.",
   "toast.fileTooBig": "Fichier supérieur à {max} Mo.",
-  "toast.fileTooBigPro": "Fichier supérieur à 100 Mo (offre Pro).",
-  "toast.fileProOnly": "L’envoi de fichiers est une fonction Pro.",
   "toast.fileFailed": "Impossible d’envoyer ou de recevoir le fichier.",
   "toast.fileBusy": "Attendez la fin de l’envoi en cours.",
   "toast.filePartial":

@@ -4,7 +4,6 @@ import { clearInviteLocation, parseInvite } from "./invite";
 import {
   applySenderLimits,
   applyTrackConstraints,
-  currentTier,
   getCameraConstraints,
   getDisplayConstraints,
   maxFileBytes,
@@ -836,11 +835,10 @@ export class PeerSession {
       await this.stopScreenShare();
       return;
     }
-    const tier = currentTier();
     let display: MediaStream;
     try {
       display = await navigator.mediaDevices.getDisplayMedia(
-        getDisplayConstraints(tier),
+        getDisplayConstraints(),
       );
     } catch {
       return;
@@ -849,7 +847,7 @@ export class PeerSession {
     if (!track) return;
     this.screenTrack = track;
     const screenStream = new MediaStream([track]);
-    await applyTrackConstraints(screenStream, "screen", tier);
+    await applyTrackConstraints(screenStream, "screen");
     track.addEventListener("ended", () => {
       void this.stopScreenShare();
     });
@@ -877,14 +875,9 @@ export class PeerSession {
 
   async reapplyQuality() {
     const stream = this.state.localStream;
-    const tier = currentTier();
-    if (stream) await applyTrackConstraints(stream, "camera", tier);
+    if (stream) await applyTrackConstraints(stream, "camera");
     if (this.screenTrack) {
-      await applyTrackConstraints(
-        new MediaStream([this.screenTrack]),
-        "screen",
-        tier,
-      );
+      await applyTrackConstraints(new MediaStream([this.screenTrack]), "screen");
     }
     this.applyLimitsToAll();
   }
@@ -929,12 +922,11 @@ export class PeerSession {
 
   private async ensureLocalStream() {
     if (this.state.localStream) return this.state.localStream;
-    const tier = currentTier();
     const gum = navigator.mediaDevices?.getUserMedia?.bind(
       navigator.mediaDevices,
     );
-    const media = await acquireLocalMedia(gum, getCameraConstraints(tier));
-    await applyTrackConstraints(media.stream, "camera", tier);
+    const media = await acquireLocalMedia(gum, getCameraConstraints());
+    await applyTrackConstraints(media.stream, "camera");
     if (!media.muted) {
       media.stream.getAudioTracks().forEach((track) => {
         track.enabled = !this.state.muted;
@@ -959,12 +951,11 @@ export class PeerSession {
 
   private async enableCamera() {
     if (this.selfLocked("video")) return;
-    const tier = currentTier();
     let fresh: MediaStream;
     try {
       fresh = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: getCameraConstraints(tier).video,
+        video: getCameraConstraints().video,
       });
     } catch {
       this.toast("toast.mediaCamera");
@@ -972,7 +963,7 @@ export class PeerSession {
     }
     const video = fresh.getVideoTracks()[0];
     if (!video) return;
-    await applyTrackConstraints(new MediaStream([video]), "camera", tier);
+    await applyTrackConstraints(new MediaStream([video]), "camera");
     const audio = this.state.localStream?.getAudioTracks() ?? [];
     this.state.localStream?.getVideoTracks().forEach((track) => track.stop());
     const stream = mediaStreamOf([...audio, video]);
@@ -2258,19 +2249,18 @@ export class PeerSession {
   }
 
   private applyLimitsToAll() {
-    const tier = currentTier();
     for (const call of this.media.values()) {
       const pc = call.peerConnection;
       if (!pc) continue;
       for (const sender of pc.getSenders()) {
-        void applySenderLimits(sender, "camera", tier);
+        void applySenderLimits(sender, "camera");
       }
     }
     for (const call of this.screenOut.values()) {
       const pc = call.peerConnection;
       if (!pc) continue;
       for (const sender of pc.getSenders()) {
-        void applySenderLimits(sender, "screen", tier);
+        void applySenderLimits(sender, "screen");
       }
     }
   }

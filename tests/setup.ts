@@ -1,7 +1,7 @@
 /**
  * Nem o jsdom desta versão nem o Node (sem `--localstorage-file`) expõem
- * `localStorage`, e o app lê dele para descobrir o tier de qualidade. Um stub
- * em memória evita que os testes dependam da configuração do runner.
+ * `localStorage`. Um stub em memória evita que os testes dependam da
+ * configuração do runner.
  */
 if (typeof globalThis.localStorage === "undefined") {
   const store = new Map<string, string>();

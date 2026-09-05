@@ -2,7 +2,6 @@ import type { RoomMuteEntry } from "./mutes";
 import type { CodeLanguage } from "./code";
 import type { TimerState } from "./timer";
 
-export type QualityTier = "free" | "pro";
 export type CallMode = "direct" | "room";
 export type View = "home" | "call";
 
