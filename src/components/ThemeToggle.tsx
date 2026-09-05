@@ -14,6 +14,7 @@ export const ThemeToggle = ({ className }: { className?: string }) => {
     <Button
       variant="ghost"
       className={cn("size-9 shrink-0 p-0 text-zinc-400 hover:text-zinc-100", className)}
+      size="none"
       title={label}
       onClick={toggleTheme}
     >

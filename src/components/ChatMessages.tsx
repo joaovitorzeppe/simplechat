@@ -134,7 +134,8 @@ const FileCard = ({ file }: { file: ChatFile }) => {
         {ready && (
           <Button
             variant="ghost"
-            className="shrink-0 px-2 py-1"
+            size="sm"
+            className="shrink-0"
             title={t("chat.download")}
             onClick={() => saveFile(file)}
           >
@@ -202,6 +203,7 @@ const CodeCard = ({
         </span>
         <Button
           variant="ghost"
+          size="none"
           className="shrink-0 px-1.5 py-0.5 text-zinc-400"
           title={copied ? t("chat.command.codeCopied") : t("chat.command.codeCopy")}
           onClick={() => void copy()}
@@ -298,7 +300,8 @@ const TimerCard = ({
           {state.status === "running" ? (
             <Button
               variant="secondary"
-              className="px-2.5 py-1 text-xs"
+              size="sm"
+              className="text-xs"
               onClick={() => onControl(message.id, "pause")}
             >
               {t("chat.command.timerPause")}
@@ -306,7 +309,8 @@ const TimerCard = ({
           ) : (
             <Button
               variant="secondary"
-              className="px-2.5 py-1 text-xs"
+              size="sm"
+              className="text-xs"
               onClick={() => onControl(message.id, "resume")}
             >
               {t("chat.command.timerResume")}
@@ -314,7 +318,8 @@ const TimerCard = ({
           )}
           <Button
             variant="ghost"
-            className="px-2.5 py-1 text-xs"
+            size="sm"
+            className="text-xs"
             onClick={() => onControl(message.id, "cancel")}
           >
             {t("chat.command.timerCancel")}

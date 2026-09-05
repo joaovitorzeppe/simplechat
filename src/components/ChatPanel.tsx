@@ -213,7 +213,7 @@ export const ChatPanel = ({
         <div className="px-1 text-sm font-medium">{t("chat.title")}</div>
         <Button
           variant="ghost"
-          className="px-2 py-1"
+          size="sm"
           onClick={onClose}
           title={t("chat.close")}
         >
@@ -252,7 +252,7 @@ export const ChatPanel = ({
         />
         <Button
           variant="ghost"
-          className="px-2.5"
+          size="sm"
           title={t("chat.attach")}
           aria-label={t("chat.attach")}
           onClick={() => fileRef.current?.click()}
