@@ -245,6 +245,7 @@ export const pt = {
   "legal.nav": "Documentos legais",
   "legal.privacy": "Política de privacidade",
   "legal.terms": "Termos de uso",
+  "legal.github": "GitHub",
   "legal.back": "Voltar ao SimpleChat",
   "legal.goBack": "Voltar",
   "legal.updated": "Atualizado em {date}",

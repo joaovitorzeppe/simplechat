@@ -9,6 +9,7 @@ SimpleChat runs entirely in the browser. There is no user database and no hosted
 - [Home](https://www.simplechat.me/): Start a call and copy an invite link
 - [Privacy policy](https://www.simplechat.me/privacy): What the site stores and what stays on your device
 - [Terms of use](https://www.simplechat.me/terms): Acceptable use and service limits
+- [Source code](https://github.com/joaovitorzeppe/simplechat): MIT-licensed repository
 
 ## Notes
 

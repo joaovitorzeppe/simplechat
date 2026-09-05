@@ -2,7 +2,7 @@
 
 Peer-to-peer audio, video, screen share, and chat in the browser. No app backend — media stays WebRTC end-to-end; only signaling uses the free PeerJS broker.
 
-Live: [www.simplechat.me](https://www.simplechat.me)
+Live: [www.simplechat.me](https://www.simplechat.me) · Source: [github.com/joaovitorzeppe/simplechat](https://github.com/joaovitorzeppe/simplechat)
 
 ## Run locally
 
@@ -63,3 +63,7 @@ Anyone with the invite link can try to join, so every peer is treated as untrust
 - Entry needs the fragment secret; refuse/remove rotates it.
 
 A current member can still forward a fresh invite. Without accounts or a server, that stays out of scope.
+
+## License
+
+[MIT](./LICENSE)

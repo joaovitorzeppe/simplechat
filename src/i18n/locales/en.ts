@@ -247,6 +247,7 @@ export const en: Messages = {
   "legal.nav": "Legal documents",
   "legal.privacy": "Privacy policy",
   "legal.terms": "Terms of use",
+  "legal.github": "GitHub",
   "legal.back": "Back to SimpleChat",
   "legal.goBack": "Back",
   "legal.updated": "Updated {date}",

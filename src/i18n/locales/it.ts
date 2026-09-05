@@ -250,6 +250,7 @@ export const it: Messages = {
   "legal.nav": "Documenti legali",
   "legal.privacy": "Informativa sulla privacy",
   "legal.terms": "Termini di utilizzo",
+  "legal.github": "GitHub",
   "legal.back": "Torna a SimpleChat",
   "legal.goBack": "Indietro",
   "legal.updated": "Aggiornato il {date}",
