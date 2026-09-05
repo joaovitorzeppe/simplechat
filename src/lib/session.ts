@@ -547,7 +547,7 @@ export class PeerSession {
     this.broadcastRoom();
   }
 
-  kickPeer(peerId: string) {
+  kickPeer = (peerId: string) => {
     if (!this.state.isHost || peerId === this.state.identity?.peerId) return;
     if (!this.state.remotes.some((remote) => remote.peerId === peerId)) return;
     this.banned.add(peerId);
@@ -562,7 +562,7 @@ export class PeerSession {
     this.broadcastRoom();
     // Deixa o aviso escoar antes de derrubar o canal por baixo dele.
     window.setTimeout(() => this.onPeerLeft(peerId), FLUSH_MS);
-  }
+  };
 
   hangUp() {
     if (this.tearingDown) return;
@@ -801,7 +801,7 @@ export class PeerSession {
   }
 
   /** Silencia o áudio ou o vídeo de outra pessoa só neste cliente. */
-  toggleLocalMute(peerId: string, kind: MuteKind) {
+  toggleLocalMute = (peerId: string, kind: MuteKind) => {
     if (!this.inRoom() || !this.canControlMute(peerId)) return;
     if (muteOf(this.state.roomMutes, peerId)[kind] && !this.state.isHost)
       return;
@@ -809,19 +809,19 @@ export class PeerSession {
     this.patch({
       localMutes: setMuteFlag(this.state.localMutes, peerId, kind, next),
     });
-  }
+  };
 
   /** Host: pede silêncio de áudio/vídeo na sala.
    * Viewers já aplicam `roomMutes` na tile (não tocam o stream). O alvo é
    * pedido a cortar as tracks via `enforceSelfLocks` — cliente modificado
    * pode ignorar e continuar enviando (só gasta banda). Em P2P puro não há
    * corte no remetente. */
-  setRoomMute(peerId: string, kind: MuteKind, muted: boolean) {
+  setRoomMute = (peerId: string, kind: MuteKind, muted: boolean) => {
     if (!this.state.isHost || !this.inRoom() || !this.canControlMute(peerId))
       return;
     this.applyRoomMute(peerId, { [kind]: muted }, false);
     this.broadcast({ type: "room-mute", peerId, [kind]: muted });
-  }
+  };
 
   async shareScreen() {
     if (this.state.sharingScreen) {

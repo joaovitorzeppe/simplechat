@@ -478,7 +478,9 @@ describe("giro do segredo da sala", () => {
     core.data.set(ZECA, conn(ZECA));
     core.patch({ remotes: [remote(ZECA, "Zeca")] });
 
-    session.kickPeer(ZECA);
+    // Como a UI passa a referência do método, o `this` precisa sobreviver.
+    const kick = session.kickPeer;
+    kick(ZECA);
     const rotated = core.hostSecret;
     expect(rotated).not.toBe(SECRET);
 

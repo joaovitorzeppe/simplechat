@@ -188,6 +188,9 @@ const CallStage = memo(function CallStage({
       local={item.local}
       sharingScreen
       onPin={pinHandler}
+      onRemove={
+        isHost && !item.local ? session.kickPeer : undefined
+      }
       className={className}
     />
   );
