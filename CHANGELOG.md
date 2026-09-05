@@ -8,6 +8,23 @@ O formato segue a ideia de [Keep a Changelog](https://keepachangelog.com/pt-BR/1
 
 Tudo o que entrou depois do primeiro CHANGELOG.
 
+### Fluxo da home e convite
+
+- Home só com **Iniciar chamada**. Removidos chave/link próprios na UI, Ligar/Entrar por chave e a lista de Recentes (`recents` e `callPeer` saíram).
+- Entrar na sala = abrir o link de convite (deep link). Compartilhar o link acontece **depois**, na chamada (copiar convite também no mobile).
+- Termos e privacidade alinhados: chave não aparece na interface; não guardamos mais “pessoas recentes” no aparelho.
+
+### Chamada e tela
+
+- Botão de compartilhar tela some quando não há `getDisplayMedia` (comum em alguns mobiles).
+- Com tela compartilhada: ocultar câmeras para dar espaço; várias telas dividem o palco; fixar uma prioriza ela; com câmeras ocultas e uma fixada, as outras telas também somem.
+
+### Comandos do chat
+
+- `/escolher`: mostra as opções e, na linha de baixo, a sorteada.
+- `/moeda`: `@nome jogou uma moeda: cara|coroa`.
+- `/timer`: um ativo por vez; quem enviou e o host pausam, retomam ou cancelam (`timer-control` no fio).
+
 ### Segurança, performance e confiabilidade
 
 Commit: `f92fd3a`.
@@ -37,7 +54,7 @@ Commits: `c5264d3`, `183c5e1`, `8cc398a`.
 - `/` no começo da mensagem (ou depois de espaço) abre o seletor. URLs e frações (`https://`, `1/2`) não disparam. O resultado viaja como payload; cada cliente formata no próprio idioma. `/ajuda` não vai para a rede.
 - `/dado`: 1d20 sem argumentos, `2d6`, intervalo (`1-100`) e expressões (`5d10+7d4+3`, `*` `/` com precedência, repetição `2 5d10+7d4+3`). Tetos de dados, faces, termos e repetições.
 - `/sortear` marca alguém da sala. `/escolher` sorteia entre opções (vírgula ou espaço, 2 a 12). `/ordem` embaralha a sala. `/moeda` cara ou coroa. `/me` ação no chat (`@` na frase conta como menção).
-- `/timer`: `5` = minutos; também `30s`, `5m`/`5min`, `1h`, `1h30m`. Mínimo 5 s, máximo 2 h. Card com contagem; ao acabar, toast mesmo com o chat fechado. Cada cliente conta a partir do horário local da mensagem, sem relógio do remetente.
+- `/timer`: `5` = minutos; também `30s`, `5m`/`5min`, `1h`, `1h30m`. Mínimo 5 s, máximo 2 h. Card com contagem; ao acabar, toast mesmo com o chat fechado. Cada cliente conta a partir do horário local da mensagem, sem relógio do remetente. (Pausa/cancelamento e um timer por vez: ver seção “Comandos do chat” no topo de Não publicado.)
 - `/voto`: enquete clicável com as mesmas regras de opções do `/escolher`. Trocar de opção vale; o mesmo voto não reenvia. No fio, `poll-vote` com identidade em `conn.peer` — votos no payload do chat são ignorados.
 
 ### Tema, idiomas e observabilidade
@@ -63,20 +80,18 @@ Commits: `c452ad2`, `efdb20f`, `085b2a7`, `c909fbc`.
 Commits: `845b1ee`, `01ca868`, `a56b288`.
 
 - Convite com segredo no fragmento: `/?room=<chave>#k=<segredo>`. Sem o `#k=` certo, o pedido nem chega ao host. Recusar ou remover alguém gira o segredo; o link antigo deixa de valer.
-- Quem abre o convite sem identidade passa pelo onboarding e, com o broker pronto, entra na sala sozinho — não precisa clicar em Entrar na home.
-- Sala de espera: quem entra fica no lobby até o host aprovar. Quem o host discou (Ligar) entra direto.
+- Quem abre o convite sem identidade passa pelo onboarding e, com o broker pronto, entra na sala sozinho.
+- Sala de espera: quem entra pelo link fica no lobby até o host aprovar.
 - Host pode recusar a entrada e remover alguém da chamada. Recusado e removido ficam bloqueados por `peerId`.
 - Host que sai escolhe passar o papel (`host-transfer`) ou encerrar para todos. Se o host some sem avisar, o menor `peerId` entre quem ficou assume; sobrando uma pessoa, a chamada acaba.
-- Ligar no link de uma chamada já aberta entra como convidado. Não rouba o host nem encerra a sala ao sair.
 
-### Chat, arquivos, menções e recents
+### Chat, arquivos e menções
 
 Commits: `872b2f8`, `395ac4c`, `2732ee2`, `1f4e155`.
 
 - Links no chat viram texto clicável. Antes de abrir, um aviso mostra o endereço com Cancelar ou Abrir em nova aba.
 - Arquivos no chat via data channel P2P. **Free envia até 10 MB**, Pro até 100 MB; qualquer um na sala pode receber (até o teto Pro do fio). Preview de jpeg/png/gif/webp; o resto só baixa. Some ao sair da chamada.
 - Leitura e montagem das fatias no worker (fallback na UI). Com OPFS, os bytes recebidos vão para o disco do origin durante a transferência.
-- Recentes na home: quem já esteve numa chamada com você, para Ligar de novo (não reabre a sala antiga).
 - Quando alguém sai, os outros veem toast e uma linha no chat com o nome.
 - Menções no chat: `@` depois de espaço abre o seletor (roster + `@all`). O fio leva `peerId` (ou `"all"`), não o nome. E-mails não disparam o picker. Quem foi marcado vê a bolha em destaque e um toast; quem enviou, não.
 
@@ -88,7 +103,7 @@ Commits: `872b2f8`, `395ac4c`, `2732ee2`, `1f4e155`.
 
 ### Entrada sem câmera ou microfone
 
-- Criar sala, entrar, ligar ou atender não exige mais os dois dispositivos. A cascata tenta áudio+vídeo, depois só áudio, só vídeo, e por fim entra só ouvindo (chat + receber mídia dos outros).
+- Criar sala ou entrar pelo link não exige mais os dois dispositivos. A cascata tenta áudio+vídeo, depois só áudio, só vídeo, e por fim entra só ouvindo (chat + receber mídia dos outros).
 - Toast avisa o fallback. Religar microfone ou câmera na barra pede o dispositivo de novo. A chamada de mídia atende mesmo com stream vazio, para quem entrou sem tracks ainda receber áudio/vídeo.
 
 ### Rede P2P
@@ -108,7 +123,7 @@ Commits: `01ca868`, `190e4ac`.
 - Lobby na chamada, Error Boundary, fontes Outfit e IBM Plex Mono (latino; o resto cai na fonte do sistema).
 - Imports entre pastas usam alias: `@i18n/*`, `@libs/*`, `@components/*`, `@screens/*`.
 - TURN opcional por `VITE_TURN_URL`, `VITE_TURN_USERNAME` e `VITE_TURN_CREDENTIAL`. Sem as três, segue só STUN.
-- Vitest (`npm test`); testes em `tests/` (wire, convite, identidade, arquivo, recents, chat, menções, comandos, mute, mídia, sessão, texto, tema, path SPA, observabilidade).
+- Vitest (`npm test`); testes em `tests/` (wire, convite, identidade, arquivo, chat, menções, comandos, mute, mídia, sessão, timer, texto, tema, path SPA, observabilidade, legal).
 
 ### Removido
 

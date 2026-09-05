@@ -25,24 +25,23 @@ Produção: [https://simplechat.me](https://simplechat.me) redireciona para [htt
 
 Toda chamada é uma sala em mesh. Quem inicia é o **host**; quem entra é convidado.
 
-- **Identidade:** no onboarding você informa o nome. O app gera um `peerId` opaco e, se você pedir para lembrar, grava `{ displayName, peerId }` no `localStorage`. Sem isso, a chave é nova a cada visita. A chave é o ID PeerJS.
-- **Iniciar:** você abre a chamada sozinho e compartilha o link `/?room=<sua-chave>#k=<segredo>`. Links antigos `?call=` ainda funcionam, mas sem o fragmento não entram mais.
-- **Ligar:** cola a chave (ou o link) da outra pessoa. Você vira host e convoca ela.
-- **Entrar:** junta você à chamada que a outra pessoa já começou. Abrir o link sem identidade passa pelo onboarding e entra na sala em seguida. O cliente conecta no host por data channel e fica na **sala de espera** até o host aprovar; então o host envia a lista de peers e cada um monta mesh de mídia (quem tem o ID menor inicia, para evitar glare). Quem o host discou entra direto, sem passar pela espera.
+- **Identidade:** no onboarding você informa o nome. O app gera um `peerId` opaco (a “chave”) e, se você pedir para lembrar, grava `{ displayName, peerId }` no `localStorage`. Sem isso, a chave é nova a cada visita. A chave **não aparece** na interface — só o nome.
+- **Iniciar:** na home, só existe **Iniciar chamada**. Você abre a sala sozinho e, já na chamada, copia o link `/?room=<sua-chave>#k=<segredo>`. Links antigos `?call=` ainda funcionam, mas sem o fragmento não entram mais.
+- **Entrar:** abrir o link (com ou sem identidade) é o único caminho. Sem identidade, passa pelo onboarding e entra em seguida. O cliente conecta no host por data channel e fica na **sala de espera** até o host aprovar; então o host envia a lista de peers e cada um monta mesh de mídia (quem tem o ID menor inicia, para evitar glare).
 - **Moderação:** o host aprova ou recusa cada entrada e pode remover alguém da chamada. Recusado e removido ficam bloqueados por `peerId` e, como o segredo gira junto, o link que eles têm deixa de valer. Abrir uma sala nova (`createRoom`) também gira o segredo.
 - **Sair:** convidado só sai da sala. O host escolhe entre passar o papel adiante (`host-transfer`) ou encerrar para todos (`room-ended`).
 - **Queda do host:** se ele some sem avisar, quem ficou elege o substituto sozinho — o menor `peerId` entre os membros. Como a lista veio do host e é a mesma em todos, todos chegam ao mesmo nome sem negociar. Sobrando uma pessoa só, a chamada encerra.
-- **Câmera e microfone:** desligar a câmera para o track (`replaceTrack(null)` + `stop()`). Não envia frames pretos; o LED deve apagar. Os outros veem o avatar. Compartilhamento de tela segue em conexão separada.
+- **Câmera e microfone:** desligar a câmera para o track (`replaceTrack(null)` + `stop()`). Não envia frames pretos; o LED deve apagar. Os outros veem o avatar. Compartilhamento de tela segue em conexão separada; o botão some se o navegador não expõe `getDisplayMedia` (comum em alguns mobiles).
+- **Layout com tela:** com alguém compartilhando, dá para ocultar as câmeras e dar espaço à tela. Várias telas dividem o palco; fixar uma prioriza ela. Com câmeras ocultas e uma tela fixada, as outras telas também somem.
 - **Entrar sem mídia:** a entrada tenta áudio+vídeo, depois só áudio, só vídeo, e por fim só ouvir e chat. Sem câmera ou microfone (dispositivo ausente ou permissão recusada) você ainda entra; um toast avisa o que faltou. Religar mic ou câmera na barra pede o dispositivo de novo.
 - **Silenciar outros:** nos tiles, qualquer um pode desligar o áudio ou o vídeo de outra pessoa **só para si**. O host não pode ser silenciado. O host também pode silenciar para a **sala inteira** (`room-mute`); aí ninguém reativa — nem a pessoa alvo — até ele liberar.
 - **Chat e menções:** `@` depois de espaço (ou no começo) abre o seletor; `@all` marca todo mundo. O fio leva `peerId`, não o nome. Quem foi marcado vê a bolha em destaque e um toast. E-mails (`ana@site.com`) não abrem o seletor.
 - **Comandos:** `/` no começo da mensagem (ou depois de espaço) abre o seletor. O resultado viaja estruturado; cada cliente formata no próprio idioma. `/ajuda` só aparece para quem digitou. Nomes no seletor seguem o idioma da interface (`/dado`, `/roll`, `/dé`…).
   - `/dado` — 1d20, `2d6`, intervalo (`1-100`) ou expressão (`2d6*3`, `2 5d10+7d4+3`).
-  - `/sortear` — escolhe alguém da sala. `/escolher pizza, sushi` — sorteia entre opções. `/ordem` — embaralha a sala. `/moeda` — cara ou coroa. `/me acena` — ação no chat (`@` na frase conta como menção).
-  - `/timer 5m` — cronômetro visível para a sala (`5` = minutos; também `30s`, `1h`, `1h30m`). Mínimo 5 segundos, máximo 2 horas. Ao acabar, um toast avisa mesmo com o chat fechado.
+  - `/sortear` — escolhe alguém da sala. `/escolher pizza, sushi` — lista as opções e a sorteada. `/ordem` — embaralha a sala. `/moeda` — `@nome jogou uma moeda: cara|coroa`. `/me acena` — ação no chat (`@` na frase conta como menção).
+  - `/timer 5m` — um cronômetro por vez, visível para a sala (`5` = minutos; também `30s`, `1h`, `1h30m`). Mínimo 5 segundos, máximo 2 horas. Quem enviou e o host podem pausar, retomar ou cancelar (`timer-control`). Ao acabar, um toast avisa mesmo com o chat fechado.
   - `/voto pizza, sushi` — votação clicável (2 a 12 opções). Dá para trocar de opção. O voto no fio é `poll-vote`; a identidade vem da conexão, não do payload.
 - **Arquivo:** clipe no chat. Vai P2P no data channel, em pedaços. A montagem e a leitura das fatias rodam num worker (com fallback na thread da UI). Imagens (jpeg/png/gif/webp) têm prévia; o resto só baixa. Some ao sair da chamada.
-- **Recentes:** quem já esteve numa chamada com você aparece na home para Ligar de novo. Não reabre a sala antiga: o segredo do convite gira.
 
 ## Limites do plano
 

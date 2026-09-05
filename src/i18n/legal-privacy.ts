@@ -23,7 +23,7 @@ export const privacy: Record<Locale, LegalDocument> = {
       {
         heading: "Dados neste aparelho",
         paragraphs: [
-          "Se você pedir para lembrar quem é, gravamos o nome e a chave neste navegador. Também podemos guardar idioma, tema e pessoas recentes.",
+          "Se você pedir para lembrar quem é, gravamos o nome e a chave neste navegador. Também podemos guardar idioma e tema.",
         ],
       },
       {
@@ -103,7 +103,7 @@ export const privacy: Record<Locale, LegalDocument> = {
       {
         heading: "Data on this device",
         paragraphs: [
-          "If you ask us to remember who you are, we store your name and key in this browser. We may also store language, theme, and recent people.",
+          "If you ask us to remember who you are, we store your name and key in this browser. We may also store language and theme.",
         ],
       },
       {
@@ -183,7 +183,7 @@ export const privacy: Record<Locale, LegalDocument> = {
       {
         heading: "Datos en este dispositivo",
         paragraphs: [
-          "Si pides que recordemos quién eres, guardamos el nombre y la clave en este navegador. También podemos guardar idioma, tema y personas recientes.",
+          "Si pides que recordemos quién eres, guardamos el nombre y la clave en este navegador. También podemos guardar idioma y tema.",
         ],
       },
       {
@@ -263,7 +263,7 @@ export const privacy: Record<Locale, LegalDocument> = {
       {
         heading: "Données sur cet appareil",
         paragraphs: [
-          "Si vous demandez à ce que l’on se souvienne de vous, nous enregistrons le nom et la clé dans ce navigateur. Nous pouvons aussi enregistrer la langue, le thème et les personnes récentes.",
+          "Si vous demandez à ce que l’on se souvienne de vous, nous enregistrons le nom et la clé dans ce navigateur. Nous pouvons aussi enregistrer la langue et le thème.",
         ],
       },
       {
@@ -343,7 +343,7 @@ export const privacy: Record<Locale, LegalDocument> = {
       {
         heading: "Dati su questo dispositivo",
         paragraphs: [
-          "Se chiedi di ricordare chi sei, salviamo il nome e la chiave in questo browser. Possiamo anche salvare lingua, tema e persone recenti.",
+          "Se chiedi di ricordare chi sei, salviamo il nome e la chiave in questo browser. Possiamo anche salvare lingua e tema.",
         ],
       },
       {
