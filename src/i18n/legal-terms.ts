@@ -4,13 +4,13 @@ import type { LegalDocument } from "./legal-types";
 export const terms: Record<Locale, LegalDocument> = {
   pt: {
     title: "Termos de uso",
-    updated: "5 de setembro de 2026",
+    updated: "6 de setembro de 2026",
     intro: "Ao usar o SimpleChat você concorda com estes termos.",
     sections: [
       {
         heading: "O serviço",
         paragraphs: [
-          "O SimpleChat é uma chamada de áudio, vídeo, tela e texto no navegador. É gratuito, oferecido como está, sem garantia de conexão e sem conta. A chamada pode falhar por causa da rede ou do aparelho. O código-fonte é open source sob licença MIT em https://github.com/joaovitorzeppe/simplechat.",
+          "O SimpleChat é uma chamada de áudio, vídeo, tela e texto no navegador. É gratuito, oferecido como está, sem garantia de conexão e sem conta. A chamada pode falhar por causa da rede ou do aparelho. O contato é https://github.com/joaovitorzeppe.",
         ],
       },
       {
@@ -65,13 +65,13 @@ export const terms: Record<Locale, LegalDocument> = {
   },
   en: {
     title: "Terms of use",
-    updated: "5 September 2026",
+    updated: "6 September 2026",
     intro: "By using SimpleChat you agree to these terms.",
     sections: [
       {
         heading: "The service",
         paragraphs: [
-          "SimpleChat is an audio, video, screen, and text call in the browser. It is free, offered as is, with no connection guarantee and no account. The call may fail because of the network or the device. The source code is open source under the MIT license at https://github.com/joaovitorzeppe/simplechat.",
+          "SimpleChat is an audio, video, screen, and text call in the browser. It is free, offered as is, with no connection guarantee and no account. The call may fail because of the network or the device. Contact: https://github.com/joaovitorzeppe.",
         ],
       },
       {
@@ -112,9 +112,7 @@ export const terms: Record<Locale, LegalDocument> = {
       },
       {
         heading: "Governing law",
-        paragraphs: [
-          "These terms are interpreted under the laws of Brazil.",
-        ],
+        paragraphs: ["These terms are interpreted under the laws of Brazil."],
       },
       {
         heading: "Changes",
@@ -126,13 +124,13 @@ export const terms: Record<Locale, LegalDocument> = {
   },
   es: {
     title: "Términos de uso",
-    updated: "5 de septiembre de 2026",
+    updated: "6 de septiembre de 2026",
     intro: "Al usar SimpleChat aceptas estos términos.",
     sections: [
       {
         heading: "El servicio",
         paragraphs: [
-          "SimpleChat es una llamada de audio, vídeo, pantalla y texto en el navegador. Es gratuito, se ofrece tal cual, sin garantía de conexión y sin cuenta. La llamada puede fallar por la red o el dispositivo. El código fuente es open source bajo licencia MIT en https://github.com/joaovitorzeppe/simplechat.",
+          "SimpleChat es una llamada de audio, vídeo, pantalla y texto en el navegador. Es gratuito, se ofrece tal cual, sin garantía de conexión y sin cuenta. La llamada puede fallar por la red o el dispositivo. El contacto es https://github.com/joaovitorzeppe.",
         ],
       },
       {
@@ -187,13 +185,13 @@ export const terms: Record<Locale, LegalDocument> = {
   },
   fr: {
     title: "Conditions d’utilisation",
-    updated: "5 septembre 2026",
+    updated: "6 septembre 2026",
     intro: "En utilisant SimpleChat, vous acceptez ces conditions.",
     sections: [
       {
         heading: "Le service",
         paragraphs: [
-          "SimpleChat est un appel audio, vidéo, écran et texte dans le navigateur. Il est gratuit, proposé en l’état, sans garantie de connexion et sans compte. L’appel peut échouer à cause du réseau ou de l’appareil. Le code source est open source sous licence MIT sur https://github.com/joaovitorzeppe/simplechat.",
+          "SimpleChat est un appel audio, vidéo, écran et texte dans le navigateur. Il est gratuit, proposé en l’état, sans garantie de connexion et sans compte. L’appel peut échouer à cause du réseau ou de l’appareil. Le contact est https://github.com/joaovitorzeppe.",
         ],
       },
       {
@@ -234,9 +232,7 @@ export const terms: Record<Locale, LegalDocument> = {
       },
       {
         heading: "Droit applicable",
-        paragraphs: [
-          "Ces conditions s’interprètent selon les lois du Brésil.",
-        ],
+        paragraphs: ["Ces conditions s’interprètent selon les lois du Brésil."],
       },
       {
         heading: "Modifications",
@@ -248,13 +244,13 @@ export const terms: Record<Locale, LegalDocument> = {
   },
   it: {
     title: "Termini di utilizzo",
-    updated: "5 settembre 2026",
+    updated: "6 settembre 2026",
     intro: "Usando SimpleChat accetti questi termini.",
     sections: [
       {
         heading: "Il servizio",
         paragraphs: [
-          "SimpleChat è una chiamata audio, video, schermo e testo nel browser. È gratuito, offerto così com’è, senza garanzia di connessione e senza account. La chiamata può fallire a causa della rete o del dispositivo. Il codice sorgente è open source sotto licenza MIT su https://github.com/joaovitorzeppe/simplechat.",
+          "SimpleChat è una chiamata audio, video, schermo e testo nel browser. È gratuito, offerto così com’è, senza garanzia di connessione e senza account. La chiamata può fallire a causa della rete o del dispositivo. Il contatto è https://github.com/joaovitorzeppe.",
         ],
       },
       {

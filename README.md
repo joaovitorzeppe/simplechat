@@ -2,7 +2,7 @@
 
 Peer-to-peer audio, video, screen share, and chat in the browser. No app backend — media stays WebRTC end-to-end; only signaling uses the free PeerJS broker.
 
-Live: [www.simplechat.me](https://www.simplechat.me) · Source: [github.com/joaovitorzeppe/simplechat](https://github.com/joaovitorzeppe/simplechat)
+Live: [www.simplechat.me](https://www.simplechat.me)
 
 ## Run locally
 
@@ -36,22 +36,6 @@ UI languages: Portuguese, English, Spanish, French, Italian. Light/dark theme. I
 | Screen    | 1920×1080 @ 30 fps, ~4 Mbps  |
 
 See `src/lib/quality.ts`.
-
-## Network
-
-Signaling: PeerJS (`0.peerjs.com`). STUN: Google. Without TURN, some NATs and corporate firewalls fail — the app asks you to switch Wi‑Fi ↔ mobile data when ICE never connects.
-
-Optional TURN (`.env.local` or Vercel env). All three required; otherwise STUN only:
-
-```bash
-VITE_TURN_URL=turn:your-server:3478
-VITE_TURN_USERNAME=user
-VITE_TURN_CREDENTIAL=secret
-```
-
-`VITE_*` values are baked into the client bundle — treat them as public to anyone who loads the page.
-
-Large video meshes are heavy on clients. Bigger rooms would need an SFU and stop being pure P2P.
 
 ## Trust model
 
