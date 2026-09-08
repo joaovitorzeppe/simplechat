@@ -33,6 +33,9 @@ export const en: Messages = {
   "home.hello": "Hi, {name}",
   "home.ready": "Ready to call.",
   "home.connecting": "Getting ready to connect…",
+  "home.joining": "Joining the call…",
+  "home.joiningHint":
+    "Connecting to the host. If the browser asks, allow camera and microphone.",
   "home.switchIdentity": "Switch identity",
   "home.inviteBody":
     "Start a call and share the link. Whoever starts approves who joins, can remove someone, and when leaving chooses between handing the call over or ending it for everyone.",

@@ -460,6 +460,10 @@ export class PeerSession {
     const id = invite?.peerId ?? "";
     if (!id || !this.peer || id === this.state.identity?.peerId) return;
     if (this.state.callStatus !== "idle") return;
+    this.joinSecret = invite?.secret ?? null;
+    this.dialedPeerId = id;
+    this.beginCall(false, id);
+    this.patch({ callStatus: "connecting", roomSecret: this.joinSecret });
     try {
       await this.ensureLocalStream();
     } catch {
@@ -469,15 +473,11 @@ export class PeerSession {
         muted: true,
       });
     }
-    this.joinSecret = invite?.secret ?? null;
-    this.dialedPeerId = id;
-    this.beginCall(false, id);
     this.openData(id, {
       type: "hello",
       ...this.helloPayload(),
       kind: "room-join",
     });
-    this.patch({ callStatus: "connecting", roomSecret: this.joinSecret });
     this.armConnectWatch();
   }
 

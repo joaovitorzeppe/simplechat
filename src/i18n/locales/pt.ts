@@ -31,6 +31,9 @@ export const pt = {
   "home.hello": "Olá, {name}",
   "home.ready": "Pronto para ligar.",
   "home.connecting": "Preparando a conexão…",
+  "home.joining": "Entrando na chamada…",
+  "home.joiningHint":
+    "Conectando ao host. Se o navegador pedir, permita câmera e microfone.",
   "home.switchIdentity": "Trocar identidade",
   "home.inviteBody":
     "Inicie uma chamada e compartilhe o link. Quem inicia aprova quem entra, pode remover alguém e, ao sair, escolhe entre passar o comando da chamada adiante ou encerrar para todos.",

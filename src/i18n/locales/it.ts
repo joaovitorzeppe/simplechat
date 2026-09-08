@@ -33,6 +33,9 @@ export const it: Messages = {
   "home.hello": "Ciao, {name}",
   "home.ready": "Pronto a chiamare.",
   "home.connecting": "Preparazione della connessione…",
+  "home.joining": "Ingresso nella chiamata…",
+  "home.joiningHint":
+    "Connessione all’host. Se il browser lo chiede, consenti fotocamera e microfono.",
   "home.switchIdentity": "Cambia identità",
   "home.inviteBody":
     "Avvia una chiamata e condividi il link. Chi avvia approva chi entra, può rimuovere qualcuno e, uscendo, sceglie se passare la conduzione della chiamata o chiudere per tutti.",

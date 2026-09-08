@@ -33,6 +33,9 @@ export const fr: Messages = {
   "home.hello": "Bonjour, {name}",
   "home.ready": "Prêt à appeler.",
   "home.connecting": "Préparation de la connexion…",
+  "home.joining": "Entrée dans l’appel…",
+  "home.joiningHint":
+    "Connexion à l’hôte. Si le navigateur le demande, autorisez caméra et micro.",
   "home.switchIdentity": "Changer d’identité",
   "home.inviteBody":
     "Démarrez un appel et partagez le lien. Qui démarre approuve qui entre, peut retirer quelqu’un et, en partant, choisit entre transmettre la conduite de l’appel ou terminer pour tout le monde.",

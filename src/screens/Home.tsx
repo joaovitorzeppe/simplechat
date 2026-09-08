@@ -20,6 +20,7 @@ export const Home = () => {
   const { canInstall, showIosHelp, install } = useInstallPrompt();
 
   const myId = state.identity?.peerId ?? "";
+  const joiningInvite = Boolean(deepLinkJoinArg(window.location.href, myId));
 
   useEffect(() => {
     if (!myId || !state.peerReady || state.callStatus !== "idle") return;
@@ -41,7 +42,10 @@ export const Home = () => {
   return (
     <main className="min-h-dvh grid place-items-center px-4 py-8">
       <div className="w-full max-w-md">
-        <section className="rounded-3xl border border-line bg-panel p-8">
+        <section
+          className="rounded-3xl border border-line bg-panel p-8"
+          aria-busy={joiningInvite}
+        >
           <div className="flex items-start justify-between gap-3">
             <p className="text-xs uppercase tracking-[0.25em] text-accent">
               SimpleChat
@@ -73,30 +77,40 @@ export const Home = () => {
           </div>
 
           <h1 className="mt-3 text-3xl font-semibold tracking-tight wrap-break-word">
-            {t("home.hello", { name: state.identity?.displayName ?? "" })}
+            {joiningInvite
+              ? t("home.joining")
+              : t("home.hello", { name: state.identity?.displayName ?? "" })}
           </h1>
-          <p className="mt-2 text-sm text-zinc-400">
-            {state.peerReady
-              ? t("home.ready")
-              : state.peerError
+          <p className="mt-2 text-sm text-zinc-400" aria-live="polite">
+            {joiningInvite
+              ? state.peerError
                 ? t(state.peerError)
-                : t("home.connecting")}
+                : t("home.joiningHint")
+              : state.peerReady
+                ? t("home.ready")
+                : state.peerError
+                  ? t(state.peerError)
+                  : t("home.connecting")}
           </p>
 
-          <p className="mt-8 text-sm text-zinc-400">{t("home.inviteBody")}</p>
+          {!joiningInvite && (
+            <>
+              <p className="mt-8 text-sm text-zinc-400">{t("home.inviteBody")}</p>
 
-          <Button
-            className="mt-6 w-full py-3.5 text-base"
-            disabled={startDisabled}
-            title={startDisabled ? (brokerHint ?? undefined) : undefined}
-            onClick={() => void session.createRoom()}
-          >
-            {t("home.startCall")}
-          </Button>
+              <Button
+                className="mt-6 w-full py-3.5 text-base"
+                disabled={startDisabled}
+                title={startDisabled ? (brokerHint ?? undefined) : undefined}
+                onClick={() => void session.createRoom()}
+              >
+                {t("home.startCall")}
+              </Button>
+            </>
+          )}
 
           <Button
             variant="ghost"
-            className="mt-3 w-full"
+            className={joiningInvite ? "mt-8 w-full" : "mt-3 w-full"}
             onClick={() => {
               clearIdentity();
               window.location.reload();
