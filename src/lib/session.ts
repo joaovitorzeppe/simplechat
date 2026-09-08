@@ -842,7 +842,7 @@ export class PeerSession {
     } catch {
       return;
     }
-    let cams = devices
+    const cams = devices
       .filter((d) => d.kind === "videoinput")
       .filter((d) => Boolean(facingFromLabel(d.label)));
     if (cams.length < 2) return;
