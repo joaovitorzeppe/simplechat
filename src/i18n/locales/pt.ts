@@ -65,6 +65,11 @@ export const pt = {
   "call.pinScreen": "Centralizar esta tela",
   "call.waiting": "Esperando o host aprovar sua entrada…",
   "call.remove": "Remover da chamada",
+  "call.removeTitle": "Remover {name}?",
+  "call.removeBody":
+    "A pessoa sai agora e não volta com este convite.",
+  "call.removeConfirm": "Remover",
+  "call.removeCancel": "Cancelar",
   "call.muteForMe": "Silenciar para mim",
   "call.unmuteForMe": "Ativar áudio para mim",
   "call.muteForRoom": "Silenciar para a sala",

@@ -14,6 +14,7 @@ import {
   ScreenIcon,
 } from "@components/Icons";
 import { HostLeaveDialog } from "@components/HostLeaveDialog";
+import { KickDialog } from "@components/KickDialog";
 import { LanguageSwitcher } from "@components/LanguageSwitcher";
 import { Lobby } from "@components/Lobby";
 import { ThemeToggle } from "@components/ThemeToggle";
@@ -87,10 +88,12 @@ const CallStage = memo(function CallStage({
   pinnedId,
   showCameras,
   onPin,
+  onAskRemove,
 }: {
   pinnedId: string | null;
   showCameras: boolean;
   onPin: (id: string) => void;
+  onAskRemove?: (peerId: string) => void;
 }) {
   const { t } = useI18n();
   const remotes = useSessionSelector((s) => s.remotes);
@@ -165,7 +168,7 @@ const CallStage = memo(function CallStage({
             name={remote.displayName}
             mutedAudio={localMute.audio || roomMute.audio}
             cameraOff={remote.cameraOff || localMute.video || roomMute.video}
-            onRemove={isHost ? session.kickPeer : undefined}
+            onRemove={isHost ? onAskRemove : undefined}
             isHostViewer={isHost}
             localMute={localMute}
             roomMute={roomMute}
@@ -199,9 +202,7 @@ const CallStage = memo(function CallStage({
       local={item.local}
       sharingScreen
       onPin={pinHandler}
-      onRemove={
-        isHost && !item.local ? session.kickPeer : undefined
-      }
+      onRemove={isHost && !item.local ? onAskRemove : undefined}
       className={className}
     />
   );
@@ -273,8 +274,18 @@ export const Call = () => {
   useEffect(() => () => window.clearTimeout(copiedTimer.current), []);
   const [pinnedId, setPinnedId] = useState<string | null>(null);
   const [showCameras, setShowCameras] = useState(false);
+  const [kickTarget, setKickTarget] = useState<{
+    peerId: string;
+    name: string;
+  } | null>(null);
   const me = state.identity;
   const selfId = me?.peerId;
+  useEffect(() => {
+    if (!kickTarget) return;
+    if (!state.remotes.some((remote) => remote.peerId === kickTarget.peerId)) {
+      setKickTarget(null);
+    }
+  }, [kickTarget, state.remotes]);
   const unread = chatOpen
     ? 0
     : state.messages
@@ -379,6 +390,11 @@ export const Call = () => {
           pinnedId={pinnedId}
           showCameras={showCameras}
           onPin={(id) => setPinnedId((cur) => (cur === id ? null : id))}
+          onAskRemove={(peerId) => {
+            const remote = state.remotes.find((item) => item.peerId === peerId);
+            if (!remote) return;
+            setKickTarget({ peerId, name: remote.displayName });
+          }}
         />
 
         <div className="safe-bottom flex shrink-0 flex-wrap items-center justify-center gap-2 px-4 pt-4">
@@ -479,6 +495,17 @@ export const Call = () => {
           pending={state.pending}
           onAdmit={(peerId) => peerSession.admitPeer(peerId)}
           onDeny={(peerId) => peerSession.denyPeer(peerId)}
+        />
+      )}
+
+      {kickTarget && (
+        <KickDialog
+          name={kickTarget.name}
+          onConfirm={() => {
+            peerSession.kickPeer(kickTarget.peerId);
+            setKickTarget(null);
+          }}
+          onCancel={() => setKickTarget(null)}
         />
       )}
 

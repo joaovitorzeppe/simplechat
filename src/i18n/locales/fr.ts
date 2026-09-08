@@ -66,6 +66,11 @@ export const fr: Messages = {
   "call.pinScreen": "Centrer cet écran",
   "call.waiting": "En attente que l’hôte vous laisse entrer…",
   "call.remove": "Retirer de l’appel",
+  "call.removeTitle": "Retirer {name} ?",
+  "call.removeBody":
+    "La personne part maintenant et ne peut pas revenir avec cette invitation.",
+  "call.removeConfirm": "Retirer",
+  "call.removeCancel": "Annuler",
   "call.muteForMe": "Couper pour moi",
   "call.unmuteForMe": "Activer l’audio pour moi",
   "call.muteForRoom": "Couper pour la salle",
