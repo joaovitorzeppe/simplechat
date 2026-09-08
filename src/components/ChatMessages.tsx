@@ -24,7 +24,7 @@ import {
   highlightCode,
   type CodeLanguage,
 } from "@libs/code";
-import { isPinged, mentionMarks, type MentionPerson } from "@libs/mentions";
+import { isPinged, isSelfMentioned, mentionMarks, type MentionPerson } from "@libs/mentions";
 import type { ChatCommandPayload, ChatFile, ChatMessage } from "@libs/types";
 import { useFileProgress } from "@libs/file-progress";
 import { cn } from "@libs/cn";
@@ -423,7 +423,11 @@ export const ChatMessages = ({
               </span>
             </div>
             {group.messages.map((msg) => {
-              const pinged = isPinged(msg.mentions, selfId, msg.fromPeerId);
+              const listed =
+                msg.command?.kind === "pick" || msg.command?.kind === "order";
+              const pinged = listed
+                ? isSelfMentioned(msg.mentions, selfId)
+                : isPinged(msg.mentions, selfId, msg.fromPeerId);
               return (
                 <div key={msg.id} className={cn(mine && "flex justify-end")}>
                   <div
@@ -460,7 +464,12 @@ export const ChatMessages = ({
                       <MessageBody
                         text={
                           msg.command
-                            ? formatCommandText(msg.command, t, msg.fromName)
+                            ? formatCommandText(
+                                msg.command,
+                                t,
+                                msg.fromName,
+                                people,
+                              )
                             : msg.text
                         }
                         marks={mentionMarks(

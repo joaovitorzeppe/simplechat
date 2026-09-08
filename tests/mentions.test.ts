@@ -96,6 +96,23 @@ describe("isPinged", () => {
   });
 });
 
+describe("mentionMarks", () => {
+  it("só pinta de amarelo o nome de quem está lendo", () => {
+    const twins = [
+      { peerId: "ana-1", displayName: "Ana" },
+      { peerId: "ana-2", displayName: "Ana" },
+    ];
+    const marks = mentionMarks(["ana-1", "ana-2"], twins, "ana-2");
+    expect(marks.filter((mark) => mark.mine).map((mark) => mark.label)).toEqual([
+      "Ana - 2",
+      "Ana",
+    ]);
+    expect(
+      marks.filter((mark) => !mark.mine).map((mark) => mark.label),
+    ).toEqual(["Ana - 1", "Ana"]);
+  });
+});
+
 describe("splitMessageText com menções", () => {
   it("destaca o token e preserva links", () => {
     const marks = mentionMarks(["ana-1"], people, "me-1");

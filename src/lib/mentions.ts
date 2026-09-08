@@ -144,7 +144,6 @@ export const mentionMarks = (
   selfId: string,
 ): MentionMark[] => {
   if (!mentions?.length) return [];
-  const mine = isSelfMentioned(mentions, selfId);
   const marks: MentionMark[] = [];
   if (mentions.includes(ALL_MENTION)) {
     marks.push({ label: ALL_MENTION, mine: true });
@@ -153,8 +152,8 @@ export const mentionMarks = (
   named.sort((a, b) => b.displayName.length - a.displayName.length);
   for (const person of named) {
     if (person.displayName.toLowerCase() === ALL_MENTION) continue;
-    const marked = person.peerId === selfId || mine;
     const unique = displayLabel(person.displayName, person.peerId, people);
+    const marked = person.peerId === selfId;
     marks.push({ label: unique, mine: marked });
     if (unique !== person.displayName) {
       marks.push({ label: person.displayName, mine: marked });

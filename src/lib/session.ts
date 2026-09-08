@@ -671,7 +671,12 @@ export class PeerSession {
         id: crypto.randomUUID(),
         fromPeerId: me.peerId,
         fromName: me.displayName,
-        text: formatCommandText(command.command, t, me.displayName),
+        text: formatCommandText(
+          command.command,
+          t,
+          me.displayName,
+          this.roomMembers,
+        ),
         at,
         command: command.command,
         ...(command.command.kind === "timer"

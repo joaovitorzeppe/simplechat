@@ -6,6 +6,7 @@ import type {
   RollExprTerm,
 } from "./types";
 import { parseCodeArgs, CODE_LANGUAGE_LABELS } from "./code";
+import { displayLabel } from "./text";
 
 export type CommandId =
   | "roll"
@@ -477,6 +478,7 @@ export const formatCommandText = (
   command: ChatCommandPayload,
   translate: Translate,
   fromName = "",
+  people: readonly PeerInfo[] = [],
 ) => {
   if (command.kind === "die") {
     return translate("chat.command.rollDie", {
@@ -520,7 +522,7 @@ export const formatCommandText = (
   }
   if (command.kind === "pick") {
     return translate("chat.command.pickResult", {
-      name: `@${command.name}`,
+      name: `@${displayLabel(command.name, command.peerId, people)}`,
     });
   }
   if (command.kind === "choice") {
@@ -530,7 +532,9 @@ export const formatCommandText = (
     });
   }
   if (command.kind === "order") {
-    const names = command.people.map((person) => `@${person.name}`).join(", ");
+    const names = command.people
+      .map((person) => `@${displayLabel(person.name, person.peerId, people)}`)
+      .join(", ");
     return translate("chat.command.orderResult", { names });
   }
   if (command.kind === "coin") {
@@ -587,21 +591,27 @@ export const peopleForCommandMentions = (
   people: PeerInfo[],
 ) => {
   if (command?.kind === "pick") {
-    return [
-      { peerId: command.peerId, displayName: command.name },
-      ...people.filter((person) => person.peerId !== command.peerId),
-    ];
+    const mapped = people.map((person) =>
+      person.peerId === command.peerId
+        ? { ...person, displayName: command.name }
+        : person,
+    );
+    if (mapped.some((person) => person.peerId === command.peerId)) return mapped;
+    return [...mapped, { peerId: command.peerId, displayName: command.name }];
   }
   if (command?.kind === "order") {
-    const extras = command.people.map((person) => ({
-      peerId: person.peerId,
-      displayName: person.name,
-    }));
-    const seen = new Set(extras.map((person) => person.peerId));
-    return [
-      ...extras,
-      ...people.filter((person) => !seen.has(person.peerId)),
-    ];
+    const names = new Map(
+      command.people.map((person) => [person.peerId, person.name]),
+    );
+    const mapped = people.map((person) => {
+      const name = names.get(person.peerId);
+      return name ? { ...person, displayName: name } : person;
+    });
+    const seen = new Set(mapped.map((person) => person.peerId));
+    const extras = command.people
+      .filter((person) => !seen.has(person.peerId))
+      .map((person) => ({ peerId: person.peerId, displayName: person.name }));
+    return extras.length ? [...mapped, ...extras] : mapped;
   }
   return people;
 };

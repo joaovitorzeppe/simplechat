@@ -554,6 +554,34 @@ describe("formatCommandText", () => {
         t,
       ),
     ).toBe("Ordem: @Ana, @Bruno");
+    expect(
+      formatCommandText(
+        { kind: "pick", name: "Ana", peerId: "ana-2" },
+        t,
+        "",
+        [
+          { peerId: "ana-1", displayName: "Ana" },
+          { peerId: "ana-2", displayName: "Ana" },
+        ],
+      ),
+    ).toBe("Sorteou: @Ana - 2");
+    expect(
+      formatCommandText(
+        {
+          kind: "order",
+          people: [
+            { name: "Ana", peerId: "ana-2" },
+            { name: "Ana", peerId: "ana-1" },
+          ],
+        },
+        t,
+        "",
+        [
+          { peerId: "ana-1", displayName: "Ana" },
+          { peerId: "ana-2", displayName: "Ana" },
+        ],
+      ),
+    ).toBe("Ordem: @Ana - 2, @Ana - 1");
     expect(formatCommandText({ kind: "help" }, t)).toMatch(/^Comandos:\n\/dado /);
   });
 
