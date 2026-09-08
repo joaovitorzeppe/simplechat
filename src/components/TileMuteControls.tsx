@@ -140,14 +140,14 @@ const MuteButton = ({
         else onToggleLocal(kind);
       }}
       className={cn(
-        "grid size-7 place-items-center rounded-full border",
+        "grid size-8 place-items-center rounded-full border",
         locked ? "cursor-not-allowed opacity-70" : "cursor-pointer",
         off
           ? "border-red-500 bg-red-500 text-white"
           : "border-white/20 bg-black/60 text-white",
       )}
     >
-      <Icon width={14} height={14} />
+      <Icon width={16} height={16} />
     </button>
   );
 
