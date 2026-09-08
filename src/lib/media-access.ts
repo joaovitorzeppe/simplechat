@@ -19,7 +19,7 @@ export type CameraFlip =
   | { facingMode: "user" | "environment" }
   | { deviceId: string };
 
-const facingFromLabel = (label: string) => {
+export const facingFromLabel = (label: string) => {
   const l = label.toLowerCase();
   if (/front|facetime|\buser\b|frontal/.test(l)) return "user" as const;
   if (/back|rear|environment|traseir/.test(l)) return "environment" as const;

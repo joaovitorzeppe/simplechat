@@ -44,7 +44,12 @@ import {
 } from "./file-progress";
 import { FileBridge } from "./file-transfer";
 import { CONNECT_GIVE_UP_MS, CONNECT_HINT_MS, iceGaveUpKind } from "./ice-path";
-import { acquireLocalMedia, mediaStreamOf, nextCameraFlip } from "./media-access";
+import {
+  acquireLocalMedia,
+  facingFromLabel,
+  mediaStreamOf,
+  nextCameraFlip,
+} from "./media-access";
 import {
   dropMute,
   muteOf,
@@ -644,7 +649,10 @@ export class PeerSession {
       }
       const mentions = mentionsForCommand(command.command);
       if (command.command.kind === "emote") {
-        for (const id of resolveMentions(command.command.action, this.roomMembers)) {
+        for (const id of resolveMentions(
+          command.command.action,
+          this.roomMembers,
+        )) {
           if (!mentions.includes(id)) mentions.push(id);
         }
       }
@@ -699,7 +707,12 @@ export class PeerSession {
   controlTimer(messageId: string, action: TimerAction) {
     const me = this.state.identity;
     if (!me || !this.inRoom()) return;
-    const next = this.applyTimerControl(messageId, me.peerId, action, Date.now());
+    const next = this.applyTimerControl(
+      messageId,
+      me.peerId,
+      action,
+      Date.now(),
+    );
     if (!next) return;
     this.broadcast({ type: "timer-control", id: messageId, timer: next });
   }
@@ -829,7 +842,9 @@ export class PeerSession {
     } catch {
       return;
     }
-    const cams = devices.filter((d) => d.kind === "videoinput");
+    let cams = devices
+      .filter((d) => d.kind === "videoinput")
+      .filter((d) => Boolean(facingFromLabel(d.label)));
     if (cams.length < 2) return;
     const current = this.state.localStream?.getVideoTracks()[0];
     const settings = current?.getSettings?.();
@@ -930,7 +945,10 @@ export class PeerSession {
     const stream = this.state.localStream;
     if (stream) await applyTrackConstraints(stream, "camera");
     if (this.screenTrack) {
-      await applyTrackConstraints(new MediaStream([this.screenTrack]), "screen");
+      await applyTrackConstraints(
+        new MediaStream([this.screenTrack]),
+        "screen",
+      );
     }
     this.applyLimitsToAll();
   }
@@ -1312,8 +1330,7 @@ export class PeerSession {
   }
 
   private nameFromMeta(raw: unknown, peerId: string) {
-    const clamped =
-      typeof raw === "string" ? clampDisplayName(raw.trim()) : "";
+    const clamped = typeof raw === "string" ? clampDisplayName(raw.trim()) : "";
     return clamped || this.names.get(peerId) || t("common.someone");
   }
 
@@ -1782,7 +1799,8 @@ export class PeerSession {
   }
 
   private clearAllTimerAlarms() {
-    for (const timeout of this.timerAlarms.values()) window.clearTimeout(timeout);
+    for (const timeout of this.timerAlarms.values())
+      window.clearTimeout(timeout);
     this.timerAlarms.clear();
   }
 

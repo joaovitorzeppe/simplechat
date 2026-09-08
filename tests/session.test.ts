@@ -1136,6 +1136,7 @@ describe("troca de câmera", () => {
   const mockCams = (
     ids: string[],
     gum: (constraints: MediaStreamConstraints) => Promise<MediaStream>,
+    labels?: Record<string, string>,
   ) => {
     Object.defineProperty(navigator, "mediaDevices", {
       configurable: true,
@@ -1145,7 +1146,11 @@ describe("troca de câmera", () => {
           ids.map((deviceId) => ({
             deviceId,
             kind: "videoinput" as const,
-            label: deviceId,
+            label:
+              labels?.[deviceId] ??
+              (/front/i.test(deviceId)
+                ? "Front Camera"
+                : `Back ${deviceId} Camera`),
             groupId: "",
             toJSON() {
               return this;
@@ -1207,6 +1212,42 @@ describe("troca de câmera", () => {
     const gum = vi.fn();
     mockCams(["cam-a", "cam-b"], gum);
     core.patch({ cameraOff: true });
+    await session.switchCamera();
+    expect(gum).not.toHaveBeenCalled();
+  });
+
+  it("com mais de duas, só usa câmera com frente/trás no rótulo", async () => {
+    const gum = vi.fn(async (_constraints: MediaStreamConstraints) =>
+      streamWith(videoCam("back", "environment")),
+    );
+    mockCams(["front", "back", "usb"], gum, {
+      front: "Front Camera",
+      back: "Back Camera",
+      usb: "USB Capture",
+    });
+    core.patch({
+      cameraOff: false,
+      localStream: streamWith(videoCam("front", "user")),
+    });
+    await session.switchCamera();
+    const args = gum.mock.calls[0];
+    if (!args) throw new Error("expected getUserMedia call");
+    expect((args[0].video as MediaTrackConstraints).facingMode).toEqual({
+      exact: "environment",
+    });
+  });
+
+  it("não troca se o filtro deixa menos de duas", async () => {
+    const gum = vi.fn();
+    mockCams(["front", "usb", "hdmi"], gum, {
+      front: "Front Camera",
+      usb: "USB Capture",
+      hdmi: "HDMI",
+    });
+    core.patch({
+      cameraOff: false,
+      localStream: streamWith(videoCam("front", "user")),
+    });
     await session.switchCamera();
     expect(gum).not.toHaveBeenCalled();
   });
