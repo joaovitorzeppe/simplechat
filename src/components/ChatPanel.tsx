@@ -252,7 +252,6 @@ export const ChatPanel = ({
         />
         <Button
           variant="ghost"
-          size="sm"
           title={t("chat.attach")}
           aria-label={t("chat.attach")}
           onClick={() => fileRef.current?.click()}
@@ -298,10 +297,10 @@ export const ChatPanel = ({
             aria-label={t("chat.placeholder")}
             aria-autocomplete="list"
             aria-expanded={pickerOpen}
-            className="max-h-40 w-full resize-none rounded-xl bg-zinc-900 border border-line px-3 py-2 text-sm outline-none focus:border-accent"
+            className="block min-h-10 max-h-40 w-full resize-none rounded-xl bg-zinc-900 border border-line px-3 py-2 text-sm leading-5 outline-none focus:border-accent"
           />
         </div>
-        <Button type="submit" disabled={!text.trim()} className="shrink-0">
+        <Button type="submit" disabled={!text.trim()} className="h-10 shrink-0">
           {t("chat.send")}
         </Button>
       </form>
