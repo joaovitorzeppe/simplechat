@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { firstGrapheme, graphemes, truncateText } from "@libs/text";
+import { firstGrapheme, graphemes, truncateText, displayLabel } from "@libs/text";
 import { safeFileName } from "@libs/chat";
 import {
   clampChatText,
@@ -108,5 +108,25 @@ describe("nomes de arquivo não latinos", () => {
     const cut = safeFileName(`${"🎉".repeat(200)}.png`);
     expect(cut.length).toBeLessThanOrEqual(180);
     expect(LONE_SURROGATE.test(cut)).toBe(false);
+  });
+});
+
+describe("displayLabel", () => {
+  it("deixa o nome sozinho quando não há homônimo", () => {
+    expect(
+      displayLabel("Ana", "aaaaaaaaaaaaaaaaaaaaaaaa1", [
+        { displayName: "Ana" },
+        { displayName: "Bruno" },
+      ]),
+    ).toBe("Ana");
+  });
+
+  it("acrescenta o fim do peerId quando o nome bate", () => {
+    expect(
+      displayLabel("Ana", "xxxxxxxxxxxxxxxxxxxxxxyz12", [
+        { displayName: "Ana" },
+        { displayName: "ana" },
+      ]),
+    ).toBe("Ana · yz12");
   });
 });

@@ -21,6 +21,7 @@ import {
   filterChatCommands,
   insertCommand,
 } from "@libs/commands";
+import { displayLabel } from "@libs/text";
 import type { ChatMessage } from "@libs/types";
 import type { TimerAction } from "@libs/timer";
 import { MAX_CHAT_TEXT } from "@libs/wire-guard";
@@ -130,7 +131,10 @@ export const ChatPanel = ({
   };
 
   const applyMention = (item: PickerItem) => {
-    const label = item.kind === "all" ? ALL_MENTION : item.person.displayName;
+    const label =
+      item.kind === "all"
+        ? ALL_MENTION
+        : displayLabel(item.person.displayName, item.person.peerId, people);
     focusCaret(insertMention(text, caret, label));
   };
 
@@ -262,6 +266,7 @@ export const ChatPanel = ({
           {pickerOpen && pickerKind === "mention" && (
             <MentionPicker
               items={mentionItems}
+              people={people}
               active={Math.min(active, mentionItems.length - 1)}
               label={t("chat.mentionPicker")}
               allLabel={t("chat.mentionAll")}

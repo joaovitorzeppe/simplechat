@@ -1,3 +1,4 @@
+import { displayLabel } from "./text";
 import type { PeerInfo } from "./types";
 
 export const ALL_MENTION = "all";
@@ -45,8 +46,17 @@ export const filterMentionPeople = (
   const q = folded(query);
   return people
     .filter((person) => person.peerId !== selfId)
-    .filter((person) => folded(person.displayName).includes(q))
-    .toSorted((a, b) => a.displayName.localeCompare(b.displayName));
+    .filter((person) => {
+      if (folded(person.displayName).includes(q)) return true;
+      return folded(
+        displayLabel(person.displayName, person.peerId, people),
+      ).includes(q);
+    })
+    .toSorted((a, b) =>
+      displayLabel(a.displayName, a.peerId, people).localeCompare(
+        displayLabel(b.displayName, b.peerId, people),
+      ),
+    );
 };
 
 export const matchAllOption = (query: string, hasOthers: boolean) => {
@@ -82,9 +92,12 @@ export const resolveMentions = (
   const used: Array<{ start: number; end: number }> = [];
   const add = (id: string, start: number, end: number) => {
     if (seen.has(id)) return;
-    if (used.some((span) => start < span.end && end > span.start)) return;
+    const clash = used.find((span) => start < span.end && end > span.start);
+    // Mesmo token (`@Ana` duas vezes na lista) marca todo mundo. Span
+    // diferente ainda perde para o nome mais longo (`@Ana Maria`).
+    if (clash && (clash.start !== start || clash.end !== end)) return;
     seen.add(id);
-    used.push({ start, end });
+    if (!clash) used.push({ start, end });
     found.push(id);
   };
   const consider = (id: string, name: string) => {
@@ -96,10 +109,16 @@ export const resolveMentions = (
     }
   };
   consider(ALL_MENTION, ALL_MENTION);
-  const byLength = [...people].toSorted(
-    (a, b) => b.displayName.length - a.displayName.length,
-  );
-  for (const person of byLength) consider(person.peerId, person.displayName);
+  const tokens: Array<{ id: string; name: string }> = [];
+  for (const person of people) {
+    const unique = displayLabel(person.displayName, person.peerId, people);
+    tokens.push({ id: person.peerId, name: unique });
+    if (unique !== person.displayName) {
+      tokens.push({ id: person.peerId, name: person.displayName });
+    }
+  }
+  tokens.sort((a, b) => b.name.length - a.name.length);
+  for (const token of tokens) consider(token.id, token.name);
   return found;
 };
 
@@ -134,10 +153,12 @@ export const mentionMarks = (
   named.sort((a, b) => b.displayName.length - a.displayName.length);
   for (const person of named) {
     if (person.displayName.toLowerCase() === ALL_MENTION) continue;
-    marks.push({
-      label: person.displayName,
-      mine: person.peerId === selfId || mine,
-    });
+    const marked = person.peerId === selfId || mine;
+    const unique = displayLabel(person.displayName, person.peerId, people);
+    marks.push({ label: unique, mine: marked });
+    if (unique !== person.displayName) {
+      marks.push({ label: person.displayName, mine: marked });
+    }
   }
   return marks;
 };

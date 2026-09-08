@@ -1,9 +1,11 @@
 import { useI18n } from "@i18n/use-i18n";
+import { displayLabel } from "@libs/text";
 import type { PeerInfo } from "@libs/types";
 import { Button } from "./Button";
 
 type Props = {
   pending: PeerInfo[];
+  roster: PeerInfo[];
   onAdmit: (peerId: string) => void;
   onDeny: (peerId: string) => void;
 };
@@ -12,9 +14,10 @@ type Props = {
  * Fica ao lado da chamada em vez de cobri-la: o host continua conversando
  * enquanto decide, e uma segunda pessoa batendo na porta não rouba o foco.
  */
-export const Lobby = ({ pending, onAdmit, onDeny }: Props) => {
+export const Lobby = ({ pending, roster, onAdmit, onDeny }: Props) => {
   const { t } = useI18n();
   if (pending.length === 0) return null;
+  const names = [...roster, ...pending];
 
   return (
     <aside
@@ -27,7 +30,7 @@ export const Lobby = ({ pending, onAdmit, onDeny }: Props) => {
         {pending.map((peer) => (
           <li key={peer.peerId} className="flex items-center gap-2">
             <span className="min-w-0 flex-1 truncate text-sm text-zinc-200">
-              {peer.displayName}
+              {displayLabel(peer.displayName, peer.peerId, names)}
             </span>
             <Button
               className="shrink-0 px-3 py-1.5 text-xs"

@@ -29,3 +29,23 @@ export const truncateText = (value: string, maxUnits: number) => {
 };
 
 export const firstGrapheme = (value: string) => graphemes(value)[0] ?? "";
+
+const foldedName = (value: string) => value.trim().toLowerCase();
+
+/**
+ * Duas pessoas com o mesmo nome na sala. O sufixo é o fim do peerId, estável
+ * enquanto a pessoa estiver na chamada — não um índice que muda se alguém sai.
+ */
+export const displayLabel = (
+  name: string,
+  peerId: string,
+  people: readonly { displayName: string }[],
+) => {
+  const key = foldedName(name);
+  let hits = 0;
+  for (const person of people) {
+    if (foldedName(person.displayName) === key) hits += 1;
+    if (hits > 1) return `${name} · ${peerId.slice(-4)}`;
+  }
+  return name;
+};

@@ -27,6 +27,7 @@ import { maxParticipants } from "@libs/quality";
 import { muteOf } from "@libs/mutes";
 import { screenStageKind } from "@libs/screen-layout";
 import { electHost, session } from "@libs/session";
+import { displayLabel } from "@libs/text";
 import type { PeerInfo } from "@libs/types";
 import { useSession, useSessionSelector } from "@libs/use-session";
 
@@ -105,6 +106,19 @@ const CallStage = memo(function CallStage({
   const isHost = useSessionSelector((s) => s.isHost);
   const localMutes = useSessionSelector((s) => s.localMutes);
   const roomMutes = useSessionSelector((s) => s.roomMutes);
+  const roster = useMemo(() => {
+    const list: PeerInfo[] = remotes.map((remote) => ({
+      peerId: remote.peerId,
+      displayName: remote.displayName,
+    }));
+    if (identity) {
+      list.unshift({
+        peerId: identity.peerId,
+        displayName: identity.displayName,
+      });
+    }
+    return list;
+  }, [remotes, identity]);
 
   const screens = useMemo(() => {
     const items: ScreenItem[] = [];
@@ -113,7 +127,7 @@ const CallStage = memo(function CallStage({
       items.push({
         id: remote.peerId,
         stream: remote.screenStream,
-        name: remote.displayName,
+        name: displayLabel(remote.displayName, remote.peerId, roster),
         local: false,
       });
     }
@@ -121,12 +135,12 @@ const CallStage = memo(function CallStage({
       items.push({
         id: identity.peerId,
         stream: localScreenStream,
-        name: identity.displayName,
+        name: displayLabel(identity.displayName, identity.peerId, roster),
         local: true,
       });
     }
     return items;
-  }, [remotes, localScreenStream, identity]);
+  }, [remotes, localScreenStream, identity, roster]);
 
   const userPinned =
     pinnedId && screens.some((item) => item.id === pinnedId) ? pinnedId : null;
@@ -151,7 +165,11 @@ const CallStage = memo(function CallStage({
       <VideoTile
         key="local"
         stream={localStream}
-        name={identity?.displayName ?? t("common.you")}
+        name={
+          identity
+            ? displayLabel(identity.displayName, identity.peerId, roster)
+            : t("common.you")
+        }
         local
         cameraOff={cameraOff}
         className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
@@ -165,7 +183,7 @@ const CallStage = memo(function CallStage({
             key={remote.peerId}
             peerId={remote.peerId}
             stream={remote.stream}
-            name={remote.displayName}
+            name={displayLabel(remote.displayName, remote.peerId, roster)}
             mutedAudio={localMute.audio || roomMute.audio}
             cameraOff={remote.cameraOff || localMute.video || roomMute.video}
             onRemove={isHost ? onAskRemove : undefined}
@@ -312,9 +330,12 @@ export const Call = () => {
   }, [me, state.remotes]);
 
   const successorId = electHost(state.remotes.map((remote) => remote.peerId));
-  const successorName =
-    state.remotes.find((remote) => remote.peerId === successorId)
-      ?.displayName ?? null;
+  const successor = state.remotes.find(
+    (remote) => remote.peerId === successorId,
+  );
+  const successorName = successor
+    ? displayLabel(successor.displayName, successor.peerId, people)
+    : null;
   const selfRoom = me ? muteOf(state.roomMutes, me.peerId) : null;
   const screenCount =
     state.remotes.filter((remote) => remote.screenStream).length +
@@ -393,7 +414,10 @@ export const Call = () => {
           onAskRemove={(peerId) => {
             const remote = state.remotes.find((item) => item.peerId === peerId);
             if (!remote) return;
-            setKickTarget({ peerId, name: remote.displayName });
+            setKickTarget({
+              peerId,
+              name: displayLabel(remote.displayName, remote.peerId, people),
+            });
           }}
         />
 
@@ -493,6 +517,7 @@ export const Call = () => {
       {state.isHost && (
         <Lobby
           pending={state.pending}
+          roster={people}
           onAdmit={(peerId) => peerSession.admitPeer(peerId)}
           onDeny={(peerId) => peerSession.denyPeer(peerId)}
         />

@@ -67,6 +67,27 @@ describe("resolveMentions", () => {
   it("não marca token grudado em outra letra", () => {
     expect(resolveMentions("x@Ana", people)).toEqual([]);
   });
+
+  it("marca todos os homônimos em @Nome", () => {
+    const twins = [
+      { peerId: "ana-aaaaaaa1", displayName: "Ana" },
+      { peerId: "ana-aaaaaaa2", displayName: "Ana" },
+    ];
+    expect(resolveMentions("oi @Ana", twins)).toEqual([
+      "ana-aaaaaaa1",
+      "ana-aaaaaaa2",
+    ]);
+  });
+
+  it("rótulo desambiguado pega só uma pessoa", () => {
+    const twins = [
+      { peerId: "xxxxxxxxxxxxxxxxxxxxxxyz12", displayName: "Ana" },
+      { peerId: "xxxxxxxxxxxxxxxxxxxxxxyz34", displayName: "Ana" },
+    ];
+    expect(resolveMentions("oi @Ana · yz34", twins)).toEqual([
+      "xxxxxxxxxxxxxxxxxxxxxxyz34",
+    ]);
+  });
 });
 
 describe("isPinged", () => {

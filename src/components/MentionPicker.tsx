@@ -1,4 +1,5 @@
 import type { MentionPerson } from "@libs/mentions";
+import { displayLabel } from "@libs/text";
 import { cn } from "@libs/cn";
 
 type Item =
@@ -7,6 +8,7 @@ type Item =
 
 type Props = {
   items: Item[];
+  people: MentionPerson[];
   active: number;
   label: string;
   allLabel: string;
@@ -16,6 +18,7 @@ type Props = {
 
 export const MentionPicker = ({
   items,
+  people,
   active,
   label,
   allLabel,
@@ -33,7 +36,9 @@ export const MentionPicker = ({
       {items.map((item, index) => {
         const selected = index === active;
         const name =
-          item.kind === "all" ? `@all` : `@${item.person.displayName}`;
+          item.kind === "all"
+            ? `@all`
+            : `@${displayLabel(item.person.displayName, item.person.peerId, people)}`;
         const hint = item.kind === "all" ? allLabel : null;
         return (
           <li key={item.kind === "all" ? "all" : item.person.peerId}>
