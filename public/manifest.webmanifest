@@ -2,13 +2,13 @@
   "id": "/",
   "name": "SimpleChat",
   "short_name": "SimpleChat",
-  "description": "SimpleChat — chamada de áudio, vídeo e chat sem compromisso no navegador.",
+  "description": "SimpleChat — audio, video without hassle in the browser.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#070708",
   "theme_color": "#070708",
-  "lang": "pt-BR",
+  "lang": "en-US",
   "icons": [
     {
       "src": "/icons/icon-192.png",
