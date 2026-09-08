@@ -238,7 +238,6 @@ export const fr: Messages = {
   "toast.fileBusy": "Attendez la fin de l’envoi en cours.",
   "toast.filePartial":
     "Fichier envoyé seulement à une partie de la salle — quelqu’un a quitté.",
-  "toast.knock": "{name} veut rejoindre l’appel.",
   "toast.joinDenied": "L’hôte n’a pas approuvé votre entrée.",
   "toast.inviteStale":
     "Lien invalide ou expiré. Demandez une nouvelle invitation.",

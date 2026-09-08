@@ -237,7 +237,6 @@ export const es: Messages = {
   "toast.fileBusy": "Espera a que termine el envío actual.",
   "toast.filePartial":
     "Archivo enviado solo a parte de la sala — alguien se fue a mitad.",
-  "toast.knock": "{name} quiere entrar a la llamada.",
   "toast.joinDenied": "El anfitrión no aprobó tu entrada.",
   "toast.inviteStale": "Enlace inválido o vencido. Pide una invitación nueva.",
   "toast.kicked": "El anfitrión te quitó de la llamada.",

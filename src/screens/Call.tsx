@@ -517,15 +517,6 @@ export const Call = () => {
         </div>
       </div>
 
-      {state.isHost && (
-        <Lobby
-          pending={state.pending}
-          roster={people}
-          onAdmit={(peerId) => peerSession.admitPeer(peerId)}
-          onDeny={(peerId) => peerSession.denyPeer(peerId)}
-        />
-      )}
-
       {kickTarget && (
         <KickDialog
           name={kickTarget.name}
@@ -534,6 +525,15 @@ export const Call = () => {
             setKickTarget(null);
           }}
           onCancel={() => setKickTarget(null)}
+        />
+      )}
+
+      {state.isHost && (
+        <Lobby
+          pending={state.pending}
+          roster={people}
+          onAdmit={(peerId) => peerSession.admitPeer(peerId)}
+          onDeny={(peerId) => peerSession.denyPeer(peerId)}
         />
       )}
 

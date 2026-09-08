@@ -235,7 +235,6 @@ export const en: Messages = {
   "toast.fileBusy": "Wait for the current file to finish sending.",
   "toast.filePartial":
     "File sent to some people only — others disconnected mid-transfer.",
-  "toast.knock": "{name} wants to join the call.",
   "toast.joinDenied": "The host did not let you in.",
   "toast.inviteStale": "Invalid or expired link. Ask for a new invite.",
   "toast.kicked": "The host removed you from the call.",

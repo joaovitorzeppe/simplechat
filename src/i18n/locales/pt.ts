@@ -234,7 +234,6 @@ export const pt = {
   "toast.fileBusy": "Espere o arquivo atual terminar de enviar.",
   "toast.filePartial":
     "Arquivo enviado só para parte da sala — alguém saiu no meio.",
-  "toast.knock": "{name} quer entrar na chamada.",
   "toast.joinDenied": "O host não aprovou sua entrada.",
   "toast.inviteStale": "Link inválido ou expirado. Peça um convite novo.",
   "toast.kicked": "O host removeu você da chamada.",

@@ -1852,7 +1852,6 @@ export class PeerSession {
     if (this.state.pending.some((p) => p.peerId === peerId)) return;
     this.patch({ pending: [...this.state.pending, { peerId, displayName }] });
     if (conn.open) conn.send({ type: "room-waiting" });
-    showToast("toast.knock", { name: displayName });
   }
 
   private assumeHost(
