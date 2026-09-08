@@ -1038,7 +1038,7 @@ export class PeerSession {
   }
 
   private async replaceCameraTrack(video: MediaStreamTrack) {
-    await applyTrackConstraints(new MediaStream([video]), "camera");
+    await applyTrackConstraints(mediaStreamOf([video]), "camera");
     const audio = this.state.localStream?.getAudioTracks() ?? [];
     this.state.localStream?.getVideoTracks().forEach((track) => track.stop());
     const stream = mediaStreamOf([...audio, video]);
