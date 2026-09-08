@@ -45,6 +45,19 @@ const inlineCssAndPreloadFont = (): Plugin => ({
           `    <link rel="preload" href="/${font.fileName}" as="font" type="font/woff2" crossorigin>\n  </head>`,
         );
       }
+      // Vite injeta o <script type="module"> do entry antes dos
+      // modulepreload. O Chrome baixa o runtime pelo import e marca o
+      // <link> como preload sem uso.
+      const preloads = [
+        ...next.matchAll(/<link rel="modulepreload"[^>]*>/g),
+      ].map((match) => match[0]);
+      if (preloads.length) {
+        next = next.replace(/\s*<link rel="modulepreload"[^>]*>/g, "");
+        next = next.replace(
+          /<script type="module"/,
+          `${preloads.join("\n  ")}\n  <script type="module"`,
+        );
+      }
       return next;
     },
   },
