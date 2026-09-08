@@ -4,7 +4,7 @@ import { LanguageSwitcher } from "@components/LanguageSwitcher";
 import { ThemeToggle } from "@components/ThemeToggle";
 import { useI18n } from "@i18n/use-i18n";
 import { legalDoc } from "@i18n/legal";
-import { GITHUB_URL } from "@libs/github";
+import { GITHUB_URL, KOFI_URL } from "@libs/github";
 import { legalHref, sameOriginReferrer, type LegalKind } from "@libs/spa-path";
 import { useEffect } from "react";
 
@@ -109,6 +109,14 @@ export const Legal = ({ kind }: Props) => {
             rel="noopener noreferrer"
           >
             {t("legal.github")}
+          </a>
+          <a
+            href={KOFI_URL}
+            className="text-zinc-500 underline-offset-2 hover:text-zinc-200 hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t("legal.kofi")}
           </a>
         </nav>
       </div>

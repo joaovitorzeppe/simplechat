@@ -255,6 +255,7 @@ export const pt = {
   "legal.privacy": "Política de privacidade",
   "legal.terms": "Termos de uso",
   "legal.github": "GitHub",
+  "legal.kofi": "Apoiar",
   "legal.back": "Voltar ao SimpleChat",
   "legal.goBack": "Voltar",
   "legal.updated": "Atualizado em {date}",

@@ -263,6 +263,7 @@ export const fr: Messages = {
   "legal.privacy": "Politique de confidentialité",
   "legal.terms": "Conditions d’utilisation",
   "legal.github": "GitHub",
+  "legal.kofi": "Soutenir",
   "legal.back": "Retour à SimpleChat",
   "legal.goBack": "Retour",
   "legal.updated": "Mis à jour le {date}",

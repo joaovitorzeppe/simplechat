@@ -1,6 +1,6 @@
 import { useI18n } from "@i18n/use-i18n";
 import { cn } from "@libs/cn";
-import { GITHUB_URL } from "@libs/github";
+import { GITHUB_URL, KOFI_URL } from "@libs/github";
 
 const linkClass = "underline-offset-2 hover:text-zinc-200 hover:underline";
 
@@ -28,6 +28,14 @@ export const LegalLinks = ({ className }: { className?: string }) => {
         rel="noopener noreferrer"
       >
         {t("legal.github")}
+      </a>
+      <a
+        href={KOFI_URL}
+        className={linkClass}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {t("legal.kofi")}
       </a>
     </nav>
   );
