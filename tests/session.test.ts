@@ -1155,22 +1155,41 @@ describe("troca de câmera", () => {
     });
   };
 
-  it("cicla para a próxima câmera e para a anterior", async () => {
-    const oldVideo = videoCam("cam-a", "user");
-    const newVideo = videoCam("cam-b", "environment");
-    const gum = vi.fn(async () => streamWith(newVideo));
-    mockCams(["cam-a", "cam-b"], gum);
+  it("alterna frente e traseira sem passar pelas extras", async () => {
+    const oldVideo = videoCam("front", "user");
+    const newVideo = videoCam("dual", "environment");
+    const gum = vi.fn(async (_constraints: MediaStreamConstraints) =>
+      streamWith(newVideo),
+    );
+    mockCams(["front", "dual", "ultra", "tele"], gum);
     core.patch({ cameraOff: false, localStream: streamWith(oldVideo) });
     await session.switchCamera();
-    expect(gum).toHaveBeenCalledWith(
-      expect.objectContaining({
-        audio: false,
-        video: expect.objectContaining({ deviceId: { exact: "cam-b" } }),
-      }),
+    const args = gum.mock.calls[0];
+    if (!args) throw new Error("expected getUserMedia call");
+    expect(args[0].video).toEqual(
+      expect.objectContaining({ facingMode: { exact: "environment" } }),
     );
+    expect((args[0].video as MediaTrackConstraints).deviceId).toBeUndefined();
     expect(oldVideo.stop).toHaveBeenCalled();
     expect(core.state.localStream?.getVideoTracks()[0]).toBe(newVideo);
     expect(core.state.canSwitchCamera).toBe(true);
+  });
+
+  it("da traseira volta para a frontal", async () => {
+    const gum = vi.fn(async (_constraints: MediaStreamConstraints) =>
+      streamWith(videoCam("front", "user")),
+    );
+    mockCams(["front", "dual", "ultra"], gum);
+    core.patch({
+      cameraOff: false,
+      localStream: streamWith(videoCam("ultra", "environment")),
+    });
+    await session.switchCamera();
+    const args = gum.mock.calls[0];
+    if (!args) throw new Error("expected getUserMedia call");
+    expect((args[0].video as MediaTrackConstraints).facingMode).toEqual({
+      exact: "user",
+    });
   });
 
   it("não pede câmera se só existe uma", async () => {

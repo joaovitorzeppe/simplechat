@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { acquireLocalMedia, canShareScreen, nextVideoDeviceId } from "@libs/media-access";
+import { acquireLocalMedia, canShareScreen, nextCameraFlip } from "@libs/media-access";
 
 const track = (kind: "audio" | "video") =>
   ({
@@ -106,28 +106,50 @@ describe("canShareScreen", () => {
   });
 });
 
-describe("nextVideoDeviceId", () => {
-  const cam = (deviceId: string) => ({ kind: "videoinput" as const, deviceId });
-
-  it("cicla para a próxima câmera", () => {
-    expect(nextVideoDeviceId([cam("a"), cam("b")], "a")).toBe("b");
-    expect(nextVideoDeviceId([cam("a"), cam("b")], "b")).toBe("a");
+describe("nextCameraFlip", () => {
+  const cam = (deviceId: string, label = "") => ({
+    kind: "videoinput" as const,
+    deviceId,
+    label,
   });
 
-  it("pula a atual desconhecida e pega a segunda", () => {
-    expect(nextVideoDeviceId([cam("a"), cam("b"), cam("c")], "x")).toBe("b");
-  });
-
-  it("é null com menos de duas câmeras com id", () => {
-    expect(nextVideoDeviceId([cam("a")], "a")).toBeNull();
+  it("no iPhone só alterna frente e traseira, ignora extra traseira", () => {
+    const iphone = [
+      cam("front", "Front Camera"),
+      cam("dual", "Back Dual Wide Camera"),
+      cam("ultra", "Back Ultra Wide Camera"),
+      cam("tele", "Back Telephoto Camera"),
+    ];
     expect(
-      nextVideoDeviceId(
-        [
-          { kind: "videoinput", deviceId: "" },
-          { kind: "videoinput", deviceId: "" },
-        ],
-        undefined,
+      nextCameraFlip(iphone, { deviceId: "front", facingMode: "user" }),
+    ).toEqual({ facingMode: "environment" });
+    expect(
+      nextCameraFlip(iphone, { deviceId: "ultra", facingMode: "environment" }),
+    ).toEqual({ facingMode: "user" });
+    expect(
+      nextCameraFlip(iphone, { deviceId: "tele", facingMode: "environment" }),
+    ).toEqual({ facingMode: "user" });
+  });
+
+  it("usa o rótulo se facingMode não veio", () => {
+    expect(
+      nextCameraFlip(
+        [cam("front", "Front Camera"), cam("back", "Back Camera")],
+        { deviceId: "front" },
       ),
-    ).toBeNull();
+    ).toEqual({ facingMode: "environment" });
+  });
+
+  it("cicla id só quando não há frente/trás", () => {
+    expect(nextCameraFlip([cam("a"), cam("b")], { deviceId: "a" })).toEqual({
+      deviceId: "b",
+    });
+    expect(nextCameraFlip([cam("a"), cam("b")], { deviceId: "b" })).toEqual({
+      deviceId: "a",
+    });
+  });
+
+  it("é null com menos de duas câmeras", () => {
+    expect(nextCameraFlip([cam("a")], { deviceId: "a" })).toBeNull();
   });
 });

@@ -13,17 +13,43 @@ export const canShareScreen = (
     typeof navigator !== "undefined" ? navigator.mediaDevices : undefined,
 ) => typeof devices?.getDisplayMedia === "function";
 
-type VideoDevice = Pick<MediaDeviceInfo, "kind" | "deviceId">;
+type VideoDevice = Pick<MediaDeviceInfo, "kind" | "deviceId" | "label">;
 
-/** Próxima `videoinput` com id; `null` se não há o que ciclar. */
-export const nextVideoDeviceId = (
+export type CameraFlip =
+  | { facingMode: "user" | "environment" }
+  | { deviceId: string };
+
+const facingFromLabel = (label: string) => {
+  const l = label.toLowerCase();
+  if (/front|facetime|\buser\b|frontal/.test(l)) return "user" as const;
+  if (/back|rear|environment|traseir/.test(l)) return "environment" as const;
+};
+
+/** Frente ↔ uma traseira. Não cicla ultra-wide/tele. Desktop sem facing: cicla id. */
+export const nextCameraFlip = (
   devices: readonly VideoDevice[],
-  currentId: string | undefined,
-) => {
-  const cams = devices.filter((d) => d.kind === "videoinput" && d.deviceId);
+  current: { deviceId?: string; facingMode?: string },
+): CameraFlip | null => {
+  const cams = devices.filter((d) => d.kind === "videoinput");
   if (cams.length < 2) return null;
-  const idx = cams.findIndex((d) => d.deviceId === currentId);
-  return cams[(idx < 0 ? 1 : idx + 1) % cams.length]?.deviceId ?? null;
+
+  const currentLabel =
+    cams.find((d) => d.deviceId && d.deviceId === current.deviceId)?.label ??
+    "";
+  const from =
+    current.facingMode === "user" || current.facingMode === "environment"
+      ? current.facingMode
+      : facingFromLabel(currentLabel);
+
+  if (from) {
+    return { facingMode: from === "user" ? "environment" : "user" };
+  }
+
+  const withId = cams.filter((d) => d.deviceId);
+  if (withId.length < 2) return null;
+  const idx = withId.findIndex((d) => d.deviceId === current.deviceId);
+  const next = withId[(idx < 0 ? 1 : idx + 1) % withId.length];
+  return next?.deviceId ? { deviceId: next.deviceId } : null;
 };
 
 type GetUserMedia = (

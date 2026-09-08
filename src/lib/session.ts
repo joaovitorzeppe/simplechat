@@ -44,7 +44,7 @@ import {
 } from "./file-progress";
 import { FileBridge } from "./file-transfer";
 import { CONNECT_GIVE_UP_MS, CONNECT_HINT_MS, iceGaveUpKind } from "./ice-path";
-import { acquireLocalMedia, mediaStreamOf, nextVideoDeviceId } from "./media-access";
+import { acquireLocalMedia, mediaStreamOf, nextCameraFlip } from "./media-access";
 import {
   dropMute,
   muteOf,
@@ -832,25 +832,26 @@ export class PeerSession {
     const cams = devices.filter((d) => d.kind === "videoinput");
     if (cams.length < 2) return;
     const current = this.state.localStream?.getVideoTracks()[0];
-    const currentId = current?.getSettings?.().deviceId;
-    const nextId = nextVideoDeviceId(cams, currentId);
-    const facing = current?.getSettings?.().facingMode;
+    const settings = current?.getSettings?.();
+    const flip = nextCameraFlip(cams, {
+      deviceId: settings?.deviceId,
+      facingMode: settings?.facingMode,
+    });
+    if (!flip) return;
     const video: MediaTrackConstraints = {
       ...this.cameraVideoBase(),
-      ...(nextId
-        ? { deviceId: { exact: nextId } }
-        : {
-            facingMode: {
-              exact: facing === "environment" ? "user" : "environment",
-            },
-          }),
+      ...("deviceId" in flip
+        ? { deviceId: { exact: flip.deviceId } }
+        : { facingMode: { exact: flip.facingMode } }),
     };
     this.switchingCamera = true;
     try {
       const fresh = await md.getUserMedia({ audio: false, video });
       const track = fresh.getVideoTracks()[0];
       if (!track) return;
-      this.cameraDeviceId = track.getSettings?.().deviceId || nextId || null;
+      this.cameraDeviceId =
+        track.getSettings?.().deviceId ||
+        ("deviceId" in flip ? flip.deviceId : null);
       await this.replaceCameraTrack(track);
     } catch {
       this.toast("toast.mediaSwitchCamera");
