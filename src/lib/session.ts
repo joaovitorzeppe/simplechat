@@ -1084,9 +1084,9 @@ export class PeerSession {
     let n = 0;
     try {
       n =
-        (await navigator.mediaDevices?.enumerateDevices?.())?.filter(
-          (d) => d.kind === "videoinput",
-        ).length ?? 0;
+        (await navigator.mediaDevices?.enumerateDevices?.())
+          ?.filter((d) => d.kind === "videoinput")
+          ?.filter((d) => Boolean(facingFromLabel(d.label)))?.length ?? 0;
     } catch {
       n = 0;
     }
