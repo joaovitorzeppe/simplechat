@@ -79,7 +79,11 @@ export const VideoTile = memo(function VideoTile({
         className={cn(
           "h-full w-full",
           sharingScreen ? "object-contain bg-black" : "object-cover",
-          local && !sharingScreen && "-scale-x-100",
+          local &&
+            !sharingScreen &&
+            stream?.getVideoTracks()[0]?.getSettings?.().facingMode !==
+              "environment" &&
+            "-scale-x-100",
           blank && "opacity-0",
         )}
       />

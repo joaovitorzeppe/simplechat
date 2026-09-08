@@ -57,6 +57,7 @@ export const it: Messages = {
   "call.mute": "Disattiva microfono",
   "call.cameraOn": "Accendi fotocamera",
   "call.cameraOff": "Spegni fotocamera",
+  "call.switchCamera": "Cambia fotocamera",
   "call.shareScreen": "Condividi schermo",
   "call.stopScreen": "Interrompi condivisione",
   "call.chat": "Chat",
@@ -216,6 +217,7 @@ export const it: Messages = {
   "toast.callEnded": "Chiamata terminata.",
   "toast.roomFull": "Questa chiamata è piena.",
   "toast.mediaCamera": "Consenti la fotocamera per accenderla.",
+  "toast.mediaSwitchCamera": "Impossibile cambiare fotocamera.",
   "toast.mediaMic": "Consenti il microfono per attivarlo.",
   "toast.mediaAudioOnly":
     "Sei entrato solo con l’audio. Puoi accendere la fotocamera dopo.",

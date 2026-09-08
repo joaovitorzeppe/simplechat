@@ -1113,3 +1113,82 @@ describe("timer e voto no chat", () => {
     expect(core.state.messages.at(-1)?.pollVotes).toBeUndefined();
   });
 });
+
+describe("troca de câmera", () => {
+  const videoCam = (id: string, facing?: string) =>
+    ({
+      kind: "video",
+      enabled: true,
+      readyState: "live",
+      stop: vi.fn(),
+      getSettings: () => ({ deviceId: id, facingMode: facing }),
+    }) as unknown as MediaStreamTrack;
+
+  const streamWith = (video: MediaStreamTrack) => {
+    const audio = gumTrack("audio");
+    return {
+      getTracks: () => [audio, video],
+      getAudioTracks: () => [audio],
+      getVideoTracks: () => [video],
+    } as unknown as MediaStream;
+  };
+
+  const mockCams = (
+    ids: string[],
+    gum: (constraints: MediaStreamConstraints) => Promise<MediaStream>,
+  ) => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: {
+        getUserMedia: gum,
+        enumerateDevices: async () =>
+          ids.map((deviceId) => ({
+            deviceId,
+            kind: "videoinput" as const,
+            label: deviceId,
+            groupId: "",
+            toJSON() {
+              return this;
+            },
+          })),
+      },
+    });
+  };
+
+  it("cicla para a próxima câmera e para a anterior", async () => {
+    const oldVideo = videoCam("cam-a", "user");
+    const newVideo = videoCam("cam-b", "environment");
+    const gum = vi.fn(async () => streamWith(newVideo));
+    mockCams(["cam-a", "cam-b"], gum);
+    core.patch({ cameraOff: false, localStream: streamWith(oldVideo) });
+    await session.switchCamera();
+    expect(gum).toHaveBeenCalledWith(
+      expect.objectContaining({
+        audio: false,
+        video: expect.objectContaining({ deviceId: { exact: "cam-b" } }),
+      }),
+    );
+    expect(oldVideo.stop).toHaveBeenCalled();
+    expect(core.state.localStream?.getVideoTracks()[0]).toBe(newVideo);
+    expect(core.state.canSwitchCamera).toBe(true);
+  });
+
+  it("não pede câmera se só existe uma", async () => {
+    const gum = vi.fn();
+    mockCams(["cam-a"], gum);
+    core.patch({
+      cameraOff: false,
+      localStream: streamWith(videoCam("cam-a")),
+    });
+    await session.switchCamera();
+    expect(gum).not.toHaveBeenCalled();
+  });
+
+  it("não troca com a câmera desligada", async () => {
+    const gum = vi.fn();
+    mockCams(["cam-a", "cam-b"], gum);
+    core.patch({ cameraOff: true });
+    await session.switchCamera();
+    expect(gum).not.toHaveBeenCalled();
+  });
+});

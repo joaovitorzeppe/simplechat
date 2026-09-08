@@ -57,6 +57,7 @@ export const pt = {
   "call.mute": "Silenciar microfone",
   "call.cameraOn": "Ligar câmera",
   "call.cameraOff": "Desligar câmera",
+  "call.switchCamera": "Trocar câmera",
   "call.shareScreen": "Compartilhar tela",
   "call.stopScreen": "Parar de compartilhar",
   "call.chat": "Chat",
@@ -213,6 +214,7 @@ export const pt = {
   "toast.callEnded": "Chamada encerrada.",
   "toast.roomFull": "Esta chamada está cheia.",
   "toast.mediaCamera": "Permita a câmera para ligá-la.",
+  "toast.mediaSwitchCamera": "Não deu para trocar a câmera.",
   "toast.mediaMic": "Permita o microfone para ativá-lo.",
   "toast.mediaAudioOnly":
     "Entrou só com áudio. A câmera pode ser ligada depois.",

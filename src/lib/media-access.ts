@@ -13,6 +13,19 @@ export const canShareScreen = (
     typeof navigator !== "undefined" ? navigator.mediaDevices : undefined,
 ) => typeof devices?.getDisplayMedia === "function";
 
+type VideoDevice = Pick<MediaDeviceInfo, "kind" | "deviceId">;
+
+/** Próxima `videoinput` com id; `null` se não há o que ciclar. */
+export const nextVideoDeviceId = (
+  devices: readonly VideoDevice[],
+  currentId: string | undefined,
+) => {
+  const cams = devices.filter((d) => d.kind === "videoinput" && d.deviceId);
+  if (cams.length < 2) return null;
+  const idx = cams.findIndex((d) => d.deviceId === currentId);
+  return cams[(idx < 0 ? 1 : idx + 1) % cams.length]?.deviceId ?? null;
+};
+
 type GetUserMedia = (
   constraints: MediaStreamConstraints,
 ) => Promise<MediaStream>;

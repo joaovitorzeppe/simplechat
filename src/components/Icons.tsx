@@ -61,6 +61,17 @@ export const CameraOffIcon = (props: IconProps) => {
   );
 }
 
+export const FlipCameraIcon = (props: IconProps) => {
+  return (
+    <svg {...base(props)} width={CALL_ICONS_SIZE} height={CALL_ICONS_SIZE}>
+      <path d="M3 12a9 9 0 0 1 15.5-6.4L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-15.5 6.4L3 16" />
+      <path d="M8 16H3v5" />
+    </svg>
+  );
+}
+
 export const ScreenIcon = (props: IconProps) => {
   return (
     <svg {...base(props)} width={CALL_ICONS_SIZE} height={CALL_ICONS_SIZE}>

@@ -44,7 +44,7 @@ import {
 } from "./file-progress";
 import { FileBridge } from "./file-transfer";
 import { CONNECT_GIVE_UP_MS, CONNECT_HINT_MS, iceGaveUpKind } from "./ice-path";
-import { acquireLocalMedia, mediaStreamOf } from "./media-access";
+import { acquireLocalMedia, mediaStreamOf, nextVideoDeviceId } from "./media-access";
 import {
   dropMute,
   muteOf,
@@ -78,6 +78,8 @@ export type SessionState = {
   messages: ChatMessage[];
   muted: boolean;
   cameraOff: boolean;
+  /** Duas ou mais câmeras: dá para ciclar a que está no ar. */
+  canSwitchCamera: boolean;
   /** Silêncio só neste cliente: não vai para o fio. */
   localMutes: MuteMap;
   /** Silêncio mandado pelo host: vale para a sala inteira. */
@@ -151,6 +153,7 @@ const initialState: SessionState = {
   messages: [],
   muted: false,
   cameraOff: false,
+  canSwitchCamera: false,
   localMutes: {},
   roomMutes: {},
   sharingScreen: false,
@@ -183,6 +186,9 @@ export class PeerSession {
   /** Saídas provocadas por remoção, para o aviso não dizer que a pessoa saiu. */
   private removed = new Set<string>();
   private screenTrack: MediaStreamTrack | null = null;
+  /** Última câmera escolhida: religar não volta para a padrão. */
+  private cameraDeviceId: string | null = null;
+  private switchingCamera = false;
   private dialedPeerId: string | null = null;
   /** Nosso segredo quando somos host. Gira a cada recusa ou remoção. */
   private hostSecret: string | null = null;
@@ -273,6 +279,7 @@ export class PeerSession {
       debug: 0,
     });
     this.peer = peer;
+    this.watchDevices();
 
     peer.on("open", () => {
       this.starting = false;
@@ -807,6 +814,51 @@ export class PeerSession {
     else this.disableCamera();
   }
 
+  async switchCamera() {
+    if (
+      this.switchingCamera ||
+      this.state.cameraOff ||
+      this.selfLocked("video")
+    )
+      return;
+    const md = navigator.mediaDevices;
+    if (!md?.getUserMedia) return;
+    let devices: MediaDeviceInfo[] = [];
+    try {
+      devices = (await md.enumerateDevices?.()) ?? [];
+    } catch {
+      return;
+    }
+    const cams = devices.filter((d) => d.kind === "videoinput");
+    if (cams.length < 2) return;
+    const current = this.state.localStream?.getVideoTracks()[0];
+    const currentId = current?.getSettings?.().deviceId;
+    const nextId = nextVideoDeviceId(cams, currentId);
+    const facing = current?.getSettings?.().facingMode;
+    const video: MediaTrackConstraints = {
+      ...this.cameraVideoBase(),
+      ...(nextId
+        ? { deviceId: { exact: nextId } }
+        : {
+            facingMode: {
+              exact: facing === "environment" ? "user" : "environment",
+            },
+          }),
+    };
+    this.switchingCamera = true;
+    try {
+      const fresh = await md.getUserMedia({ audio: false, video });
+      const track = fresh.getVideoTracks()[0];
+      if (!track) return;
+      this.cameraDeviceId = track.getSettings?.().deviceId || nextId || null;
+      await this.replaceCameraTrack(track);
+    } catch {
+      this.toast("toast.mediaSwitchCamera");
+    } finally {
+      this.switchingCamera = false;
+    }
+  }
+
   /** Silencia o áudio ou o vídeo de outra pessoa só neste cliente. */
   toggleLocalMute = (peerId: string, kind: MuteKind) => {
     if (!this.inRoom() || !this.canControlMute(peerId)) return;
@@ -935,6 +987,8 @@ export class PeerSession {
     const cameraOff = media.cameraOff || this.state.cameraOff;
     const muted = media.muted || this.state.muted;
     this.patch({ localStream: media.stream, cameraOff, muted });
+    this.rememberCamera(media.stream);
+    void this.refreshCameraSwitch();
     if (media.fallback === "audio") this.toast("toast.mediaAudioOnly");
     else if (media.fallback === "video") this.toast("toast.mediaVideoOnly");
     else if (media.fallback === "listen") this.toast("toast.mediaListenOnly");
@@ -955,7 +1009,7 @@ export class PeerSession {
     try {
       fresh = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: getCameraConstraints().video,
+        video: this.cameraVideoRequest(),
       });
     } catch {
       this.toast("toast.mediaCamera");
@@ -963,6 +1017,27 @@ export class PeerSession {
     }
     const video = fresh.getVideoTracks()[0];
     if (!video) return;
+    this.rememberCamera(fresh);
+    await this.replaceCameraTrack(video);
+  }
+
+  private cameraVideoBase(): MediaTrackConstraints {
+    const video = getCameraConstraints().video;
+    return typeof video === "object" && video ? { ...video } : {};
+  }
+
+  private cameraVideoRequest(): MediaTrackConstraints {
+    const video = this.cameraVideoBase();
+    if (this.cameraDeviceId) video.deviceId = { ideal: this.cameraDeviceId };
+    return video;
+  }
+
+  private rememberCamera(stream: MediaStream) {
+    const id = stream.getVideoTracks()[0]?.getSettings?.().deviceId;
+    if (id) this.cameraDeviceId = id;
+  }
+
+  private async replaceCameraTrack(video: MediaStreamTrack) {
     await applyTrackConstraints(new MediaStream([video]), "camera");
     const audio = this.state.localStream?.getAudioTracks() ?? [];
     this.state.localStream?.getVideoTracks().forEach((track) => track.stop());
@@ -972,6 +1047,34 @@ export class PeerSession {
     this.broadcast({ type: "media-meta", cameraOff: false });
     this.applyLimitsToAll();
     window.setTimeout(() => this.applyLimitsToAll(), 400);
+    void this.refreshCameraSwitch();
+  }
+
+  private onDeviceChange = () => {
+    void this.refreshCameraSwitch();
+  };
+
+  private watchDevices() {
+    const md = navigator.mediaDevices;
+    if (!md?.addEventListener) return;
+    md.removeEventListener("devicechange", this.onDeviceChange);
+    md.addEventListener("devicechange", this.onDeviceChange);
+  }
+
+  private async refreshCameraSwitch() {
+    let n = 0;
+    try {
+      n =
+        (await navigator.mediaDevices?.enumerateDevices?.())?.filter(
+          (d) => d.kind === "videoinput",
+        ).length ?? 0;
+    } catch {
+      n = 0;
+    }
+    const canSwitchCamera = n >= 2;
+    if (canSwitchCamera !== this.state.canSwitchCamera) {
+      this.patch({ canSwitchCamera });
+    }
   }
 
   private async enableMic() {
@@ -2302,6 +2405,8 @@ export class PeerSession {
     this.joinSecret = null;
     this.screenTrack?.stop();
     this.screenTrack = null;
+    this.cameraDeviceId = null;
+    this.switchingCamera = false;
     this.state.localStream?.getTracks().forEach((track) => track.stop());
     this.names.clear();
     if (endedReason) {
@@ -2322,6 +2427,7 @@ export class PeerSession {
       screenShareOrder: [],
       muted: false,
       cameraOff: false,
+      canSwitchCamera: false,
       localMutes: {},
       roomMutes: {},
       callMode: null,
@@ -2345,6 +2451,10 @@ export class PeerSession {
 
   private destroyPeer() {
     window.clearTimeout(this.reconnectTimer);
+    navigator.mediaDevices?.removeEventListener?.(
+      "devicechange",
+      this.onDeviceChange,
+    );
     this.peer?.destroy();
     this.peer = null;
   }

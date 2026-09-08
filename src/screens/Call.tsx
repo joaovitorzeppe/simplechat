@@ -4,6 +4,7 @@ import { ChatPanel } from "@components/ChatPanel";
 import {
   CameraIcon,
   CameraOffIcon,
+  FlipCameraIcon,
   ChatIcon,
   CheckIcon,
   CopyIcon,
@@ -411,6 +412,20 @@ export const Call = () => {
           >
             {state.cameraOff ? <CameraOffIcon /> : <CameraIcon />}
           </Button>
+          {state.canSwitchCamera && !state.cameraOff && (
+            <Button
+              variant="icon"
+              onClick={() => void peerSession.switchCamera()}
+              disabled={!!selfRoom?.video}
+              title={
+                selfRoom?.video
+                  ? t("call.hostMutedYouVideo")
+                  : t("call.switchCamera")
+              }
+            >
+              <FlipCameraIcon />
+            </Button>
+          )}
           {canDisplay && (
             <Button
               variant="icon"

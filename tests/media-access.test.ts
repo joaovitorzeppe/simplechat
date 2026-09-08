@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { acquireLocalMedia, canShareScreen } from "@libs/media-access";
+import { acquireLocalMedia, canShareScreen, nextVideoDeviceId } from "@libs/media-access";
 
 const track = (kind: "audio" | "video") =>
   ({
@@ -103,5 +103,31 @@ describe("canShareScreen", () => {
   it("é false sem mediaDevices ou sem getDisplayMedia", () => {
     expect(canShareScreen(undefined)).toBe(false);
     expect(canShareScreen({} as MediaDevices)).toBe(false);
+  });
+});
+
+describe("nextVideoDeviceId", () => {
+  const cam = (deviceId: string) => ({ kind: "videoinput" as const, deviceId });
+
+  it("cicla para a próxima câmera", () => {
+    expect(nextVideoDeviceId([cam("a"), cam("b")], "a")).toBe("b");
+    expect(nextVideoDeviceId([cam("a"), cam("b")], "b")).toBe("a");
+  });
+
+  it("pula a atual desconhecida e pega a segunda", () => {
+    expect(nextVideoDeviceId([cam("a"), cam("b"), cam("c")], "x")).toBe("b");
+  });
+
+  it("é null com menos de duas câmeras com id", () => {
+    expect(nextVideoDeviceId([cam("a")], "a")).toBeNull();
+    expect(
+      nextVideoDeviceId(
+        [
+          { kind: "videoinput", deviceId: "" },
+          { kind: "videoinput", deviceId: "" },
+        ],
+        undefined,
+      ),
+    ).toBeNull();
   });
 });

@@ -58,6 +58,7 @@ export const fr: Messages = {
   "call.mute": "Couper le micro",
   "call.cameraOn": "Allumer la caméra",
   "call.cameraOff": "Éteindre la caméra",
+  "call.switchCamera": "Changer de caméra",
   "call.shareScreen": "Partager l’écran",
   "call.stopScreen": "Arrêter le partage",
   "call.chat": "Chat",
@@ -216,6 +217,7 @@ export const fr: Messages = {
   "toast.callEnded": "Appel terminé.",
   "toast.roomFull": "Cet appel est complet.",
   "toast.mediaCamera": "Autorisez la caméra pour l’allumer.",
+  "toast.mediaSwitchCamera": "Impossible de changer de caméra.",
   "toast.mediaMic": "Autorisez le micro pour l’activer.",
   "toast.mediaAudioOnly":
     "Entrée en audio seulement. Vous pourrez allumer la caméra plus tard.",
