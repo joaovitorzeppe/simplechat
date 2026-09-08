@@ -80,6 +80,8 @@ export type SessionState = {
   localStream: MediaStream | null;
   localScreenStream: MediaStream | null;
   remotes: RemotePeer[];
+  /** Quem está na sala, na ordem em que entrou. Host primeiro. */
+  members: PeerInfo[];
   messages: ChatMessage[];
   muted: boolean;
   cameraOff: boolean;
@@ -155,6 +157,7 @@ const initialState: SessionState = {
   localStream: null,
   localScreenStream: null,
   remotes: [],
+  members: [],
   messages: [],
   muted: false,
   cameraOff: false,
@@ -452,7 +455,7 @@ export class PeerSession {
       });
     }
     const me = this.selfInfo();
-    this.roomMembers = me ? [me] : [];
+    this.setRoomMembers(me ? [me] : []);
     this.joinSecret = null;
     // Sala nova ⇒ link novo: quem tinha o convite antigo não bate na porta.
     this.hostSecret = rotateRoomSecret();
@@ -564,7 +567,7 @@ export class PeerSession {
     if (!this.state.remotes.some((remote) => remote.peerId === peerId)) return;
     this.banned.add(peerId);
     this.removed.add(peerId);
-    this.roomMembers = this.roomMembers.filter((p) => p.peerId !== peerId);
+    this.setRoomMembers(this.roomMembers.filter((p) => p.peerId !== peerId));
     const conn = this.data.get(peerId);
     if (conn?.open) conn.send({ type: "room-kicked" });
     // Quem saiu já está fora de `roomMembers`, então `activeConnections` o
@@ -1434,7 +1437,7 @@ export class PeerSession {
     if (msg.type === "room-peers") {
       if (!this.isRoomAuthority(from)) return;
       this.becomeGuest(msg.hostPeerId || from);
-      this.roomMembers = msg.peers;
+      this.setRoomMembers(msg.peers);
       if (msg.secret) {
         // Guardamos para reapresentar numa reconexão e para que o convite
         // mostrado aqui continue válido depois de o host girar o segredo.
@@ -1560,7 +1563,7 @@ export class PeerSession {
 
     if (msg.type === "host-transfer") {
       if (!this.isRoomAuthority(from)) return;
-      this.roomMembers = this.roomMembers.filter((p) => p.peerId !== from);
+      this.setRoomMembers(this.roomMembers.filter((p) => p.peerId !== from));
       this.assumeHost(
         msg.hostPeerId,
         "toast.hostLeftYouHost",
@@ -1892,7 +1895,7 @@ export class PeerSession {
       this.resetCall("toast.roomEndedByHost");
       return;
     }
-    this.roomMembers = this.roomMembers.filter((p) => p.peerId !== goneHostId);
+    this.setRoomMembers(this.roomMembers.filter((p) => p.peerId !== goneHostId));
     const pool = (
       this.roomMembers.length > 0
         ? this.roomMembers.map((p) => p.peerId)
@@ -1914,9 +1917,14 @@ export class PeerSession {
     );
   }
 
+  private setRoomMembers(next: PeerInfo[]) {
+    this.roomMembers = next;
+    this.patch({ members: next });
+  }
+
   private addRoomMember(info: PeerInfo) {
     if (!this.roomMembers.some((p) => p.peerId === info.peerId)) {
-      this.roomMembers = [...this.roomMembers, info];
+      this.setRoomMembers([...this.roomMembers, info]);
     }
   }
 
@@ -2074,7 +2082,7 @@ export class PeerSession {
     this.lastChatAt.delete(peerId);
     this.lastFileStart.delete(peerId);
     const remotes = this.state.remotes.filter((r) => r.peerId !== peerId);
-    this.roomMembers = this.roomMembers.filter((p) => p.peerId !== peerId);
+    this.setRoomMembers(this.roomMembers.filter((p) => p.peerId !== peerId));
     this.patch({
       remotes,
       screenShareOrder: this.removeShare(peerId),
@@ -2417,7 +2425,7 @@ export class PeerSession {
     void this.files.abortAll();
     clearAllFileProgress();
     this.revokeMessageFiles();
-    this.roomMembers = [];
+    this.setRoomMembers([]);
     this.banned.clear();
     this.removed.clear();
     this.dialedPeerId = null;
@@ -2459,6 +2467,7 @@ export class PeerSession {
       pending: [],
       leavePrompt: false,
       pathHint: false,
+      members: [],
     });
     this.iceRetries.clear();
     this.iceEverConnected.clear();

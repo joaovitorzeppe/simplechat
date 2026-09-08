@@ -33,19 +33,17 @@ export const firstGrapheme = (value: string) => graphemes(value)[0] ?? "";
 const foldedName = (value: string) => value.trim().toLowerCase();
 
 /**
- * Duas pessoas com o mesmo nome na sala. O sufixo é o fim do peerId, estável
- * enquanto a pessoa estiver na chamada — não um índice que muda se alguém sai.
+ * Duas pessoas com o mesmo nome na sala. O número segue a ordem do array
+ * (`people`): quem entrou primeiro fica `- 1`.
  */
 export const displayLabel = (
   name: string,
   peerId: string,
-  people: readonly { displayName: string }[],
+  people: readonly { peerId: string; displayName: string }[],
 ) => {
   const key = foldedName(name);
-  let hits = 0;
-  for (const person of people) {
-    if (foldedName(person.displayName) === key) hits += 1;
-    if (hits > 1) return `${name} · ${peerId.slice(-4)}`;
-  }
-  return name;
+  const same = people.filter((person) => foldedName(person.displayName) === key);
+  if (same.length < 2) return name;
+  const at = same.findIndex((person) => person.peerId === peerId);
+  return `${name} - ${at < 0 ? same.length + 1 : at + 1}`;
 };

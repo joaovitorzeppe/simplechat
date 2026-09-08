@@ -98,6 +98,7 @@ const CallStage = memo(function CallStage({
 }) {
   const { t } = useI18n();
   const remotes = useSessionSelector((s) => s.remotes);
+  const members = useSessionSelector((s) => s.members);
   const localStream = useSessionSelector((s) => s.localStream);
   const localScreenStream = useSessionSelector((s) => s.localScreenStream);
   const cameraOff = useSessionSelector((s) => s.cameraOff);
@@ -107,6 +108,7 @@ const CallStage = memo(function CallStage({
   const localMutes = useSessionSelector((s) => s.localMutes);
   const roomMutes = useSessionSelector((s) => s.roomMutes);
   const roster = useMemo(() => {
+    if (members.length > 0) return members;
     const list: PeerInfo[] = remotes.map((remote) => ({
       peerId: remote.peerId,
       displayName: remote.displayName,
@@ -118,7 +120,7 @@ const CallStage = memo(function CallStage({
       });
     }
     return list;
-  }, [remotes, identity]);
+  }, [members, remotes, identity]);
 
   const screens = useMemo(() => {
     const items: ScreenItem[] = [];
@@ -319,6 +321,7 @@ export const Call = () => {
   const invite = roomId ? inviteLink(roomId, state.roomSecret) : "";
 
   const people = useMemo(() => {
+    if (state.members.length > 0) return state.members;
     if (!me) return [];
     return [
       { peerId: me.peerId, displayName: me.displayName },
@@ -327,7 +330,7 @@ export const Call = () => {
         displayName: remote.displayName,
       })),
     ];
-  }, [me, state.remotes]);
+  }, [me, state.members, state.remotes]);
 
   const successorId = electHost(state.remotes.map((remote) => remote.peerId));
   const successor = state.remotes.find(

@@ -112,21 +112,18 @@ describe("nomes de arquivo não latinos", () => {
 });
 
 describe("displayLabel", () => {
+  const twins = [
+    { peerId: "first", displayName: "Ana" },
+    { peerId: "bruno", displayName: "Bruno" },
+    { peerId: "second", displayName: "ana" },
+  ];
+
   it("deixa o nome sozinho quando não há homônimo", () => {
-    expect(
-      displayLabel("Ana", "aaaaaaaaaaaaaaaaaaaaaaaa1", [
-        { displayName: "Ana" },
-        { displayName: "Bruno" },
-      ]),
-    ).toBe("Ana");
+    expect(displayLabel("Bruno", "bruno", twins)).toBe("Bruno");
   });
 
-  it("acrescenta o fim do peerId quando o nome bate", () => {
-    expect(
-      displayLabel("Ana", "xxxxxxxxxxxxxxxxxxxxxxyz12", [
-        { displayName: "Ana" },
-        { displayName: "ana" },
-      ]),
-    ).toBe("Ana · yz12");
+  it("numera pela ordem de chegada", () => {
+    expect(displayLabel("Ana", "first", twins)).toBe("Ana - 1");
+    expect(displayLabel("ana", "second", twins)).toBe("ana - 2");
   });
 });

@@ -81,12 +81,10 @@ describe("resolveMentions", () => {
 
   it("rótulo desambiguado pega só uma pessoa", () => {
     const twins = [
-      { peerId: "xxxxxxxxxxxxxxxxxxxxxxyz12", displayName: "Ana" },
-      { peerId: "xxxxxxxxxxxxxxxxxxxxxxyz34", displayName: "Ana" },
+      { peerId: "ana-1", displayName: "Ana" },
+      { peerId: "ana-2", displayName: "Ana" },
     ];
-    expect(resolveMentions("oi @Ana · yz34", twins)).toEqual([
-      "xxxxxxxxxxxxxxxxxxxxxxyz34",
-    ]);
+    expect(resolveMentions("oi @Ana - 2", twins)).toEqual(["ana-2"]);
   });
 });
 
