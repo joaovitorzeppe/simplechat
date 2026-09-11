@@ -49,6 +49,7 @@ import {
   facingFromLabel,
   mediaStreamOf,
   nextCameraFlip,
+  placeholderVideoTrack,
 } from "./media-access";
 import {
   dropMute,
@@ -194,6 +195,8 @@ export class PeerSession {
   /** Saídas provocadas por remoção, para o aviso não dizer que a pessoa saiu. */
   private removed = new Set<string>();
   private screenTrack: MediaStreamTrack | null = null;
+  /** Faixa preta no offer/answer enquanto a câmera real está off. */
+  private placeholderVideo: MediaStreamTrack | null = null;
   /** Última câmera escolhida: religar não volta para a padrão. */
   private cameraDeviceId: string | null = null;
   private switchingCamera = false;
@@ -1023,7 +1026,7 @@ export class PeerSession {
   }
 
   private disableCamera() {
-    this.syncOutgoingTrack("video", null);
+    this.syncOutgoingTrack("video", this.heldPlaceholder());
     const audio = this.state.localStream?.getAudioTracks() ?? [];
     this.state.localStream?.getVideoTracks().forEach((track) => track.stop());
     this.patch({ cameraOff: true, localStream: mediaStreamOf(audio) });
@@ -1156,15 +1159,27 @@ export class PeerSession {
     }
   }
 
+  private heldPlaceholder(): MediaStreamTrack | null {
+    if (this.placeholderVideo?.readyState === "live") {
+      return this.placeholderVideo;
+    }
+    this.placeholderVideo = placeholderVideoTrack();
+    return this.placeholderVideo;
+  }
+
+  /**
+   * Sempre manda uma faixa de vídeo. Sem m-line no offer, `replaceTrack`
+   * depois não tem sender e o PeerJS não renegocia `addTrack`.
+   */
   private outboundStream() {
     const local = this.state.localStream;
-    const mixed = new MediaStream();
-    local?.getAudioTracks().forEach((track) => mixed.addTrack(track));
-    if (!this.state.cameraOff) {
-      const video = local?.getVideoTracks()[0];
-      if (video && video.readyState === "live") mixed.addTrack(video);
-    }
-    return mixed;
+    const audio = local?.getAudioTracks() ?? [];
+    const live =
+      !this.state.cameraOff
+        ? local?.getVideoTracks().find((track) => track.readyState === "live")
+        : undefined;
+    const video = live ?? this.heldPlaceholder();
+    return mediaStreamOf(video ? [...audio, video] : audio);
   }
 
   private openData(peerId: string, first?: WireMessage) {
@@ -1234,8 +1249,7 @@ export class PeerSession {
       }
       if (this.state.sharingScreen)
         conn.send({ type: "media-meta", sharingScreen: true });
-      if (this.state.cameraOff)
-        conn.send({ type: "media-meta", cameraOff: true });
+      conn.send({ type: "media-meta", cameraOff: this.state.cameraOff });
       this.offerExistingHost(conn);
     });
     conn.on("data", (raw) => {
@@ -2436,6 +2450,8 @@ export class PeerSession {
     this.joinSecret = null;
     this.screenTrack?.stop();
     this.screenTrack = null;
+    this.placeholderVideo?.stop();
+    this.placeholderVideo = null;
     this.cameraDeviceId = null;
     this.switchingCamera = false;
     this.state.localStream?.getTracks().forEach((track) => track.stop());

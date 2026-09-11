@@ -9,8 +9,12 @@ export type AcquiredMedia = {
 
 /** Sem `getDisplayMedia` (comum em mobile) o botão de tela não serve. */
 export const canShareScreen = (
-  devices: Pick<MediaDevices, "getDisplayMedia"> | null | undefined =
-    typeof navigator !== "undefined" ? navigator.mediaDevices : undefined,
+  devices:
+    | Pick<MediaDevices, "getDisplayMedia">
+    | null
+    | undefined = typeof navigator !== "undefined"
+    ? navigator.mediaDevices
+    : undefined,
 ) => typeof devices?.getDisplayMedia === "function";
 
 type VideoDevice = Pick<MediaDeviceInfo, "kind" | "deviceId" | "label">;
@@ -55,6 +59,27 @@ export const nextCameraFlip = (
 type GetUserMedia = (
   constraints: MediaStreamConstraints,
 ) => Promise<MediaStream>;
+
+const placeholderPins = new WeakMap<MediaStreamTrack, HTMLCanvasElement>();
+
+/**
+ * Faixa preta só para o SDP: sem m-line de vídeo, religar a câmera depois
+ * não chega nos outros (PeerJS não renegocia `addTrack`).
+ */
+export const placeholderVideoTrack = (): MediaStreamTrack | null => {
+  if (typeof document === "undefined") return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = 2;
+  canvas.height = 2;
+  if (typeof canvas.captureStream !== "function") return null;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.fillRect(0, 0, 2, 2);
+  const track = canvas.captureStream(1).getVideoTracks()[0];
+  if (!track) return null;
+  placeholderPins.set(track, canvas);
+  return track;
+};
 
 export const mediaStreamOf = (tracks: MediaStreamTrack[]): MediaStream => {
   if (typeof MediaStream === "function") {

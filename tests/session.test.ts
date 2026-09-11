@@ -24,8 +24,10 @@ type Internals = {
   banned: Set<string>;
   hostSecret: string | null;
   data: Map<string, FakeConn>;
+  media: Map<string, { peerConnection?: unknown }>;
   dialedPeerId: string | null;
   incomingFiles: Map<string, unknown>;
+  outboundStream: () => MediaStream;
 };
 
 const internals = (session: PeerSession) => session as unknown as Internals;
@@ -845,6 +847,70 @@ describe("entrada sem câmera ou microfone", () => {
     await session.toggleMute();
     expect(core.state.muted).toBe(false);
     expect(core.state.localStream?.getAudioTracks().length).toBeGreaterThan(0);
+  });
+});
+
+const stubPlaceholderCapture = () => {
+  const proto = HTMLCanvasElement.prototype as HTMLCanvasElement & {
+    captureStream?: (fps?: number) => MediaStream;
+  };
+  const prev = proto.captureStream;
+  const ctx = HTMLCanvasElement.prototype.getContext;
+  proto.captureStream = () => gumStream("video");
+  HTMLCanvasElement.prototype.getContext = (() =>
+    ({ fillRect() {} })) as unknown as typeof ctx;
+  return () => {
+    proto.captureStream = prev;
+    HTMLCanvasElement.prototype.getContext = ctx;
+  };
+};
+
+describe("câmera ligada depois do offer", () => {
+  it("reserva faixa de vídeo no outbound mesmo com câmera off", () => {
+    const restore = stubPlaceholderCapture();
+    try {
+      core.patch({
+        cameraOff: true,
+        localStream: gumStream("audio"),
+      });
+      const out = core.outboundStream();
+      expect(out.getVideoTracks()).toHaveLength(1);
+      expect(out.getAudioTracks()).toHaveLength(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it("religar a câmera troca a faixa no sender que já existia", async () => {
+    const restore = stubPlaceholderCapture();
+    const replaceTrack = vi.fn(async () => {});
+    const slot = gumTrack("video");
+    core.media.set(ZECA, {
+      peerConnection: {
+        getSenders: () => [{ track: slot, replaceTrack }],
+        getTransceivers: () => [],
+      },
+    });
+    const next = gumTrack("video");
+    mockGum(async () => {
+      const audio = gumTrack("audio");
+      return {
+        getTracks: () => [next],
+        getAudioTracks: () => [audio],
+        getVideoTracks: () => [next],
+      } as unknown as MediaStream;
+    });
+    core.patch({
+      cameraOff: true,
+      localStream: gumStream("audio"),
+    });
+    try {
+      await session.toggleCamera();
+      expect(core.state.cameraOff).toBe(false);
+      expect(replaceTrack).toHaveBeenCalledWith(next);
+    } finally {
+      restore();
+    }
   });
 });
 

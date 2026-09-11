@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { acquireLocalMedia, canShareScreen, nextCameraFlip } from "@libs/media-access";
+import {
+  acquireLocalMedia,
+  canShareScreen,
+  nextCameraFlip,
+  placeholderVideoTrack,
+} from "@libs/media-access";
 
 const track = (kind: "audio" | "video") =>
   ({
@@ -88,6 +93,29 @@ describe("acquireLocalMedia", () => {
     expect(media.fallback).toBe("audio");
     expect(media.cameraOff).toBe(true);
     expect(gum).toHaveBeenCalledOnce();
+  });
+});
+
+describe("placeholderVideoTrack", () => {
+  it("é null sem captureStream", () => {
+    expect(placeholderVideoTrack()).toBeNull();
+  });
+
+  it("devolve a faixa do canvas quando dá para capturar", () => {
+    const proto = HTMLCanvasElement.prototype as HTMLCanvasElement & {
+      captureStream?: (fps?: number) => MediaStream;
+    };
+    const prev = proto.captureStream;
+    const ctx = HTMLCanvasElement.prototype.getContext;
+    proto.captureStream = () => streamOf("video");
+    HTMLCanvasElement.prototype.getContext = (() =>
+      ({ fillRect() {} })) as unknown as typeof ctx;
+    try {
+      expect(placeholderVideoTrack()?.kind).toBe("video");
+    } finally {
+      proto.captureStream = prev;
+      HTMLCanvasElement.prototype.getContext = ctx;
+    }
   });
 });
 
