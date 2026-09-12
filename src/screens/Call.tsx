@@ -15,6 +15,7 @@ import {
 } from "@components/Icons";
 import { HostLeaveDialog } from "@components/HostLeaveDialog";
 import { KickDialog } from "@components/KickDialog";
+import { useDialogFocus } from "@libs/use-dialog-focus";
 import { LanguageSwitcher } from "@components/LanguageSwitcher";
 import { Lobby } from "@components/Lobby";
 import { ThemeToggle } from "@components/ThemeToggle";
@@ -42,6 +43,51 @@ type ScreenItem = {
 
 const iconOff =
   "bg-red-500! hover:bg-red-400! hover:border-red-400 border-red-500";
+
+const VideoInputsDialog = ({
+  names,
+  onClose,
+}: {
+  names: string[];
+  onClose: () => void;
+}) => {
+  const dialogRef = useDialogFocus<HTMLDivElement>(onClose);
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4"
+      onClick={onClose}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="video-inputs-title"
+        className="w-full max-w-sm rounded-3xl border border-line bg-panel p-6 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 id="video-inputs-title" className="text-xl font-semibold">
+          videoinput
+        </h2>
+        {names.length === 0 ? (
+          <p className="mt-2 text-sm text-zinc-400">Nenhum dispositivo.</p>
+        ) : (
+          <ul className="mt-3 max-h-64 list-disc overflow-y-auto pl-5 text-sm text-zinc-200">
+            {names.map((name, index) => (
+              <li key={`${index}-${name}`} className="break-all">
+                {name}
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="mt-6">
+          <Button variant="secondary" onClick={onClose}>
+            Fechar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const CallChatDock = memo(function CallChatDock({
   open,
@@ -298,6 +344,8 @@ export const Call = () => {
     peerId: string;
     name: string;
   } | null>(null);
+  const [videoInputs, setVideoInputs] = useState<string[] | null>(null);
+  const dismissedInputs = useRef(false);
   const me = state.identity;
   const selfId = me?.peerId;
   useEffect(() => {
@@ -306,6 +354,29 @@ export const Call = () => {
       setKickTarget(null);
     }
   }, [kickTarget, state.remotes]);
+  useEffect(() => {
+    if (dismissedInputs.current) return;
+    let gone = false;
+    void navigator.mediaDevices
+      ?.enumerateDevices?.()
+      .then((devices) => {
+        if (gone || dismissedInputs.current) return;
+        setVideoInputs(
+          devices
+            .filter((device) => device.kind === "videoinput")
+            .map(
+              (device, index) =>
+                device.label.trim() || device.deviceId || `videoinput ${index + 1}`,
+            ),
+        );
+      })
+      .catch(() => {
+        if (!gone && !dismissedInputs.current) setVideoInputs([]);
+      });
+    return () => {
+      gone = true;
+    };
+  }, [state.localStream]);
   const unread = chatOpen
     ? 0
     : state.messages
@@ -516,6 +587,16 @@ export const Call = () => {
           </Button>
         </div>
       </div>
+
+      {videoInputs && (
+        <VideoInputsDialog
+          names={videoInputs}
+          onClose={() => {
+            dismissedInputs.current = true;
+            setVideoInputs(null);
+          }}
+        />
+      )}
 
       {kickTarget && (
         <KickDialog
