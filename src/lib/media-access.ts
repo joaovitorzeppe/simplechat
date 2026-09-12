@@ -56,6 +56,23 @@ export const nextCameraFlip = (
   return next?.deviceId ? { deviceId: next.deviceId } : null;
 };
 
+/** `exact` + tamanho no gum quebra tablet. deviceId primeiro; facingMode só fallback. */
+export const cameraFlipConstraints = (
+  flip: CameraFlip,
+  devices: readonly VideoDevice[] = [],
+): MediaTrackConstraints[] => {
+  if ("deviceId" in flip) return [{ deviceId: { exact: flip.deviceId } }];
+  const match = devices.find(
+    (device) =>
+      device.kind === "videoinput" &&
+      facingFromLabel(device.label) === flip.facingMode,
+  );
+  const next: MediaTrackConstraints[] = [];
+  if (match?.deviceId) next.push({ deviceId: { exact: match.deviceId } });
+  next.push({ facingMode: { ideal: flip.facingMode } });
+  return next;
+};
+
 type GetUserMedia = (
   constraints: MediaStreamConstraints,
 ) => Promise<MediaStream>;

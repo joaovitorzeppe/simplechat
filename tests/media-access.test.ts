@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   acquireLocalMedia,
+  cameraFlipConstraints,
   canShareScreen,
   nextCameraFlip,
   placeholderVideoTrack,
@@ -179,5 +180,25 @@ describe("nextCameraFlip", () => {
 
   it("é null com menos de duas câmeras", () => {
     expect(nextCameraFlip([cam("a")], { deviceId: "a" })).toBeNull();
+  });
+});
+
+describe("cameraFlipConstraints", () => {
+  it("no flip por facing pede o deviceId da câmera alvo, sem tamanho", () => {
+    expect(
+      cameraFlipConstraints({ facingMode: "environment" }, [
+        { kind: "videoinput", deviceId: "front", label: "Front Camera" },
+        { kind: "videoinput", deviceId: "dual", label: "Back Dual Camera" },
+      ]),
+    ).toEqual([
+      { deviceId: { exact: "dual" } },
+      { facingMode: { ideal: "environment" } },
+    ]);
+  });
+
+  it("no flip por id só pede esse id", () => {
+    expect(cameraFlipConstraints({ deviceId: "cam-b" })).toEqual([
+      { deviceId: { exact: "cam-b" } },
+    ]);
   });
 });

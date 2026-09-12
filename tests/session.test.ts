@@ -1229,18 +1229,16 @@ describe("troca de câmera", () => {
   it("alterna frente e traseira sem passar pelas extras", async () => {
     const oldVideo = videoCam("front", "user");
     const newVideo = videoCam("dual", "environment");
-    const gum = vi.fn(async (_constraints: MediaStreamConstraints) =>
-      streamWith(newVideo),
-    );
+    const gum = vi.fn(async (_constraints: MediaStreamConstraints) => {
+      expect(oldVideo.stop).toHaveBeenCalled();
+      return streamWith(newVideo);
+    });
     mockCams(["front", "dual", "ultra", "tele"], gum);
     core.patch({ cameraOff: false, localStream: streamWith(oldVideo) });
     await session.switchCamera();
     const args = gum.mock.calls[0];
     if (!args) throw new Error("expected getUserMedia call");
-    expect(args[0].video).toEqual(
-      expect.objectContaining({ facingMode: { exact: "environment" } }),
-    );
-    expect((args[0].video as MediaTrackConstraints).deviceId).toBeUndefined();
+    expect(args[0].video).toEqual({ deviceId: { exact: "dual" } });
     expect(oldVideo.stop).toHaveBeenCalled();
     expect(core.state.localStream?.getVideoTracks()[0]).toBe(newVideo);
     expect(core.state.canSwitchCamera).toBe(true);
@@ -1258,9 +1256,7 @@ describe("troca de câmera", () => {
     await session.switchCamera();
     const args = gum.mock.calls[0];
     if (!args) throw new Error("expected getUserMedia call");
-    expect((args[0].video as MediaTrackConstraints).facingMode).toEqual({
-      exact: "user",
-    });
+    expect(args[0].video).toEqual({ deviceId: { exact: "front" } });
   });
 
   it("não pede câmera se só existe uma", async () => {
@@ -1298,9 +1294,45 @@ describe("troca de câmera", () => {
     await session.switchCamera();
     const args = gum.mock.calls[0];
     if (!args) throw new Error("expected getUserMedia call");
-    expect((args[0].video as MediaTrackConstraints).facingMode).toEqual({
-      exact: "environment",
+    expect(args[0].video).toEqual({ deviceId: { exact: "back" } });
+  });
+
+  it("se o deviceId falha, tenta facingMode ideal", async () => {
+    const gum = vi.fn(async (constraints: MediaStreamConstraints) => {
+      const video = constraints.video as MediaTrackConstraints;
+      if (video.deviceId) throw new Error("id recusado");
+      return streamWith(videoCam("back", "environment"));
     });
+    mockCams(["front", "back"], gum);
+    core.patch({
+      cameraOff: false,
+      localStream: streamWith(videoCam("front", "user")),
+    });
+    await session.switchCamera();
+    expect(gum).toHaveBeenCalledTimes(2);
+    expect(gum.mock.calls[1]?.[0].video).toEqual({
+      facingMode: { ideal: "environment" },
+    });
+    expect(core.state.localStream?.getVideoTracks()[0]?.getSettings()).toEqual(
+      expect.objectContaining({ deviceId: "back" }),
+    );
+  });
+
+  it("se a troca falha, avisa e reabre a câmera", async () => {
+    const restored = videoCam("front", "user");
+    const gum = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("busy"))
+      .mockRejectedValueOnce(new Error("busy"))
+      .mockResolvedValueOnce(streamWith(restored));
+    mockCams(["front", "back"], gum);
+    core.patch({
+      cameraOff: false,
+      localStream: streamWith(videoCam("front", "user")),
+    });
+    await session.switchCamera();
+    expect(getToast()?.key).toBe("toast.mediaSwitchCamera");
+    expect(core.state.localStream?.getVideoTracks()[0]).toBe(restored);
   });
 
   it("não troca se o filtro deixa menos de duas", async () => {

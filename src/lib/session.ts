@@ -46,6 +46,7 @@ import { FileBridge } from "./file-transfer";
 import { CONNECT_GIVE_UP_MS, CONNECT_HINT_MS, iceGaveUpKind } from "./ice-path";
 import {
   acquireLocalMedia,
+  cameraFlipConstraints,
   facingFromLabel,
   mediaStreamOf,
   nextCameraFlip,
@@ -864,25 +865,55 @@ export class PeerSession {
       facingMode: settings?.facingMode,
     });
     if (!flip) return;
-    const video: MediaTrackConstraints = {
-      ...this.cameraVideoBase(),
-      ...("deviceId" in flip
-        ? { deviceId: { exact: flip.deviceId } }
-        : { facingMode: { exact: flip.facingMode } }),
-    };
+    const attempts = cameraFlipConstraints(flip, cams);
     this.switchingCamera = true;
+    // Tablet Android só entrega um sensor por vez: soltar antes do gum.
+    current?.stop();
     try {
-      const fresh = await md.getUserMedia({ audio: false, video });
-      const track = fresh.getVideoTracks()[0];
-      if (!track) return;
+      const track = await this.acquireFlipTrack(md, attempts);
+      if (!track) throw new Error("switch");
       this.cameraDeviceId =
         track.getSettings?.().deviceId ||
-        ("deviceId" in flip ? flip.deviceId : null);
+        ("deviceId" in flip ? flip.deviceId : this.cameraDeviceId);
       await this.replaceCameraTrack(track);
     } catch {
       this.toast("toast.mediaSwitchCamera");
+      await this.reopenCamera();
     } finally {
       this.switchingCamera = false;
+    }
+  }
+
+  private async acquireFlipTrack(
+    md: MediaDevices,
+    attempts: MediaTrackConstraints[],
+  ) {
+    // oxlint-disable no-await-in-loop
+    for (const video of attempts) {
+      try {
+        const fresh = await md.getUserMedia({ audio: false, video });
+        const track = fresh.getVideoTracks()[0];
+        if (track) return track;
+      } catch {
+        // Overconstrained / NotReadable: tenta o próximo jeito
+      }
+    }
+    // oxlint-enable no-await-in-loop
+    return undefined;
+  }
+
+  private async reopenCamera() {
+    const md = navigator.mediaDevices;
+    if (!md?.getUserMedia) return;
+    try {
+      const fresh = await md.getUserMedia({
+        audio: false,
+        video: this.cameraVideoRequest(),
+      });
+      const track = fresh.getVideoTracks()[0];
+      if (track) await this.replaceCameraTrack(track);
+    } catch {
+      // faixa velha já parou
     }
   }
 
