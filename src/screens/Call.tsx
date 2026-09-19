@@ -472,7 +472,7 @@ export const Call = () => {
           {canDisplay && (
             <Button
               variant="icon"
-              className={state.sharingScreen ? "border-accent text-accent" : ""}
+              className={state.sharingScreen ? iconOff : undefined}
               onClick={() => void peerSession.shareScreen()}
               title={
                 state.sharingScreen
