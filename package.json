@@ -2,7 +2,9 @@
   "name": "simplechat",
   "private": true,
   "version": "0.0.0",
+  "license": "MIT",
   "type": "module",
+  "author": "João Vitor Zeppe",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

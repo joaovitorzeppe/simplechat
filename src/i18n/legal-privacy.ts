@@ -4,14 +4,14 @@ import type { LegalDocument } from "./legal-types";
 export const privacy: Record<Locale, LegalDocument> = {
   pt: {
     title: "Política de privacidade",
-    updated: "6 de setembro de 2026",
+    updated: "21 de setembro de 2026",
     intro:
       "Esta política descreve o que o SimpleChat trata quando você usa o site. O serviço pode mudar; a data acima é a desta versão.",
     sections: [
       {
         heading: "Quem opera",
         paragraphs: [
-          "O SimpleChat é um projeto pessoal publicado em simplechat.me e www.simplechat.me. Não há empresa cadastrada neste produto, conta de usuário nem área logada. O contato é https://github.com/joaovitorzeppe.",
+          "O SimpleChat é um projeto pessoal publicado em simplechat.me e www.simplechat.me. Não há empresa cadastrada neste produto, conta de usuário nem área logada. O código é público sob licença MIT em https://github.com/joaovitorzeppe/simplechat. O contato é https://github.com/joaovitorzeppe.",
         ],
       },
       {
@@ -84,14 +84,14 @@ export const privacy: Record<Locale, LegalDocument> = {
   },
   en: {
     title: "Privacy policy",
-    updated: "6 September 2026",
+    updated: "21 September 2026",
     intro:
       "This policy describes what SimpleChat processes when you use the site. The service may change; the date above is for this version.",
     sections: [
       {
         heading: "Who runs this",
         paragraphs: [
-          "SimpleChat is a personal project published at simplechat.me and www.simplechat.me. There is no registered company in this product, no user account, and no signed-in area. Contact: https://github.com/joaovitorzeppe.",
+          "SimpleChat is a personal project published at simplechat.me and www.simplechat.me. There is no registered company in this product, no user account, and no signed-in area. The source is public under the MIT license at https://github.com/joaovitorzeppe/simplechat. Contact: https://github.com/joaovitorzeppe.",
         ],
       },
       {
@@ -164,14 +164,14 @@ export const privacy: Record<Locale, LegalDocument> = {
   },
   es: {
     title: "Política de privacidad",
-    updated: "6 de septiembre de 2026",
+    updated: "21 de septiembre de 2026",
     intro:
       "Esta política describe lo que SimpleChat trata cuando usas el sitio. El servicio puede cambiar; la fecha de arriba corresponde a esta versión.",
     sections: [
       {
         heading: "Quién lo opera",
         paragraphs: [
-          "SimpleChat es un proyecto personal publicado en simplechat.me y www.simplechat.me. No hay empresa registrada en este producto, ni cuenta de usuario ni área con sesión. El contacto es https://github.com/joaovitorzeppe.",
+          "SimpleChat es un proyecto personal publicado en simplechat.me y www.simplechat.me. No hay empresa registrada en este producto, ni cuenta de usuario ni área con sesión. El código es público bajo licencia MIT en https://github.com/joaovitorzeppe/simplechat. El contacto es https://github.com/joaovitorzeppe.",
         ],
       },
       {
@@ -244,14 +244,14 @@ export const privacy: Record<Locale, LegalDocument> = {
   },
   fr: {
     title: "Politique de confidentialité",
-    updated: "6 septembre 2026",
+    updated: "21 septembre 2026",
     intro:
       "Cette politique décrit ce que SimpleChat traite lorsque vous utilisez le site. Le service peut changer ; la date ci-dessus concerne cette version.",
     sections: [
       {
         heading: "Qui l’exploite",
         paragraphs: [
-          "SimpleChat est un projet personnel publié sur simplechat.me et www.simplechat.me. Il n’y a pas de société enregistrée dans ce produit, ni de compte utilisateur, ni d’espace connecté. Le contact est https://github.com/joaovitorzeppe.",
+          "SimpleChat est un projet personnel publié sur simplechat.me et www.simplechat.me. Il n’y a pas de société enregistrée dans ce produit, ni de compte utilisateur, ni d’espace connecté. Le code est public sous licence MIT sur https://github.com/joaovitorzeppe/simplechat. Le contact est https://github.com/joaovitorzeppe.",
         ],
       },
       {
@@ -324,14 +324,14 @@ export const privacy: Record<Locale, LegalDocument> = {
   },
   it: {
     title: "Informativa sulla privacy",
-    updated: "6 settembre 2026",
+    updated: "21 settembre 2026",
     intro:
       "Questa informativa descrive cosa SimpleChat tratta quando usi il sito. Il servizio può cambiare; la data in alto riguarda questa versione.",
     sections: [
       {
         heading: "Chi lo gestisce",
         paragraphs: [
-          "SimpleChat è un progetto personale pubblicato su simplechat.me e www.simplechat.me. In questo prodotto non c’è un’azienda registrata, né un account utente né un’area con accesso. Il contatto è https://github.com/joaovitorzeppe.",
+          "SimpleChat è un progetto personale pubblicato su simplechat.me e www.simplechat.me. In questo prodotto non c’è un’azienda registrata, né un account utente né un’area con accesso. Il codice è pubblico sotto licenza MIT su https://github.com/joaovitorzeppe/simplechat. Il contatto è https://github.com/joaovitorzeppe.",
         ],
       },
       {
