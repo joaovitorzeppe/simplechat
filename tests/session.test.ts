@@ -21,23 +21,27 @@ type Internals = {
   failPath: (peerId?: string) => void;
   iceEverConnected: Set<string>;
   names: Map<string, string>;
-  roomMembers: PeerInfo[];
-  banned: Set<string>;
-  hostSecret: string | null;
   data: Map<string, FakeConn>;
-  media: Map<string, { peerConnection?: unknown }>;
-  dialedPeerId: string | null;
-  incomingFiles: Map<string, unknown>;
-  outboundStream: () => MediaStream;
+  calls: Map<string, { peerConnection?: unknown }>;
   attachMedia: (call: unknown) => void;
   redialPeer: (peerId: string) => void;
-  queueIncoming: (peerId: string, data: ArrayBuffer) => void;
-  onFileBytes: (conn: unknown, raw: unknown) => boolean;
-  failIncomingFile: (peerId: string) => void;
+  room: {
+    roomMembers: PeerInfo[];
+    banned: Set<string>;
+    hostSecret: string | null;
+    dialedPeerId: string | null;
+  };
+  media: { outboundStream: () => MediaStream };
   files: {
-    openReceive: () => Promise<void>;
-    push: () => Promise<number>;
-    abort: () => Promise<void>;
+    incomingFiles: Map<string, unknown>;
+    queueIncoming: (peerId: string, data: ArrayBuffer) => void;
+    onFileBytes: (conn: unknown, raw: unknown) => boolean;
+    failIncomingFile: (peerId: string) => void;
+    bridge: {
+      openReceive: () => Promise<void>;
+      push: () => Promise<number>;
+      abort: () => Promise<void>;
+    };
   };
 };
 
@@ -97,8 +101,8 @@ const asGuest = () => {
     isHost: false,
     hostPeerId: HOST,
   });
-  core.dialedPeerId = HOST;
-  core.roomMembers = [
+  core.room.dialedPeerId = HOST;
+  core.room.roomMembers = [
     { peerId: HOST, displayName: "Host" },
     { peerId: ME, displayName: "Eu" },
   ];
@@ -114,8 +118,8 @@ const asHost = () => {
     hostPeerId: ME,
     roomSecret: SECRET,
   });
-  core.hostSecret = SECRET;
-  core.roomMembers = [{ peerId: ME, displayName: "Eu" }];
+  core.room.hostSecret = SECRET;
+  core.room.roomMembers = [{ peerId: ME, displayName: "Eu" }];
 };
 
 beforeEach(() => {
@@ -173,8 +177,8 @@ describe("autoridade das mensagens de sala", () => {
 describe("identidade das mensagens", () => {
   it("usa a conexão como remetente, não o que a mensagem afirma", () => {
     asGuest();
-    core.roomMembers = [
-      ...core.roomMembers,
+    core.room.roomMembers = [
+      ...core.room.roomMembers,
       {
         peerId: "bruno-1",
         displayName: "Bruno",
@@ -198,8 +202,8 @@ describe("identidade das mensagens", () => {
   it("guarda menções e ignora ids que não estão na sala", () => {
     asGuest();
     core.names.set("bruno-1", "Bruno");
-    core.roomMembers = [
-      ...core.roomMembers,
+    core.room.roomMembers = [
+      ...core.room.roomMembers,
       { peerId: "bruno-1", displayName: "Bruno" },
     ];
     core.onWire(conn("bruno-1"), {
@@ -217,8 +221,8 @@ describe("identidade das mensagens", () => {
 
   it("/me e /moeda incluem o autor nas menções para pintar o @", () => {
     asGuest();
-    core.roomMembers = [
-      ...core.roomMembers,
+    core.room.roomMembers = [
+      ...core.room.roomMembers,
       { peerId: ZECA, displayName: "Zeca" },
     ];
     expect(session.sendChat("/me acena para @Zeca")).toBe(true);
@@ -286,14 +290,14 @@ describe("recepção de arquivos", () => {
   it("recusa file-start de peer que não está na sala", () => {
     asGuest();
     core.onWire(conn(INTRUDER), fileStart);
-    expect(core.incomingFiles.size).toBe(0);
+    expect(core.files.incomingFiles.size).toBe(0);
     expect(core.state.messages).toHaveLength(0);
   });
 
   it("aceita file-start de quem está na sala", () => {
     asGuest();
     core.onWire(conn(HOST), fileStart);
-    expect(core.incomingFiles.size).toBe(1);
+    expect(core.files.incomingFiles.size).toBe(1);
     expect(core.state.messages.at(-1)?.file?.name).toBe("foto.png");
   });
 
@@ -303,7 +307,7 @@ describe("recepção de arquivos", () => {
     for (let i = 0; i < 50; i += 1) {
       core.onWire(conn(HOST), { ...fileStart, id: `f${i}` });
     }
-    expect(core.incomingFiles.size).toBe(1);
+    expect(core.files.incomingFiles.size).toBe(1);
   });
 
   it("não confia no id do remetente para identificar a mensagem", () => {
@@ -315,8 +319,8 @@ describe("recepção de arquivos", () => {
   it("falha a recepção quando chega um pedaço maior que FILE_CHUNK", () => {
     asGuest();
     core.onWire(conn(HOST), fileStart);
-    core.onFileBytes(conn(HOST), new ArrayBuffer(16 * 1024 + 1));
-    expect(core.incomingFiles.size).toBe(0);
+    core.files.onFileBytes(conn(HOST), new ArrayBuffer(16 * 1024 + 1));
+    expect(core.files.incomingFiles.size).toBe(0);
     expect(core.state.messages.at(-1)?.file?.status).toBe("error");
   });
 
@@ -324,7 +328,7 @@ describe("recepção de arquivos", () => {
     asGuest();
     const calls: string[] = [];
     let release = () => {};
-    core.files = {
+    core.files.bridge = {
       openReceive: async () => {
         calls.push("open");
       },
@@ -338,9 +342,9 @@ describe("recepção de arquivos", () => {
       },
     };
     core.onWire(conn(HOST), fileStart);
-    core.queueIncoming(HOST, new ArrayBuffer(10));
+    core.files.queueIncoming(HOST, new ArrayBuffer(10));
     await vi.waitFor(() => expect(calls).toEqual(["open", "push"]));
-    core.failIncomingFile(HOST);
+    core.files.failIncomingFile(HOST);
     await Promise.resolve();
     expect(calls).toEqual(["open", "push"]);
     release();
@@ -396,7 +400,7 @@ describe("transferência explícita de host", () => {
 describe("queda do host sem aviso", () => {
   it("elege o menor peerId entre quem sobrou", () => {
     asGuest();
-    core.roomMembers = [
+    core.room.roomMembers = [
       { peerId: HOST, displayName: "Host" },
       { peerId: ME, displayName: "Eu" },
       { peerId: ZECA, displayName: "Zeca" },
@@ -410,7 +414,7 @@ describe("queda do host sem aviso", () => {
 
   it("segue como convidado quando outro peer vence a eleição", () => {
     asGuest();
-    core.roomMembers = [
+    core.room.roomMembers = [
       { peerId: HOST, displayName: "Host" },
       { peerId: ME, displayName: "Eu" },
       { peerId: ANA, displayName: "Ana" },
@@ -446,7 +450,7 @@ describe("sala de espera", () => {
     core.onWire(c, hello(ZECA, "Zeca"));
     expect(core.state.pending).toEqual([{ peerId: ZECA, displayName: "Zeca" }]);
     expect(core.state.remotes).toHaveLength(0);
-    expect(core.roomMembers).toHaveLength(1);
+    expect(core.room.roomMembers).toHaveLength(1);
     expect(c.sent).toContainEqual({ type: "room-waiting" });
   });
 
@@ -473,7 +477,7 @@ describe("sala de espera", () => {
     core.onWire(c, hello(ZECA, "Zeca"));
     session.admitPeer(ZECA);
     expect(core.state.pending).toHaveLength(0);
-    expect(core.roomMembers).toContainEqual({
+    expect(core.room.roomMembers).toContainEqual({
       peerId: ZECA,
       displayName: "Zeca",
     });
@@ -522,7 +526,7 @@ describe("sala de espera", () => {
       isHost: false,
       hostPeerId: HOST,
     });
-    core.dialedPeerId = HOST;
+    core.room.dialedPeerId = HOST;
     core.onWire(conn(HOST), { type: "room-denied", reason: "stale" });
     expect(core.state.callStatus).toBe("idle");
   });
@@ -535,7 +539,7 @@ describe("sala de espera", () => {
 describe("giro do segredo da sala", () => {
   it("remover alguém invalida o link que já estava por aí", () => {
     asHost();
-    core.roomMembers = [
+    core.room.roomMembers = [
       { peerId: ME, displayName: "Eu" },
       { peerId: ZECA, displayName: "Zeca" },
     ];
@@ -545,7 +549,7 @@ describe("giro do segredo da sala", () => {
     // Como a UI passa a referência do método, o `this` precisa sobreviver.
     const kick = session.kickPeer;
     kick(ZECA);
-    const rotated = core.hostSecret;
+    const rotated = core.room.hostSecret;
     expect(rotated).not.toBe(SECRET);
 
     // Volta com chave nova, driblando o banimento, mas com o link antigo.
@@ -565,12 +569,12 @@ describe("giro do segredo da sala", () => {
     core.data.set(ZECA, c);
     core.onWire(c, hello(ZECA, "Zeca"));
     session.denyPeer(ZECA);
-    expect(core.hostSecret).not.toBe(SECRET);
+    expect(core.room.hostSecret).not.toBe(SECRET);
   });
 
   it("membros que ficaram recebem o segredo novo", () => {
     asHost();
-    core.roomMembers = [
+    core.room.roomMembers = [
       { peerId: ME, displayName: "Eu" },
       { peerId: ANA, displayName: "Ana" },
       { peerId: ZECA, displayName: "Zeca" },
@@ -582,17 +586,17 @@ describe("giro do segredo da sala", () => {
 
     session.kickPeer(ZECA);
     const announced = ana.sent.findLast((m) => m.type === "room-peers");
-    expect(announced).toMatchObject({ secret: core.hostSecret });
+    expect(announced).toMatchObject({ secret: core.room.hostSecret });
   });
 
   it("quem nós discamos entra sem passar pela porta", () => {
     asHost();
-    core.dialedPeerId = ZECA;
+    core.room.dialedPeerId = ZECA;
     const c = conn(ZECA);
     core.data.set(ZECA, c);
     core.onWire(c, hello(ZECA, "Zeca"));
     expect(core.state.pending).toHaveLength(0);
-    expect(core.roomMembers.map((p) => p.peerId)).toContain(ZECA);
+    expect(core.room.roomMembers.map((p) => p.peerId)).toContain(ZECA);
   });
 
   it("convidado marca espera ao receber room-waiting do host", () => {
@@ -603,7 +607,7 @@ describe("giro do segredo da sala", () => {
       isHost: false,
       hostPeerId: HOST,
     });
-    core.dialedPeerId = HOST;
+    core.room.dialedPeerId = HOST;
     core.onWire(conn(HOST), { type: "room-waiting" });
     expect(core.state.callStatus).toBe("waiting");
   });
@@ -616,7 +620,7 @@ describe("giro do segredo da sala", () => {
       isHost: false,
       hostPeerId: HOST,
     });
-    core.dialedPeerId = HOST;
+    core.room.dialedPeerId = HOST;
     core.onWire(conn(HOST), { type: "room-denied" });
     expect(core.state.callStatus).toBe("idle");
   });
@@ -666,7 +670,7 @@ describe("porta lateral pelos convidados", () => {
 describe("remoção de participante", () => {
   it("host remove, bane e derruba a pessoa da lista", () => {
     asHost();
-    core.roomMembers = [
+    core.room.roomMembers = [
       { peerId: ME, displayName: "Eu" },
       { peerId: ZECA, displayName: "Zeca" },
     ];
@@ -675,15 +679,15 @@ describe("remoção de participante", () => {
     core.patch({ remotes: [remote(ZECA, "Zeca")] });
     session.kickPeer(ZECA);
     expect(c.sent).toContainEqual({ type: "room-kicked" });
-    expect(core.roomMembers.map((p) => p.peerId)).not.toContain(ZECA);
-    expect(core.banned.has(ZECA)).toBe(true);
+    expect(core.room.roomMembers.map((p) => p.peerId)).not.toContain(ZECA);
+    expect(core.room.banned.has(ZECA)).toBe(true);
   });
 
   it("convidado não consegue remover ninguém", () => {
     asGuest();
     core.patch({ remotes: [remote(ZECA, "Zeca")] });
     session.kickPeer(ZECA);
-    expect(core.banned.has(ZECA)).toBe(false);
+    expect(core.room.banned.has(ZECA)).toBe(false);
     expect(core.state.remotes).toHaveLength(1);
   });
 
@@ -702,8 +706,8 @@ describe("remoção de participante", () => {
 
 describe("silenciar áudio e vídeo", () => {
   const withZeca = () => {
-    core.roomMembers = [
-      ...core.roomMembers,
+    core.room.roomMembers = [
+      ...core.room.roomMembers,
       { peerId: ZECA, displayName: "Zeca" },
     ];
     core.patch({ remotes: [remote(ZECA, "Zeca")] });
@@ -924,7 +928,7 @@ describe("câmera ligada depois do offer", () => {
         cameraOff: true,
         localStream: gumStream("audio"),
       });
-      const out = core.outboundStream();
+      const out = core.media.outboundStream();
       expect(out.getVideoTracks()).toHaveLength(1);
       expect(out.getAudioTracks()).toHaveLength(1);
     } finally {
@@ -936,7 +940,7 @@ describe("câmera ligada depois do offer", () => {
     const restore = stubPlaceholderCapture();
     const replaceTrack = vi.fn(async () => {});
     const slot = gumTrack("video");
-    core.media.set(ZECA, {
+    core.calls.set(ZECA, {
       peerConnection: {
         getSenders: () => [{ track: slot, replaceTrack }],
         getTransceivers: () => [],
@@ -1003,7 +1007,7 @@ describe("falha de caminho ICE", () => {
   it("anuncia saída no chat só uma vez mesmo com vários eventos", () => {
     asGuest();
     core.names.set(ZECA, "Zeca");
-    core.roomMembers = [
+    core.room.roomMembers = [
       { peerId: HOST, displayName: "Host" },
       { peerId: ME, displayName: "Eu" },
       { peerId: ZECA, displayName: "Zeca" },
@@ -1015,7 +1019,7 @@ describe("falha de caminho ICE", () => {
     const left = core.state.messages.filter((msg) => msg.system === "left");
     expect(left).toHaveLength(1);
     expect(left[0]?.fromPeerId).toBe(ZECA);
-    expect(core.roomMembers.some((member) => member.peerId === ZECA)).toBe(
+    expect(core.room.roomMembers.some((member) => member.peerId === ZECA)).toBe(
       false,
     );
   });
@@ -1023,7 +1027,7 @@ describe("falha de caminho ICE", () => {
   it("não duplica aviso se close() reentra em onPeerLeft", () => {
     asGuest();
     core.names.set(ZECA, "Zeca");
-    core.roomMembers = [
+    core.room.roomMembers = [
       { peerId: HOST, displayName: "Host" },
       { peerId: ME, displayName: "Eu" },
       { peerId: ZECA, displayName: "Zeca" },
@@ -1042,7 +1046,7 @@ describe("falha de caminho ICE", () => {
 
   it("religar a mídia não trata o fim da chamada antiga como saída", () => {
     asGuest();
-    core.roomMembers = [...core.roomMembers, { peerId: ANA, displayName: "Ana" }];
+    core.room.roomMembers = [...core.room.roomMembers, { peerId: ANA, displayName: "Ana" }];
     core.patch({ remotes: [remote(ANA, "Ana")] });
     const handlers = new Map<string, () => void>();
     core.attachMedia({
@@ -1052,7 +1056,7 @@ describe("falha de caminho ICE", () => {
     });
     core.redialPeer(ANA);
     expect(core.state.remotes).toHaveLength(1);
-    expect(core.roomMembers.some((member) => member.peerId === ANA)).toBe(true);
+    expect(core.room.roomMembers.some((member) => member.peerId === ANA)).toBe(true);
   });
 });
 
@@ -1222,8 +1226,8 @@ describe("timer e voto no chat", () => {
 
   it("usa a conexão como votante, não o payload", () => {
     asGuest();
-    core.roomMembers = [
-      ...core.roomMembers,
+    core.room.roomMembers = [
+      ...core.room.roomMembers,
       { peerId: "bruno-1", displayName: "Bruno" },
     ];
     core.onWire(conn(HOST), poll);
@@ -1247,8 +1251,8 @@ describe("timer e voto no chat", () => {
 
   it("recusa enquete com id repetido para não sequestrar os votos", () => {
     asGuest();
-    core.roomMembers = [
-      ...core.roomMembers,
+    core.room.roomMembers = [
+      ...core.room.roomMembers,
       { peerId: "bruno-1", displayName: "Bruno" },
     ];
     core.onWire(conn(HOST), poll);

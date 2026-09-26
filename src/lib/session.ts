@@ -1,70 +1,20 @@
 import type { DataConnection, MediaConnection, Peer } from "peerjs";
 import { loadRoomSecret, rotateRoomSecret } from "./identity";
 import { clearInviteLocation, parseInvite } from "./invite";
-import {
-  applySenderLimits,
-  applyTrackConstraints,
-  getCameraConstraints,
-  getDisplayConstraints,
-  maxFileBytes,
-  maxParticipants,
-} from "./quality";
 import type { MessageKey } from "@i18n/locales";
 import { t } from "@i18n/i18n";
 import { playCallEnded } from "./sounds";
 import { showToast } from "./toast";
-import {
-  CHAT_COOLDOWN_MS,
-  cooledDown,
-  MAX_TIMER_ALARMS,
-  MENTION_TOAST_COOLDOWN_MS,
-  safeFileName,
-} from "./chat";
-import {
-  applyTimerAction,
-  canControlTimer,
-  hasActiveTimer,
-  initialTimerState,
-  resolveTimerState,
-  stampTimerActor,
-  type TimerAction,
-  type TimerState,
-} from "./timer";
-import {
-  formatCommandText,
-  mentionsForCommand,
-  runChatCommand,
-} from "./commands";
-import { ALL_MENTION, isPinged, resolveMentions } from "./mentions";
-import { FILE_CHUNK } from "./file-assembly";
-import {
-  clearAllFileProgress,
-  clearFileProgress,
-  setFileProgress,
-} from "./file-progress";
-import { FileBridge } from "./file-transfer";
+import type { TimerAction } from "./timer";
 import { CONNECT_GIVE_UP_MS, CONNECT_HINT_MS, iceGaveUpKind } from "./ice-path";
-import {
-  acquireLocalMedia,
-  cameraFlipConstraints,
-  facingFromLabel,
-  mediaStreamOf,
-  nextCameraFlip,
-  placeholderVideoTrack,
-} from "./media-access";
-import {
-  dropMute,
-  muteOf,
-  roomMutesFromWire,
-  roomMutesToWire,
-  setMuteFlag,
-  type MuteKind,
-  type MuteMap,
-} from "./mutes";
-import { clampChatText, clampDisplayName, parseWire } from "./wire-guard";
+import { dropMute, type MuteKind, type MuteMap } from "./mutes";
+import { clampDisplayName, parseWire } from "./wire-guard";
+import { SessionChat } from "./session-chat";
+import { SessionFiles } from "./session-files";
+import { SessionMedia } from "./session-media";
+import { electHost, FLUSH_MS, SessionRoom } from "./session-room";
 import type {
   CallMode,
-  ChatFile,
   ChatMessage,
   Identity,
   IncomingInvite,
@@ -113,12 +63,6 @@ export type SessionState = {
   pathHint: boolean;
 };
 
-const FILE_BUFFER_HIGH = 2_000_000;
-const MAX_MESSAGES = 500;
-const MAX_CONCURRENT_INCOMING = 3;
-const FILE_START_COOLDOWN = 2000;
-const FILE_SEND_CONCURRENCY = 3;
-const FLUSH_MS = 80;
 const MAX_ICE_RETRIES = 2;
 const ICE_RECOVERY_MS = 4000;
 const RECONNECT_MAX_MS = 30_000;
@@ -142,14 +86,7 @@ const iceServers = (): RTCIceServer[] => {
   return servers;
 };
 
-/**
- * Sucessor determinístico: o menor peerId entre os candidatos. Como todos
- * partem da mesma lista de membros, que veio do host, cada peer chega sozinho
- * ao mesmo nome — sem negociação e sem risco de dois hosts ao mesmo tempo.
- */
-export const electHost = (candidates: string[]) => {
-  return candidates.length > 0 ? candidates.toSorted()[0] : null;
-};
+export { electHost };
 
 const initialState: SessionState = {
   view: "home",
@@ -184,28 +121,11 @@ type Listener = () => void;
 export class PeerSession {
   private listeners = new Set<Listener>();
   private state: SessionState = initialState;
-  private peer: Peer | null = null;
-  private data = new Map<string, DataConnection>();
-  private media = new Map<string, MediaConnection>();
-  private screenOut = new Map<string, MediaConnection>();
-  private screenIn = new Map<string, MediaConnection>();
-  private names = new Map<string, string>();
-  private roomMembers: PeerInfo[] = [];
-  /** Removidos pelo host: não voltam com o mesmo link enquanto a sala existir. */
-  private banned = new Set<string>();
-  /** Saídas provocadas por remoção, para o aviso não dizer que a pessoa saiu. */
-  private removed = new Set<string>();
-  private screenTrack: MediaStreamTrack | null = null;
-  /** Faixa preta no offer/answer enquanto a câmera real está off. */
-  private placeholderVideo: MediaStreamTrack | null = null;
-  /** Última câmera escolhida: religar não volta para a padrão. */
-  private cameraDeviceId: string | null = null;
-  private switchingCamera = false;
-  private dialedPeerId: string | null = null;
-  /** Nosso segredo quando somos host. Gira a cada recusa ou remoção. */
-  private hostSecret: string | null = null;
-  /** Segredo que apresentamos ao entrar na sala de outra pessoa. */
-  private joinSecret: string | null = null;
+  // Sem `private` o que os domínios (session-*.ts) precisam ler ou chamar.
+  peer: Peer | null = null;
+  data = new Map<string, DataConnection>();
+  calls = new Map<string, MediaConnection>();
+  names = new Map<string, string>();
   private iceRetries = new Map<string, number>();
   private iceEverConnected = new Set<string>();
   private iceWatched = new WeakSet<RTCPeerConnection>();
@@ -214,26 +134,41 @@ export class PeerSession {
   private reconnectAttempts = 0;
   private reconnectTimer = 0;
   private starting = false;
-  private tearingDown = false;
-  private sendingFile = false;
-  private files = new FileBridge();
-  private incomingFiles = new Map<
-    string,
-    {
-      remoteId: string;
-      localId: string;
-      name: string;
-      mime: string;
-      size: number;
-    }
-  >();
-  private incomingByteTail = new Map<string, Promise<void>>();
-  private lastFileStart = new Map<string, number>();
-  private lastChatAt = new Map<string, number>();
-  private lastMentionToastAt = 0;
-  private timerAlarms = new Map<string, number>();
+  tearingDown = false;
   /** Evita toast/aviso duplicados quando `close()` reentra em `onPeerLeft`. */
   private departing = new Set<string>();
+  readonly room = new SessionRoom(this);
+  readonly chat = new SessionChat(this);
+  readonly files = new SessionFiles(this);
+  readonly media = new SessionMedia(this);
+
+  sendChat = (text: string) => this.chat.sendChat(text);
+  votePoll = (pollId: string, option: number) => {
+    this.chat.votePoll(pollId, option);
+  };
+  controlTimer = (messageId: string, action: TimerAction) => {
+    this.chat.controlTimer(messageId, action);
+  };
+  sendFile = (file: File) => this.files.sendFile(file);
+  toggleMute = () => this.media.toggleMute();
+  toggleCamera = () => this.media.toggleCamera();
+  switchCamera = () => this.media.switchCamera();
+  shareScreen = () => this.media.shareScreen();
+  toggleLocalMute = (peerId: string, kind: MuteKind) => {
+    this.room.toggleLocalMute(peerId, kind);
+  };
+  setRoomMute = (peerId: string, kind: MuteKind, muted: boolean) => {
+    this.room.setRoomMute(peerId, kind, muted);
+  };
+  admitPeer = (peerId: string) => {
+    this.room.admitPeer(peerId);
+  };
+  denyPeer = (peerId: string) => {
+    this.room.denyPeer(peerId);
+  };
+  kickPeer = (peerId: string) => {
+    this.room.kickPeer(peerId);
+  };
 
   subscribe = (listener: Listener) => {
     this.listeners.add(listener);
@@ -244,7 +179,7 @@ export class PeerSession {
 
   getState = () => this.state;
 
-  private patch(partial: Partial<SessionState>) {
+  patch(partial: Partial<SessionState>) {
     let changed = false;
     // As chaves de um Partial<SessionState> são chaves de SessionState.
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion
@@ -266,7 +201,7 @@ export class PeerSession {
     }
   }
 
-  private toast(key: MessageKey) {
+  toast(key: MessageKey) {
     showToast(key);
   }
 
@@ -284,12 +219,12 @@ export class PeerSession {
     }
     this.starting = true;
     this.destroyPeer();
-    this.hostSecret = loadRoomSecret();
+    this.room.hostSecret = loadRoomSecret();
     this.patch({
       identity,
       peerReady: false,
       peerError: null,
-      roomSecret: this.hostSecret,
+      roomSecret: this.room.hostSecret,
     });
 
     const { Peer } = await import("peerjs");
@@ -298,7 +233,7 @@ export class PeerSession {
       debug: 0,
     });
     this.peer = peer;
-    this.watchDevices();
+    this.media.watchDevices();
 
     peer.on("open", () => {
       this.starting = false;
@@ -472,8 +407,8 @@ export class PeerSession {
     if (!me || this.state.callStatus === "idle" || this.tearingDown) {
       return;
     }
-    const stale = this.media.get(peerId);
-    this.media.delete(peerId);
+    const stale = this.calls.get(peerId);
+    this.calls.delete(peerId);
     stale?.close();
     // Só o lado de ID menor disca, igual ao caminho normal, para evitar glare.
     if (me < peerId) {
@@ -481,28 +416,15 @@ export class PeerSession {
     }
   }
 
-  /** Sem câmera nem microfone ainda dá para entrar, só ouvindo e no chat. */
-  private async ensureLocalStreamOrSilent() {
-    try {
-      await this.ensureLocalStream();
-    } catch {
-      this.patch({
-        localStream: this.state.localStream ?? mediaStreamOf([]),
-        cameraOff: true,
-        muted: true,
-      });
-    }
-  }
-
   async createRoom() {
-    await this.ensureLocalStreamOrSilent();
-    const me = this.selfInfo();
-    this.setRoomMembers(me ? [me] : []);
-    this.joinSecret = null;
+    await this.media.ensureLocalStreamOrSilent();
+    const me = this.room.selfInfo();
+    this.room.setRoomMembers(me ? [me] : []);
+    this.room.joinSecret = null;
     // Sala nova ⇒ link novo: quem tinha o convite antigo não bate na porta.
-    this.hostSecret = rotateRoomSecret();
+    this.room.hostSecret = rotateRoomSecret();
     this.beginCall(true, me?.peerId ?? "");
-    this.patch({ callStatus: "in-call", roomSecret: this.hostSecret });
+    this.patch({ callStatus: "in-call", roomSecret: this.room.hostSecret });
   }
 
   async joinRoom(hostId: string) {
@@ -514,14 +436,14 @@ export class PeerSession {
     if (this.state.callStatus !== "idle") {
       return;
     }
-    this.joinSecret = invite?.secret ?? null;
-    this.dialedPeerId = id;
+    this.room.joinSecret = invite?.secret ?? null;
+    this.room.dialedPeerId = id;
     this.beginCall(false, id);
-    this.patch({ callStatus: "connecting", roomSecret: this.joinSecret });
-    await this.ensureLocalStreamOrSilent();
+    this.patch({ callStatus: "connecting", roomSecret: this.room.joinSecret });
+    await this.media.ensureLocalStreamOrSilent();
     this.openData(id, {
       type: "hello",
-      ...this.helloPayload(),
+      ...this.room.helloPayload(),
       kind: "room-join",
     });
     this.armConnectWatch();
@@ -532,23 +454,23 @@ export class PeerSession {
     if (!incoming) {
       return;
     }
-    await this.ensureLocalStreamOrSilent();
-    this.dialedPeerId = incoming.peerId;
+    await this.media.ensureLocalStreamOrSilent();
+    this.room.dialedPeerId = incoming.peerId;
     this.beginCall(false, incoming.peerId);
-    const queued = this.media.get(incoming.peerId);
+    const queued = this.calls.get(incoming.peerId);
     if (queued) {
-      queued.answer(this.outboundStream());
+      queued.answer(this.media.outboundStream());
     }
     const conn = this.data.get(incoming.peerId);
     if (conn?.open) {
       void conn.send({
         type: "hello",
-        ...this.helloPayload(),
+        ...this.room.helloPayload(),
         kind: "room-join",
       });
     }
     this.patch({ incoming: null, callStatus: "in-call" });
-    this.applyLimitsToAll();
+    this.media.applyLimitsToAll();
   }
 
   rejectIncoming() {
@@ -557,81 +479,11 @@ export class PeerSession {
       return;
     }
     this.data.get(incoming.peerId)?.close();
-    this.media.get(incoming.peerId)?.close();
+    this.calls.get(incoming.peerId)?.close();
     this.data.delete(incoming.peerId);
-    this.media.delete(incoming.peerId);
+    this.calls.delete(incoming.peerId);
     this.patch({ incoming: null });
   }
-
-  admitPeer(peerId: string) {
-    if (!this.state.isHost) {
-      return;
-    }
-    const info = this.state.pending.find((p) => p.peerId === peerId);
-    if (!info) {
-      return;
-    }
-    this.patch({
-      pending: this.state.pending.filter((p) => p.peerId !== peerId),
-    });
-    if (this.isRoomFull()) {
-      this.refuseJoin(peerId);
-      return;
-    }
-    this.names.set(peerId, info.displayName);
-    this.upsertRemote(peerId, { displayName: info.displayName });
-    this.addRoomMember(info);
-    // A chamada de mídia dele já chegou e ficou parada esperando esta decisão.
-    const queued = this.media.get(peerId);
-    if (queued) {
-      queued.answer(this.outboundStream());
-    }
-    const conn = this.data.get(peerId);
-    if (conn) {
-      this.offerExistingHost(conn);
-    }
-    this.broadcastRoom();
-    this.maybeCall(peerId);
-  }
-
-  denyPeer(peerId: string) {
-    if (!this.state.isHost) {
-      return;
-    }
-    if (!this.state.pending.some((p) => p.peerId === peerId)) {
-      return;
-    }
-    this.patch({
-      pending: this.state.pending.filter((p) => p.peerId !== peerId),
-    });
-    this.banned.add(peerId);
-    this.sendAndDrop(peerId, { type: "room-denied" });
-    this.rotateSecret();
-    this.broadcastRoom();
-  }
-
-  kickPeer = (peerId: string) => {
-    if (!this.state.isHost || peerId === this.state.identity?.peerId) {
-      return;
-    }
-    if (!this.state.remotes.some((remote) => remote.peerId === peerId)) {
-      return;
-    }
-    this.banned.add(peerId);
-    this.removed.add(peerId);
-    this.setRoomMembers(this.roomMembers.filter((p) => p.peerId !== peerId));
-    const conn = this.data.get(peerId);
-    if (conn?.open) {
-      void conn.send({ type: "room-kicked" });
-    }
-    // Quem saiu já está fora de `roomMembers`, então `activeConnections` o
-    // exclui daqui em diante: ele não recebe o segredo novo e o link que tem
-    // morre aqui. Os que ficaram são avisados na hora, não no timer abaixo.
-    this.rotateSecret();
-    this.broadcastRoom();
-    // Deixa o aviso escoar antes de derrubar o canal por baixo dele.
-    window.setTimeout(() => this.onPeerLeft(peerId), FLUSH_MS);
-  };
 
   hangUp() {
     if (this.tearingDown) {
@@ -700,432 +552,14 @@ export class PeerSession {
     this.resetCall();
   }
 
-  sendChat(text: string) {
-    const trimmed = clampChatText(text.trim());
-    const me = this.state.identity;
-    if (!trimmed || !me || !this.inRoom()) {
-      return false;
-    }
-    const command = runChatCommand(trimmed, this.roomMembers);
-    if (command) {
-      if (!command.ok) {
-        showToast(command.error);
-        return false;
-      }
-      if (command.command.kind === "timer") {
-        if (hasActiveTimer(this.state.messages, Date.now())) {
-          showToast("chat.command.timerBusy");
-          return false;
-        }
-      }
-      const mentions = mentionsForCommand(command.command);
-      if (command.command.kind === "emote") {
-        for (const id of resolveMentions(
-          command.command.action,
-          this.roomMembers,
-        )) {
-          if (!mentions.includes(id)) {
-            mentions.push(id);
-          }
-        }
-      }
-      // /me e /moeda mostram @nome — precisa estar em mentions pra pintar.
-      if (
-        (command.command.kind === "emote" || command.command.kind === "coin") &&
-        !mentions.includes(me.peerId)
-      ) {
-        mentions.push(me.peerId);
-      }
-      const at = Date.now();
-      const message: ChatMessage = {
-        id: crypto.randomUUID(),
-        fromPeerId: me.peerId,
-        fromName: me.displayName,
-        text: formatCommandText(
-          command.command,
-          t,
-          me.displayName,
-          this.roomMembers,
-        ),
-        at,
-        command: command.command,
-        ...(command.command.kind === "timer"
-          ? { timer: initialTimerState(command.command.ms, at) }
-          : {}),
-        ...(mentions.length ? { mentions } : {}),
-      };
-      this.appendMessage(message);
-      if (command.command.kind !== "help") {
-        const { timer: _timer, ...chat } = message;
-        this.broadcast({ type: "chat", ...chat });
-      }
-      return true;
-    }
-    const mentions = resolveMentions(trimmed, this.roomMembers);
-    const message: ChatMessage = {
-      id: crypto.randomUUID(),
-      fromPeerId: me.peerId,
-      fromName: me.displayName,
-      text: trimmed,
-      at: Date.now(),
-      ...(mentions.length ? { mentions } : {}),
-    };
-    this.appendMessage(message);
-    this.broadcast({ type: "chat", ...message });
-    return true;
-  }
-
-  votePoll(pollId: string, option: number) {
-    const me = this.state.identity;
-    if (!me || !this.inRoom()) {
-      return;
-    }
-    if (!this.applyPollVote(pollId, me.peerId, option)) {
-      return;
-    }
-    this.broadcast({ type: "poll-vote", id: pollId, option });
-  }
-
-  controlTimer(messageId: string, action: TimerAction) {
-    const me = this.state.identity;
-    if (!me || !this.inRoom()) {
-      return;
-    }
-    const next = this.applyTimerControl(
-      messageId,
-      me.peerId,
-      action,
-      Date.now(),
-    );
-    if (!next) {
-      return;
-    }
-    this.broadcast({ type: "timer-control", id: messageId, timer: next });
-  }
-
-  async sendFile(file: File) {
-    const me = this.state.identity;
-    if (!me || !this.inRoom() || this.tearingDown) {
-      return;
-    }
-    if (this.sendingFile) {
-      this.toast("toast.fileBusy");
-      return;
-    }
-    const max = maxFileBytes();
-    if (file.size <= 0 || file.size > max) {
-      showToast("toast.fileTooBig", {
-        max: Math.round(max / (1024 * 1024)),
-      });
-      return;
-    }
-    const id = crypto.randomUUID();
-    const name = safeFileName(file.name);
-    const mime = file.type || "application/octet-stream";
-    const blobUrl = URL.createObjectURL(file);
-    const message: ChatMessage = {
-      id,
-      fromPeerId: me.peerId,
-      fromName: me.displayName,
-      text: "",
-      at: Date.now(),
-      file: {
-        id,
-        name,
-        mime,
-        size: file.size,
-        status: "sending",
-        blobUrl,
-      },
-    };
-    this.appendMessage(message);
-    this.sendingFile = true;
-    try {
-      const start = {
-        type: "file-start" as const,
-        id,
-        name,
-        mime,
-        size: file.size,
-        fromPeerId: me.peerId,
-        fromName: me.displayName,
-        at: message.at,
-      };
-      const peers = this.activeConnections();
-      if (peers.length === 0) {
-        setFileProgress(id, 1);
-        this.patchFile(id, { status: "ready" });
-        return;
-      }
-      for (const conn of peers) {
-        void conn.send(start);
-      }
-      await this.files.openSend(id, file);
-
-      // Cada peer avança no seu próprio ritmo: um destinatário congestionado
-      // atrasa só a própria cópia, e o progresso mostrado é o do mais lento.
-      const sent = new Map<DataConnection, number>();
-      const report = () => {
-        let slowest = file.size;
-        for (const conn of peers) {
-          slowest = Math.min(slowest, sent.get(conn) ?? 0);
-        }
-        setFileProgress(id, Math.min(1, slowest / file.size));
-      };
-
-      const results = await this.mapLimited(
-        peers,
-        FILE_SEND_CONCURRENCY,
-        (conn) => this.streamFileTo(conn, id, file.size, sent, report),
-      );
-      const ok = results.filter(Boolean).length;
-      if (ok === 0) {
-        this.patchFile(id, { status: "error" });
-        this.toast("toast.fileFailed");
-        return;
-      }
-      setFileProgress(id, 1);
-      this.patchFile(id, { status: "ready" });
-      if (ok < peers.length) {
-        this.toast("toast.filePartial");
-      }
-    } catch {
-      this.patchFile(id, { status: "error" });
-      this.toast("toast.fileFailed");
-    } finally {
-      this.sendingFile = false;
-      void this.files.closeSend(id);
-    }
-  }
-
-  async toggleMute() {
-    const next = !this.state.muted;
-    if (!next && this.selfLocked("audio")) {
-      return;
-    }
-    const live =
-      this.state.localStream
-        ?.getAudioTracks()
-        .filter((track) => track.readyState === "live") ?? [];
-    if (!next && live.length === 0) {
-      await this.enableMic();
-      return;
-    }
-    live.forEach((track) => {
-      track.enabled = !next;
-    });
-    this.patch({ muted: next });
-  }
-
-  async toggleCamera() {
-    if (this.state.cameraOff) {
-      await this.enableCamera();
-    } else {
-      this.disableCamera();
-    }
-  }
-
-  async switchCamera() {
-    if (
-      this.switchingCamera ||
-      this.state.cameraOff ||
-      this.selfLocked("video")
-    ) {
-      return;
-    }
-    const md = navigator.mediaDevices;
-    if (!md?.getUserMedia) {
-      return;
-    }
-    let devices: MediaDeviceInfo[] = [];
-    try {
-      devices = (await md.enumerateDevices?.()) ?? [];
-    } catch {
-      return;
-    }
-    const cams = devices
-      .filter((d) => d.kind === "videoinput")
-      .filter((d) => Boolean(facingFromLabel(d.label)));
-    if (cams.length < 2) {
-      return;
-    }
-    const current = this.state.localStream?.getVideoTracks()[0];
-    const settings = current?.getSettings?.();
-    const flip = nextCameraFlip(cams, {
-      deviceId: settings?.deviceId,
-      facingMode: settings?.facingMode,
-    });
-    if (!flip) {
-      return;
-    }
-    const attempts = cameraFlipConstraints(flip, cams);
-    this.switchingCamera = true;
-    // Tablet Android só entrega um sensor por vez: soltar antes do gum.
-    current?.stop();
-    try {
-      const track = await this.acquireFlipTrack(md, attempts);
-      if (!track) {
-        throw new Error("switch");
-      }
-      this.cameraDeviceId =
-        track.getSettings?.().deviceId ||
-        ("deviceId" in flip ? flip.deviceId : this.cameraDeviceId);
-      await this.replaceCameraTrack(track);
-    } catch {
-      this.toast("toast.mediaSwitchCamera");
-      await this.reopenCamera();
-    } finally {
-      this.switchingCamera = false;
-    }
-  }
-
-  private async acquireFlipTrack(
-    md: MediaDevices,
-    attempts: MediaTrackConstraints[],
-  ) {
-    // oxlint-disable no-await-in-loop
-    for (const video of attempts) {
-      try {
-        const fresh = await md.getUserMedia({ audio: false, video });
-        const track = fresh.getVideoTracks()[0];
-        if (track) {
-          return track;
-        }
-      } catch {
-        // Overconstrained / NotReadable: tenta o próximo jeito
-      }
-    }
-    // oxlint-enable no-await-in-loop
-    return undefined;
-  }
-
-  private async reopenCamera() {
-    const md = navigator.mediaDevices;
-    if (!md?.getUserMedia) {
-      return;
-    }
-    try {
-      const fresh = await md.getUserMedia({
-        audio: false,
-        video: this.cameraVideoRequest(),
-      });
-      const track = fresh.getVideoTracks()[0];
-      if (track) {
-        await this.replaceCameraTrack(track);
-      }
-    } catch {
-      // faixa velha já parou
-    }
-  }
-
-  /** Silencia o áudio ou o vídeo de outra pessoa só neste cliente. */
-  toggleLocalMute = (peerId: string, kind: MuteKind) => {
-    if (!this.inRoom() || !this.canControlMute(peerId)) {
-      return;
-    }
-    if (muteOf(this.state.roomMutes, peerId)[kind] && !this.state.isHost) {
-      return;
-    }
-    const next = !muteOf(this.state.localMutes, peerId)[kind];
-    this.patch({
-      localMutes: setMuteFlag(this.state.localMutes, peerId, kind, next),
-    });
-  };
-
-  /** Host: pede silêncio de áudio/vídeo na sala.
-   * Viewers já aplicam `roomMutes` na tile (não tocam o stream). O alvo é
-   * pedido a cortar as tracks via `enforceSelfLocks` — cliente modificado
-   * pode ignorar e continuar enviando (só gasta banda). Em P2P puro não há
-   * corte no remetente. */
-  setRoomMute = (peerId: string, kind: MuteKind, muted: boolean) => {
-    if (!this.state.isHost || !this.inRoom() || !this.canControlMute(peerId)) {
-      return;
-    }
-    this.applyRoomMute(peerId, { [kind]: muted }, false);
-    this.broadcast({ type: "room-mute", peerId, [kind]: muted });
-  };
-
-  async shareScreen() {
-    if (this.state.sharingScreen) {
-      await this.stopScreenShare();
-      return;
-    }
-    let display: MediaStream;
-    try {
-      display = await navigator.mediaDevices.getDisplayMedia(
-        getDisplayConstraints(),
-      );
-    } catch {
-      return;
-    }
-    const track = display.getVideoTracks()[0];
-    if (!track) {
-      return;
-    }
-    this.screenTrack = track;
-    const screenStream = new MediaStream([track]);
-    await applyTrackConstraints(screenStream, "screen");
-    track.addEventListener("ended", () => {
-      void this.stopScreenShare();
-    });
-    this.patch({
-      sharingScreen: true,
-      localScreenStream: screenStream,
-      screenShareOrder: this.appendShare(this.state.identity?.peerId),
-    });
-    this.broadcast({ type: "media-meta", sharingScreen: true });
-    this.openScreenToAll();
-  }
-
-  async stopScreenShare() {
-    for (const call of this.screenOut.values()) {
-      call.close();
-    }
-    this.screenOut.clear();
-    this.screenTrack?.stop();
-    this.screenTrack = null;
-    this.patch({
-      sharingScreen: false,
-      localScreenStream: null,
-      screenShareOrder: this.removeShare(this.state.identity?.peerId),
-    });
-    this.broadcast({ type: "media-meta", sharingScreen: false });
-  }
-
-  async reapplyQuality() {
-    const stream = this.state.localStream;
-    if (stream) {
-      await applyTrackConstraints(stream, "camera");
-    }
-    if (this.screenTrack) {
-      await applyTrackConstraints(
-        new MediaStream([this.screenTrack]),
-        "screen",
-      );
-    }
-    this.applyLimitsToAll();
-  }
-
   /** Só o que o broker pode ver: nunca o secret da sala. */
-  private signalMeta(extra?: Record<string, string>) {
+  signalMeta(extra?: Record<string, string>) {
     const me = this.state.identity;
     return {
       displayName: clampDisplayName(me?.displayName ?? t("common.someone")),
       peerId: me?.peerId ?? "",
       ...extra,
     };
-  }
-
-  private helloPayload() {
-    return {
-      ...this.signalMeta(),
-      ...(this.joinSecret ? { secret: this.joinSecret } : {}),
-    };
-  }
-
-  private selfInfo(): PeerInfo | null {
-    const me = this.state.identity;
-    return me ? { peerId: me.peerId, displayName: me.displayName } : null;
   }
 
   private beginCall(isHost: boolean, hostPeerId: string) {
@@ -1144,208 +578,6 @@ export class PeerSession {
     });
   }
 
-  private async ensureLocalStream() {
-    if (this.state.localStream) {
-      return this.state.localStream;
-    }
-    const gum = navigator.mediaDevices?.getUserMedia?.bind(
-      navigator.mediaDevices,
-    );
-    const media = await acquireLocalMedia(gum, getCameraConstraints());
-    await applyTrackConstraints(media.stream, "camera");
-    if (!media.muted) {
-      media.stream.getAudioTracks().forEach((track) => {
-        track.enabled = !this.state.muted;
-      });
-    }
-    const cameraOff = media.cameraOff || this.state.cameraOff;
-    const muted = media.muted || this.state.muted;
-    this.patch({ localStream: media.stream, cameraOff, muted });
-    this.rememberCamera(media.stream);
-    void this.refreshCameraSwitch();
-    if (media.fallback === "audio") {
-      this.toast("toast.mediaAudioOnly");
-    } else if (media.fallback === "video") {
-      this.toast("toast.mediaVideoOnly");
-    } else if (media.fallback === "listen") {
-      this.toast("toast.mediaListenOnly");
-    }
-    return media.stream;
-  }
-
-  private disableCamera() {
-    this.syncOutgoingTrack("video", this.heldPlaceholder());
-    const audio = this.state.localStream?.getAudioTracks() ?? [];
-    this.state.localStream?.getVideoTracks().forEach((track) => track.stop());
-    this.patch({ cameraOff: true, localStream: mediaStreamOf(audio) });
-    this.broadcast({ type: "media-meta", cameraOff: true });
-  }
-
-  private async enableCamera() {
-    if (this.selfLocked("video")) {
-      return;
-    }
-    let fresh: MediaStream;
-    try {
-      fresh = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: this.cameraVideoRequest(),
-      });
-    } catch {
-      this.toast("toast.mediaCamera");
-      return;
-    }
-    const video = fresh.getVideoTracks()[0];
-    if (!video) {
-      return;
-    }
-    this.rememberCamera(fresh);
-    await this.replaceCameraTrack(video);
-  }
-
-  private cameraVideoBase(): MediaTrackConstraints {
-    const video = getCameraConstraints().video;
-    return typeof video === "object" && video ? { ...video } : {};
-  }
-
-  private cameraVideoRequest(): MediaTrackConstraints {
-    const video = this.cameraVideoBase();
-    if (this.cameraDeviceId) {
-      video.deviceId = { ideal: this.cameraDeviceId };
-    }
-    return video;
-  }
-
-  private rememberCamera(stream: MediaStream) {
-    const id = stream.getVideoTracks()[0]?.getSettings?.().deviceId;
-    if (id) {
-      this.cameraDeviceId = id;
-    }
-  }
-
-  private async replaceCameraTrack(video: MediaStreamTrack) {
-    await applyTrackConstraints(mediaStreamOf([video]), "camera");
-    const audio = this.state.localStream?.getAudioTracks() ?? [];
-    this.state.localStream?.getVideoTracks().forEach((track) => track.stop());
-    const stream = mediaStreamOf([...audio, video]);
-    this.syncOutgoingTrack("video", video);
-    this.placeholderVideo?.stop();
-    this.placeholderVideo = null;
-    this.patch({ cameraOff: false, localStream: stream });
-    this.broadcast({ type: "media-meta", cameraOff: false });
-    this.applyLimitsToAll();
-    window.setTimeout(() => this.applyLimitsToAll(), 400);
-    void this.refreshCameraSwitch();
-  }
-
-  private onDeviceChange = () => {
-    void this.refreshCameraSwitch();
-  };
-
-  private watchDevices() {
-    const md = navigator.mediaDevices;
-    if (!md?.addEventListener) {
-      return;
-    }
-    md.removeEventListener("devicechange", this.onDeviceChange);
-    md.addEventListener("devicechange", this.onDeviceChange);
-  }
-
-  private async refreshCameraSwitch() {
-    let n = 0;
-    try {
-      n =
-        (await navigator.mediaDevices?.enumerateDevices?.())
-          ?.filter((d) => d.kind === "videoinput")
-          ?.filter((d) => Boolean(facingFromLabel(d.label)))?.length ?? 0;
-    } catch {
-      n = 0;
-    }
-    const canSwitchCamera = n >= 2;
-    if (canSwitchCamera !== this.state.canSwitchCamera) {
-      this.patch({ canSwitchCamera });
-    }
-  }
-
-  private async enableMic() {
-    if (this.selfLocked("audio")) {
-      return;
-    }
-    let fresh: MediaStream;
-    try {
-      fresh = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
-        video: false,
-      });
-    } catch {
-      this.toast("toast.mediaMic");
-      return;
-    }
-    const audio = fresh.getAudioTracks()[0];
-    if (!audio) {
-      this.toast("toast.mediaMic");
-      return;
-    }
-    this.state.localStream?.getAudioTracks().forEach((track) => track.stop());
-    const video = this.state.localStream?.getVideoTracks() ?? [];
-    const stream = mediaStreamOf([audio, ...video]);
-    this.syncOutgoingTrack("audio", audio);
-    this.patch({ muted: false, localStream: stream });
-  }
-
-  private syncOutgoingTrack(
-    kind: "audio" | "video",
-    track: MediaStreamTrack | null,
-  ) {
-    for (const call of this.media.values()) {
-      const pc = call.peerConnection;
-      if (!pc) {
-        continue;
-      }
-      const sender =
-        pc.getSenders().find((s) => s.track?.kind === kind) ??
-        pc.getTransceivers().find((tr) => {
-          const found = tr.sender.track?.kind ?? tr.receiver.track?.kind;
-          return found === kind;
-        })?.sender;
-      if (sender) {
-        void sender.replaceTrack(track);
-      } else if (track) {
-        try {
-          pc.addTrack(track, this.state.localStream ?? mediaStreamOf([track]));
-        } catch {
-          // a linha já existe nesta conexão
-        }
-      }
-    }
-  }
-
-  private heldPlaceholder(): MediaStreamTrack | null {
-    if (this.placeholderVideo?.readyState === "live") {
-      return this.placeholderVideo;
-    }
-    this.placeholderVideo = placeholderVideoTrack();
-    return this.placeholderVideo;
-  }
-
-  /**
-   * Sempre manda uma faixa de vídeo. Sem m-line no offer, `replaceTrack`
-   * depois não tem sender e o PeerJS não renegocia `addTrack`.
-   */
-  private outboundStream() {
-    const local = this.state.localStream;
-    const audio = local?.getAudioTracks() ?? [];
-    const live =
-      !this.state.cameraOff
-        ? local?.getVideoTracks().find((track) => track.readyState === "live")
-        : undefined;
-    const video = live ?? this.heldPlaceholder();
-    return mediaStreamOf(video ? [...audio, video] : audio);
-  }
-
   private openData(peerId: string, first?: WireMessage) {
     if (!this.peer || this.data.has(peerId)) {
       return;
@@ -1358,46 +590,15 @@ export class PeerSession {
   }
 
   private openMedia(peerId: string) {
-    if (!this.peer || this.media.has(peerId)) {
+    if (!this.peer || this.calls.has(peerId)) {
       return;
     }
-    const call = this.peer.call(peerId, this.outboundStream(), {
+    const call = this.peer.call(peerId, this.media.outboundStream(), {
       metadata: this.signalMeta({ kind: "camera" }),
     });
     this.attachMedia(call);
     if (this.state.sharingScreen) {
-      this.openScreen(peerId);
-    }
-  }
-
-  private openScreen(peerId: string) {
-    const stream = this.state.localScreenStream;
-    if (!this.peer || this.screenOut.has(peerId) || !stream) {
-      return;
-    }
-    const call = this.peer.call(peerId, stream, {
-      metadata: this.signalMeta({ kind: "screen" }),
-    });
-    this.screenOut.set(peerId, call);
-    call.on("close", () => this.screenOut.delete(peerId));
-    call.on("error", () => this.screenOut.delete(peerId));
-    window.setTimeout(() => this.applyLimitsToAll(), 400);
-  }
-
-  private openScreenToAll() {
-    const ids = new Set<string>([
-      ...this.data.keys(),
-      ...this.media.keys(),
-      ...this.state.remotes.map((r) => r.peerId),
-    ]);
-    for (const peerId of ids) {
-      if (peerId === this.state.identity?.peerId) {
-        continue;
-      }
-      if (this.notAdmitted(peerId)) {
-        continue;
-      }
-      this.openScreen(peerId);
+      this.media.openScreen(peerId);
     }
   }
 
@@ -1422,7 +623,7 @@ export class PeerSession {
       } else if (outgoing && this.state.callMode) {
         void conn.send({
           type: "hello",
-          ...this.helloPayload(),
+          ...this.room.helloPayload(),
           kind: "room-join",
         });
       }
@@ -1430,10 +631,10 @@ export class PeerSession {
         void conn.send({ type: "media-meta", sharingScreen: true });
       }
       void conn.send({ type: "media-meta", cameraOff: this.state.cameraOff });
-      this.offerExistingHost(conn);
+      this.room.offerExistingHost(conn);
     });
     conn.on("data", (raw) => {
-      if (this.onFileBytes(conn, raw)) {
+      if (this.files.onFileBytes(conn, raw)) {
         return;
       }
       this.onWire(conn, raw);
@@ -1449,10 +650,10 @@ export class PeerSession {
   }
 
   private attachMedia(call: MediaConnection) {
-    this.media.set(call.peer, call);
+    this.calls.set(call.peer, call);
     // `redialPeer` fecha a chamada antiga de propósito: o fim dela não é saída.
     const leftIfCurrent = () => {
-      if (this.media.get(call.peer) === call) {
+      if (this.calls.get(call.peer) === call) {
         this.onPeerLeft(call.peer);
       }
     };
@@ -1476,7 +677,7 @@ export class PeerSession {
       if (this.state.callStatus !== "in-call") {
         this.patch({ callStatus: "in-call" });
       }
-      window.setTimeout(() => this.applyLimitsToAll(), 400);
+      window.setTimeout(() => this.media.applyLimitsToAll(), 400);
     });
     call.on("close", leftIfCurrent);
     call.on("error", leftIfCurrent);
@@ -1492,34 +693,34 @@ export class PeerSession {
     if (meta?.kind === "screen") {
       if (
         this.state.callStatus === "idle" ||
-        this.banned.has(call.peer) ||
-        this.notAdmitted(call.peer)
+        this.room.banned.has(call.peer) ||
+        this.room.notAdmitted(call.peer)
       ) {
         call.close();
         return;
       }
       call.answer();
-      this.attachIncomingScreen(call);
+      this.media.attachIncomingScreen(call);
       this.names.set(call.peer, metaName);
       this.upsertRemote(call.peer, {
         displayName: metaName,
         sharingScreen: true,
       });
-      this.rememberShare(call.peer);
+      this.media.rememberShare(call.peer);
       return;
     }
 
     if (this.state.callStatus !== "idle") {
-      if (this.banned.has(call.peer)) {
+      if (this.room.banned.has(call.peer)) {
         call.close();
         return;
       }
-      if (this.shouldRefusePeer(call.peer)) {
-        this.refuseJoin(call.peer);
+      if (this.room.shouldRefusePeer(call.peer)) {
+        this.room.refuseJoin(call.peer);
         call.close();
         return;
       }
-      if (this.notAdmitted(call.peer)) {
+      if (this.room.notAdmitted(call.peer)) {
         // Só o host tem uma decisão pendente: ele segura a chamada sem atender
         // até aprovar (`admitPeer` responde depois). Para os demais, quem não
         // está na lista da sala simplesmente não é atendido.
@@ -1531,13 +732,13 @@ export class PeerSession {
         return;
       }
       this.attachMedia(call);
-      call.answer(this.outboundStream());
+      call.answer(this.media.outboundStream());
       if (this.state.sharingScreen) {
-        this.openScreen(call.peer);
+        this.media.openScreen(call.peer);
       }
       return;
     }
-    this.media.set(call.peer, call);
+    this.calls.set(call.peer, call);
     this.attachMedia(call);
     this.patch({
       incoming: {
@@ -1552,46 +753,6 @@ export class PeerSession {
     return clamped || this.names.get(peerId) || t("common.someone");
   }
 
-  private attachIncomingScreen(call: MediaConnection) {
-    const previous = this.screenIn.get(call.peer);
-    this.screenIn.set(call.peer, call);
-    previous?.close();
-    call.on("stream", (stream) => {
-      this.upsertRemote(call.peer, {
-        screenStream: stream,
-        sharingScreen: true,
-      });
-      this.rememberShare(call.peer);
-    });
-    call.on("close", () => this.dropIncomingScreen(call));
-    call.on("error", () => this.dropIncomingScreen(call));
-  }
-
-  private dropIncomingScreen(call: MediaConnection) {
-    if (this.screenIn.get(call.peer) !== call) {
-      return;
-    }
-    this.screenIn.delete(call.peer);
-    if (!this.state.remotes.some((r) => r.peerId === call.peer)) {
-      return;
-    }
-    this.upsertRemote(call.peer, { screenStream: null, sharingScreen: false });
-    this.forgetShare(call.peer);
-  }
-
-  private clearRemoteScreen(peerId: string) {
-    const call = this.screenIn.get(peerId);
-    this.screenIn.delete(peerId);
-    if (call) {
-      call.close();
-    }
-    if (!this.state.remotes.some((r) => r.peerId === peerId)) {
-      return;
-    }
-    this.upsertRemote(peerId, { screenStream: null, sharingScreen: false });
-    this.forgetShare(peerId);
-  }
-
   private onWire(conn: DataConnection, raw: unknown) {
     const msg = parseWire(raw);
     if (!msg) {
@@ -1604,99 +765,28 @@ export class PeerSession {
 
     // Quem está na sala de espera só pode se apresentar. Nada do que mande
     // além disso conta enquanto o host não decidir.
-    if (msg.type !== "hello" && this.notAdmitted(from)) {
+    if (msg.type !== "hello" && this.room.notAdmitted(from)) {
       return;
     }
 
     if (msg.type === "hello") {
-      this.names.set(from, msg.displayName);
-      if (this.state.callStatus === "idle") {
-        this.upsertRemote(from, { displayName: msg.displayName });
-        this.patch({
-          incoming: { peerId: from, displayName: msg.displayName },
-        });
-        return;
-      }
-      if (this.state.isHost) {
-        // Quem já é membro ou foi discado por nós não passa pela sala de
-        // espera: a aprovação já aconteceu, explícita ou implicitamente.
-        const known =
-          this.roomMembers.some((p) => p.peerId === from) ||
-          from === this.dialedPeerId;
-        if (!known) {
-          if (this.banned.has(from)) {
-            this.sendAndDrop(from, { type: "room-denied" });
-            return;
-          }
-          // Sem o segredo certo nem chega a incomodar o host: é link velho,
-          // de antes de alguém ser removido, ou chave garimpada no broker.
-          if (!this.hostSecret || msg.secret !== this.hostSecret) {
-            this.sendAndDrop(from, { type: "room-denied", reason: "stale" });
-            return;
-          }
-          if (this.isRoomFull()) {
-            this.refuseJoin(from);
-            return;
-          }
-          this.knock(from, msg.displayName, conn);
-          return;
-        }
-        this.upsertRemote(from, { displayName: msg.displayName });
-        this.addRoomMember({ peerId: from, displayName: msg.displayName });
-        this.offerExistingHost(conn);
-        this.broadcastRoom();
-      } else {
-        // Convidado não admite ninguém: quem vale está na lista do host, que
-        // chega por `room-peers`. Se ainda não chegou, o hello espera lá.
-        if (this.notAdmitted(from)) {
-          return;
-        }
-        this.upsertRemote(from, { displayName: msg.displayName });
-      }
-      this.maybeCall(from);
+      this.room.onHello(conn, msg);
       return;
     }
 
     if (msg.type === "room-host") {
-      if (!this.isRoomAuthority(from)) {
+      if (!this.room.isRoomAuthority(from)) {
         return;
       }
-      this.becomeGuest(msg.hostPeerId);
+      this.room.becomeGuest(msg.hostPeerId);
       return;
     }
 
     if (msg.type === "room-peers") {
-      if (!this.isRoomAuthority(from)) {
+      if (!this.room.isRoomAuthority(from)) {
         return;
       }
-      this.becomeGuest(msg.hostPeerId || from);
-      this.setRoomMembers(msg.peers);
-      if (msg.secret) {
-        // Guardamos para reapresentar numa reconexão e para que o convite
-        // mostrado aqui continue válido depois de o host girar o segredo.
-        this.joinSecret = msg.secret;
-        if (this.state.roomSecret !== msg.secret) {
-          this.patch({ roomSecret: msg.secret });
-        }
-      }
-      if (msg.mutes !== undefined) {
-        this.patch({
-          roomMutes: roomMutesFromWire(msg.mutes, this.state.hostPeerId),
-        });
-        this.enforceSelfLocks();
-      }
-      for (const peer of msg.peers) {
-        if (peer.peerId === this.state.identity?.peerId) {
-          continue;
-        }
-        this.names.set(peer.peerId, peer.displayName);
-        this.upsertRemote(peer.peerId, { displayName: peer.displayName });
-        this.maybeConnect(peer.peerId);
-        this.maybeCall(peer.peerId);
-      }
-      if (this.state.callStatus !== "in-call") {
-        this.patch({ callStatus: "in-call" });
-      }
+      this.room.onRoomPeers(from, msg);
       return;
     }
 
@@ -1704,52 +794,7 @@ export class PeerSession {
       if (!this.inRoom()) {
         return;
       }
-      const now = Date.now();
-      if (!cooledDown(this.lastChatAt.get(from), now, CHAT_COOLDOWN_MS)) {
-        return;
-      }
-      this.lastChatAt.set(from, now);
-      // Os ids vêm do remetente. Repetir um já visto desviaria votos de outra
-      // enquete ou o controle de outro timer.
-      const pollId = msg.command?.kind === "poll" ? msg.command.id : null;
-      if (
-        this.state.messages.some(
-          (m) =>
-            m.id === msg.id ||
-            (m.command?.kind === "poll" && m.command.id === pollId),
-        )
-      ) {
-        return;
-      }
-      const mentions = (msg.mentions ?? []).filter(
-        (id) =>
-          id === ALL_MENTION ||
-          this.roomMembers.some((member) => member.peerId === id),
-      );
-      this.appendMessage({
-        // Mesmo id do fio: poll-vote/timer-control apontam pra ele.
-        id: msg.id,
-        fromPeerId: from,
-        fromName: this.names.get(from) ?? t("common.someone"),
-        text: msg.text,
-        at: now,
-        ...(mentions.length ? { mentions } : {}),
-        ...(msg.command ? { command: msg.command } : {}),
-      });
-      const me = this.state.identity?.peerId;
-      if (
-        me &&
-        isPinged(mentions, me, from) &&
-        cooledDown(this.lastMentionToastAt, now, MENTION_TOAST_COOLDOWN_MS)
-      ) {
-        this.lastMentionToastAt = now;
-        showToast(
-          mentions.includes(ALL_MENTION)
-            ? "toast.mentionedAll"
-            : "toast.mentioned",
-          { name: this.names.get(from) ?? t("common.someone") },
-        );
-      }
+      this.chat.receive(from, msg);
       return;
     }
 
@@ -1757,7 +802,7 @@ export class PeerSession {
       if (!this.inRoom()) {
         return;
       }
-      this.applyPollVote(msg.id, from, msg.option);
+      this.chat.applyPollVote(msg.id, from, msg.option);
       return;
     }
 
@@ -1765,7 +810,7 @@ export class PeerSession {
       if (!this.inRoom()) {
         return;
       }
-      this.applyTimerControl(msg.id, from, null, Date.now(), msg.timer);
+      this.chat.applyTimerControl(msg.id, from, null, Date.now(), msg.timer);
       return;
     }
 
@@ -1773,12 +818,12 @@ export class PeerSession {
       if (!this.inRoom()) {
         return;
       }
-      this.beginIncomingFile(from, msg);
+      this.files.beginIncomingFile(from, msg);
       return;
     }
 
     if (msg.type === "file-end") {
-      this.finishIncomingFile(from, msg.id);
+      this.files.finishIncomingFile(from, msg.id);
       return;
     }
 
@@ -1788,7 +833,7 @@ export class PeerSession {
     }
 
     if (msg.type === "room-ended") {
-      if (!this.isRoomAuthority(from)) {
+      if (!this.room.isRoomAuthority(from)) {
         return;
       }
       this.resetCall("toast.roomEndedByHost");
@@ -1796,7 +841,7 @@ export class PeerSession {
     }
 
     if (msg.type === "room-full") {
-      if (!this.isRoomAuthority(from)) {
+      if (!this.room.isRoomAuthority(from)) {
         return;
       }
       this.resetCall("toast.roomFull");
@@ -1804,7 +849,7 @@ export class PeerSession {
     }
 
     if (msg.type === "room-waiting") {
-      if (!this.isRoomAuthority(from)) {
+      if (!this.room.isRoomAuthority(from)) {
         return;
       }
       if (this.state.callStatus === "connecting") {
@@ -1814,7 +859,7 @@ export class PeerSession {
     }
 
     if (msg.type === "room-denied") {
-      if (!this.isRoomAuthority(from)) {
+      if (!this.room.isRoomAuthority(from)) {
         return;
       }
       this.resetCall(
@@ -1824,7 +869,7 @@ export class PeerSession {
     }
 
     if (msg.type === "room-kicked") {
-      if (!this.isRoomAuthority(from)) {
+      if (!this.room.isRoomAuthority(from)) {
         return;
       }
       this.resetCall("toast.kicked");
@@ -1832,11 +877,11 @@ export class PeerSession {
     }
 
     if (msg.type === "host-transfer") {
-      if (!this.isRoomAuthority(from)) {
+      if (!this.room.isRoomAuthority(from)) {
         return;
       }
-      this.setRoomMembers(this.roomMembers.filter((p) => p.peerId !== from));
-      this.assumeHost(
+      this.room.forget(from);
+      this.room.assumeHost(
         msg.hostPeerId,
         "toast.hostLeftYouHost",
         "toast.hostLeftNewHost",
@@ -1845,10 +890,10 @@ export class PeerSession {
     }
 
     if (msg.type === "room-mute") {
-      if (!this.isRoomAuthority(from)) {
+      if (!this.room.isRoomAuthority(from)) {
         return;
       }
-      this.applyRoomMute(
+      this.room.applyRoomMute(
         msg.peerId,
         {
           ...(msg.audio !== undefined ? { audio: msg.audio } : {}),
@@ -1860,470 +905,17 @@ export class PeerSession {
     }
 
     if (msg.type === "media-meta") {
-      if (msg.cameraOff !== undefined) {
-        this.upsertRemote(from, { cameraOff: msg.cameraOff });
-      }
-      if (msg.sharingScreen === true) {
-        this.upsertRemote(from, { sharingScreen: true });
-        this.rememberShare(from);
-      } else if (msg.sharingScreen === false) {
-        this.clearRemoteScreen(from);
-      }
+      this.media.onMediaMeta(from, msg);
     }
   }
 
-  private isRoomFull() {
-    return this.roomMembers.length >= maxParticipants();
-  }
-
   /** Já dentro da sala, e não parado na porta nem fora de chamada. */
-  private inRoom() {
+  inRoom() {
     const status = this.state.callStatus;
     return status === "connecting" || status === "in-call";
   }
 
-  /**
-   * Só o host manda encerrar a sala, anunciar a lista de peers ou transferir o
-   * papel de host. Antes do host estar definido vale apenas o peer que nós
-   * discamos, que é o único em quem já depositamos confiança.
-   */
-  private isRoomAuthority(peerId: string) {
-    const me = this.state.identity?.peerId;
-    const host = this.state.hostPeerId;
-    if (host && host !== me) {
-      return peerId === host;
-    }
-    return peerId === this.dialedPeerId;
-  }
-
-  /** Host nunca é alvo; também não silenciamos a nós mesmos por este caminho. */
-  private canControlMute(peerId: string) {
-    const me = this.state.identity?.peerId;
-    const host = this.state.hostPeerId;
-    if (!peerId || peerId === me || (host && peerId === host)) {
-      return false;
-    }
-    return (
-      this.roomMembers.some((member) => member.peerId === peerId) ||
-      this.state.remotes.some((remote) => remote.peerId === peerId)
-    );
-  }
-
-  private acceptRoomMuteTarget(peerId: string) {
-    const me = this.state.identity?.peerId;
-    const host = this.state.hostPeerId;
-    if (!peerId || (host && peerId === host)) {
-      return false;
-    }
-    if (peerId === me) {
-      return true;
-    }
-    return (
-      this.roomMembers.some((member) => member.peerId === peerId) ||
-      this.state.remotes.some((remote) => remote.peerId === peerId)
-    );
-  }
-
-  private selfLocked(kind: MuteKind) {
-    const me = this.state.identity?.peerId;
-    return !!me && muteOf(this.state.roomMutes, me)[kind];
-  }
-
-  private applyRoomMute(
-    peerId: string,
-    flags: { audio?: boolean; video?: boolean },
-    notifySelf: boolean,
-  ) {
-    if (!this.acceptRoomMuteTarget(peerId)) {
-      return;
-    }
-    const prev = muteOf(this.state.roomMutes, peerId);
-    let map = this.state.roomMutes;
-    if (flags.audio !== undefined) {
-      map = setMuteFlag(map, peerId, "audio", flags.audio);
-    }
-    if (flags.video !== undefined) {
-      map = setMuteFlag(map, peerId, "video", flags.video);
-    }
-    if (map !== this.state.roomMutes) {
-      this.patch({ roomMutes: map });
-    }
-    this.enforceSelfLocks();
-    if (!notifySelf) {
-      return;
-    }
-    const me = this.state.identity?.peerId;
-    if (peerId !== me) {
-      return;
-    }
-    const next = muteOf(this.state.roomMutes, peerId);
-    if (flags.audio !== undefined && prev.audio !== next.audio) {
-      showToast(next.audio ? "toast.roomMutedAudio" : "toast.roomUnmutedAudio");
-    } else if (flags.video !== undefined && prev.video !== next.video) {
-      showToast(next.video ? "toast.roomMutedVideo" : "toast.roomUnmutedVideo");
-    }
-  }
-
-  private enforceSelfLocks() {
-    const me = this.state.identity?.peerId;
-    if (!me) {
-      return;
-    }
-    const flags = muteOf(this.state.roomMutes, me);
-    if (flags.audio) {
-      this.state.localStream?.getAudioTracks().forEach((track) => {
-        track.enabled = false;
-      });
-      if (!this.state.muted) {
-        this.patch({ muted: true });
-      }
-    }
-    if (flags.video && !this.state.cameraOff) {
-      this.disableCamera();
-    }
-  }
-
-  private appendMessage(message: ChatMessage) {
-    const withTimer =
-      message.command?.kind === "timer" && !message.timer
-        ? {
-            ...message,
-            timer: initialTimerState(message.command.ms, message.at),
-          }
-        : message;
-    const messages = [...this.state.messages, withTimer];
-    if (messages.length > MAX_MESSAGES) {
-      const dropped = messages.splice(0, messages.length - MAX_MESSAGES);
-      for (const old of dropped) {
-        this.clearTimerAlarm(old.id);
-        if (!old.file) {
-          continue;
-        }
-        if (old.file.blobUrl) {
-          URL.revokeObjectURL(old.file.blobUrl);
-        }
-        void this.files.release(old.file.id);
-        clearFileProgress(old.file.id);
-      }
-    }
-    this.patch({ messages });
-    this.scheduleTimerAlarm(withTimer);
-  }
-
-  /**
-   * Aplica pausa/retomada/cancelamento. Se `remoteTimer` vier do fio, usa esse
-   * estado (relógio de quem controlou); senão calcula a ação localmente.
-   */
-  private applyTimerControl(
-    messageId: string,
-    actorId: string,
-    action: TimerAction | null,
-    now: number,
-    remoteTimer?: TimerState,
-  ) {
-    const index = this.state.messages.findIndex((msg) => msg.id === messageId);
-    if (index < 0) {
-      return null;
-    }
-    const message = this.state.messages[index];
-    if (message?.command?.kind !== "timer") {
-      return null;
-    }
-    if (!canControlTimer(message.fromPeerId, actorId, this.state.hostPeerId)) {
-      return null;
-    }
-    const current = resolveTimerState(message);
-    if (!current) {
-      return null;
-    }
-    const raw =
-      remoteTimer ?? (action ? applyTimerAction(current, action, now) : null);
-    if (!raw) {
-      return null;
-    }
-    const next = stampTimerActor(
-      raw,
-      !!this.state.hostPeerId && actorId === this.state.hostPeerId,
-    );
-    if (
-      current.status === next.status &&
-      ((current.status === "running" &&
-        next.status === "running" &&
-        current.endsAt === next.endsAt) ||
-        (current.status === "paused" &&
-          next.status === "paused" &&
-          current.remainingMs === next.remainingMs &&
-          !!current.byHost === !!next.byHost) ||
-        (current.status === "cancelled" &&
-          next.status === "cancelled" &&
-          !!current.byHost === !!next.byHost))
-    ) {
-      return null;
-    }
-    const updated = { ...message, timer: next };
-    const messages = [...this.state.messages];
-    messages[index] = updated;
-    this.patch({ messages });
-    this.scheduleTimerAlarm(updated);
-    return next;
-  }
-
-  private applyPollVote(pollId: string, peerId: string, option: number) {
-    const index = this.state.messages.findLastIndex(
-      (msg) => msg.command?.kind === "poll" && msg.command.id === pollId,
-    );
-    if (index < 0) {
-      return false;
-    }
-    const message = this.state.messages[index];
-    if (message?.command?.kind !== "poll") {
-      return false;
-    }
-    if (option < 0 || option >= message.command.options.length) {
-      return false;
-    }
-    if (message.pollVotes?.[peerId] === option) {
-      return false;
-    }
-    const next = [...this.state.messages];
-    next[index] = {
-      ...message,
-      pollVotes: { ...message.pollVotes, [peerId]: option },
-    };
-    this.patch({ messages: next });
-    return true;
-  }
-
-  private scheduleTimerAlarm(message: ChatMessage) {
-    if (message.command?.kind !== "timer") {
-      return;
-    }
-    this.clearTimerAlarm(message.id);
-    const state = resolveTimerState(message);
-    if (state?.status !== "running") {
-      return;
-    }
-    if (this.timerAlarms.size >= MAX_TIMER_ALARMS) {
-      return;
-    }
-    const remaining = state.endsAt - Date.now();
-    if (remaining <= 0) {
-      showToast("chat.command.timerDone");
-      return;
-    }
-    const timeout = window.setTimeout(() => {
-      this.timerAlarms.delete(message.id);
-      showToast("chat.command.timerDone");
-    }, remaining);
-    this.timerAlarms.set(message.id, timeout);
-  }
-
-  private clearTimerAlarm(id: string) {
-    const timeout = this.timerAlarms.get(id);
-    if (timeout === undefined) {
-      return;
-    }
-    window.clearTimeout(timeout);
-    this.timerAlarms.delete(id);
-  }
-
-  private clearAllTimerAlarms() {
-    for (const timeout of this.timerAlarms.values()) {
-      window.clearTimeout(timeout);
-    }
-    this.timerAlarms.clear();
-  }
-
-  /**
-   * A sala é a lista que o host anuncia, e ninguém entra por fora dela. Para o
-   * host isso é a decisão dele na sala de espera; para os demais é a lista que
-   * ele mandou — senão cada convidado seria uma porta lateral sem tranca, já
-   * que todos conhecem o peerId de todos.
-   */
-  private notAdmitted(peerId: string) {
-    if (peerId === this.dialedPeerId) {
-      return false;
-    }
-    return !this.roomMembers.some((p) => p.peerId === peerId);
-  }
-
-  private shouldRefusePeer(peerId: string) {
-    if (!this.state.isHost || !this.isRoomFull()) {
-      return false;
-    }
-    return !this.roomMembers.some((p) => p.peerId === peerId);
-  }
-
-  private refuseJoin(peerId: string) {
-    this.sendAndDrop(peerId, { type: "room-full" });
-  }
-
-  /**
-   * Envia o último recado e só então derruba: fechar na mesma volta do laço
-   * de eventos descartaria a mensagem antes de ela sair do canal.
-   */
-  private sendAndDrop(peerId: string, message: WireMessage) {
-    const conn = this.data.get(peerId);
-    const call = this.media.get(peerId);
-    if (conn?.open) {
-      void conn.send(message);
-    }
-    this.data.delete(peerId);
-    this.media.delete(peerId);
-    window.setTimeout(() => {
-      conn?.close();
-      call?.close();
-    }, FLUSH_MS);
-  }
-
-  private knock(peerId: string, displayName: string, conn: DataConnection) {
-    if (this.state.pending.some((p) => p.peerId === peerId)) {
-      return;
-    }
-    this.patch({ pending: [...this.state.pending, { peerId, displayName }] });
-    if (conn.open) {
-      void conn.send({ type: "room-waiting" });
-    }
-  }
-
-  private assumeHost(
-    newHostId: string,
-    youKey: MessageKey,
-    otherKey: MessageKey,
-  ) {
-    const me = this.state.identity?.peerId;
-    if (!me || !newHostId) {
-      return;
-    }
-    const roomMutes = dropMute(this.state.roomMutes, newHostId);
-    const localMutes = dropMute(this.state.localMutes, newHostId);
-    if (newHostId === me) {
-      // Como host, ninguém acima de nós manda: a confiança no peer discado
-      // deixa de valer e a sala passa a ser anunciada por nós.
-      this.dialedPeerId = null;
-      this.patch({
-        isHost: true,
-        hostPeerId: me,
-        pending: [],
-        roomMutes,
-        localMutes,
-      });
-      this.broadcastRoom();
-      showToast(youKey);
-      return;
-    }
-    this.patch({
-      isHost: false,
-      hostPeerId: newHostId,
-      roomMutes,
-      localMutes,
-    });
-    showToast(otherKey, {
-      name: this.names.get(newHostId) ?? t("common.someone"),
-    });
-  }
-
-  /**
-   * Host sumiu sem se despedir. Em vez de derrubar a sala, quem sobra elege o
-   * substituto. Com uma pessoa só não há sala para manter.
-   */
-  private handleHostGone(goneHostId: string) {
-    const me = this.state.identity?.peerId;
-    if (!me || this.state.callStatus !== "in-call") {
-      this.resetCall("toast.roomEndedByHost");
-      return;
-    }
-    this.setRoomMembers(this.roomMembers.filter((p) => p.peerId !== goneHostId));
-    const pool = (
-      this.roomMembers.length > 0
-        ? this.roomMembers.map((p) => p.peerId)
-        : [me, ...this.state.remotes.map((remote) => remote.peerId)]
-    ).filter((id) => id !== goneHostId);
-    if (pool.filter((id) => id !== me).length === 0) {
-      this.resetCall("toast.hostDroppedAlone");
-      return;
-    }
-    const successor = electHost(pool);
-    if (!successor) {
-      this.resetCall("toast.roomEndedByHost");
-      return;
-    }
-    this.assumeHost(
-      successor,
-      "toast.hostDroppedYouHost",
-      "toast.hostDroppedNewHost",
-    );
-  }
-
-  private setRoomMembers(next: PeerInfo[]) {
-    this.roomMembers = next;
-    this.patch({ members: next });
-  }
-
-  private addRoomMember(info: PeerInfo) {
-    if (!this.roomMembers.some((p) => p.peerId === info.peerId)) {
-      this.setRoomMembers([...this.roomMembers, info]);
-    }
-  }
-
-  private offerExistingHost(conn: DataConnection) {
-    const me = this.state.identity?.peerId;
-    if (
-      !me ||
-      !this.state.isHost ||
-      this.state.callStatus !== "in-call" ||
-      !conn.open
-    ) {
-      return;
-    }
-    void conn.send({ type: "room-host", hostPeerId: me });
-  }
-
-  private becomeGuest(hostPeerId: string) {
-    const me = this.state.identity?.peerId;
-    if (!hostPeerId || hostPeerId === me) {
-      return;
-    }
-    if (this.state.isHost && this.state.callStatus === "in-call") {
-      return;
-    }
-    if (!this.state.isHost && this.state.hostPeerId === hostPeerId) {
-      return;
-    }
-    this.patch({
-      isHost: false,
-      hostPeerId,
-      localMutes: dropMute(this.state.localMutes, hostPeerId),
-      roomMutes: dropMute(this.state.roomMutes, hostPeerId),
-    });
-  }
-
-  /**
-   * Só quem já foi admitido recebe isto — `activeConnections` exclui a sala de
-   * espera —, então mandar o segredo junto é seguro e deixa qualquer membro
-   * convidar com um link que funciona, inclusive depois de um giro.
-   */
-  private broadcastRoom() {
-    const mutes = roomMutesToWire(
-      this.state.roomMutes,
-      this.state.identity?.peerId ?? null,
-    );
-    this.broadcast({
-      type: "room-peers",
-      peers: this.roomMembers,
-      hostPeerId: this.state.identity?.peerId ?? "",
-      ...(this.hostSecret ? { secret: this.hostSecret } : {}),
-      mutes,
-    });
-  }
-
-  /** Invalida os links já distribuídos, para que uma saída forçada seja final. */
-  private rotateSecret() {
-    this.hostSecret = rotateRoomSecret();
-    this.patch({ roomSecret: this.hostSecret });
-  }
-
-  private maybeConnect(peerId: string) {
+  maybeConnect(peerId: string) {
     const me = this.state.identity?.peerId;
     if (!me || peerId === me || this.data.has(peerId)) {
       return;
@@ -2333,19 +925,19 @@ export class PeerSession {
     }
   }
 
-  private maybeCall(peerId: string) {
+  maybeCall(peerId: string) {
     const me = this.state.identity?.peerId;
     if (!me || peerId === me) {
       return;
     }
-    if (!this.media.has(peerId) && me < peerId) {
+    if (!this.calls.has(peerId) && me < peerId) {
       this.openMedia(peerId);
     } else if (this.state.sharingScreen) {
-      this.openScreen(peerId);
+      this.media.openScreen(peerId);
     }
   }
 
-  private upsertRemote(peerId: string, patch: Partial<RemotePeer>) {
+  upsertRemote(peerId: string, patch: Partial<RemotePeer>) {
     const current = this.state.remotes.find((r) => r.peerId === peerId);
     const next: RemotePeer = {
       peerId,
@@ -2379,40 +971,7 @@ export class PeerSession {
     this.patch({ remotes });
   }
 
-  private appendShare(peerId: string | undefined) {
-    if (!peerId) {
-      return this.state.screenShareOrder;
-    }
-    if (this.state.screenShareOrder.includes(peerId)) {
-      return this.state.screenShareOrder;
-    }
-    return [...this.state.screenShareOrder, peerId];
-  }
-
-  private removeShare(peerId: string | undefined) {
-    if (!peerId) {
-      return this.state.screenShareOrder;
-    }
-    return this.state.screenShareOrder.filter((id) => id !== peerId);
-  }
-
-  private rememberShare(peerId: string) {
-    const screenShareOrder = this.appendShare(peerId);
-    if (screenShareOrder === this.state.screenShareOrder) {
-      return;
-    }
-    this.patch({ screenShareOrder });
-  }
-
-  private forgetShare(peerId: string) {
-    const screenShareOrder = this.removeShare(peerId);
-    if (screenShareOrder.length === this.state.screenShareOrder.length) {
-      return;
-    }
-    this.patch({ screenShareOrder });
-  }
-
-  private onPeerLeft(peerId: string, opts?: { silent?: boolean }) {
+  onPeerLeft(peerId: string, opts?: { silent?: boolean }) {
     if (this.tearingDown) {
       return;
     }
@@ -2438,21 +997,17 @@ export class PeerSession {
     const hostGone =
       peerId === this.state.hostPeerId && this.state.callStatus !== "idle";
     this.data.get(peerId)?.close();
-    this.media.get(peerId)?.close();
-    this.screenOut.get(peerId)?.close();
-    this.screenIn.get(peerId)?.close();
+    this.calls.get(peerId)?.close();
+    this.media.forget(peerId);
     this.data.delete(peerId);
-    this.media.delete(peerId);
-    this.screenOut.delete(peerId);
-    this.screenIn.delete(peerId);
-    this.failIncomingFile(peerId);
-    this.lastChatAt.delete(peerId);
-    this.lastFileStart.delete(peerId);
+    this.calls.delete(peerId);
+    this.files.forget(peerId);
+    this.chat.forget(peerId);
     const remotes = this.state.remotes.filter((r) => r.peerId !== peerId);
-    this.setRoomMembers(this.roomMembers.filter((p) => p.peerId !== peerId));
+    this.room.forget(peerId);
     this.patch({
       remotes,
-      screenShareOrder: this.removeShare(peerId),
+      screenShareOrder: this.media.removeShare(peerId),
       pending: this.state.pending.filter((p) => p.peerId !== peerId),
       incoming:
         this.state.incoming?.peerId === peerId ? null : this.state.incoming,
@@ -2460,12 +1015,12 @@ export class PeerSession {
       roomMutes: dropMute(this.state.roomMutes, peerId),
     });
     if (this.state.isHost) {
-      this.broadcastRoom();
+      this.room.broadcastRoom();
     } else if (hostGone) {
       if (wasInCall) {
-        this.appendLeaveNotice(peerId, name);
+        this.chat.appendLeaveNotice(peerId, name);
       }
-      this.handleHostGone(peerId);
+      this.room.handleHostGone(peerId);
       return;
     }
     if (
@@ -2476,311 +1031,12 @@ export class PeerSession {
         this.state.callStatus === "connecting")
     ) {
       showToast(
-        this.removed.delete(peerId) ? "toast.removed" : "toast.peerLeft",
+        this.room.removed.delete(peerId) ? "toast.removed" : "toast.peerLeft",
         {
           name,
         },
       );
-      this.appendLeaveNotice(peerId, name);
-    }
-  }
-
-  private appendLeaveNotice(peerId: string, name: string) {
-    this.appendMessage({
-      id: crypto.randomUUID(),
-      fromPeerId: peerId,
-      fromName: name,
-      text: "",
-      at: Date.now(),
-      system: "left",
-    });
-  }
-
-  /**
-   * Lê o arquivo em fatias no worker. O canal continua aqui: só mandamos o
-   * próximo pedaço quando o buffer do DataChannel esvazia.
-   * @returns false se o peer caiu antes do file-end.
-   */
-  private async streamFileTo(
-    conn: DataConnection,
-    id: string,
-    size: number,
-    sent: Map<DataConnection, number>,
-    report: () => void,
-  ): Promise<boolean> {
-    // O sequencial aqui é o ponto: cada pedaço só é lido depois que o canal
-    // tem espaço, e é isso que segura a memória em um pedaço por vez.
-    // oxlint-disable no-await-in-loop
-    for (let offset = 0; offset < size; offset += FILE_CHUNK) {
-      if (this.tearingDown) {
-        throw new Error("ended");
-      }
-      await this.waitForFileBuffer(conn);
-      if (!conn.open) {
-        return false;
-      }
-      const chunk = await this.files.readSlice(id, offset, FILE_CHUNK);
-      void conn.send(chunk);
-      sent.set(conn, offset + chunk.byteLength);
-      report();
-    }
-    // oxlint-enable no-await-in-loop
-    if (!conn.open) {
-      return false;
-    }
-    void conn.send({ type: "file-end", id });
-    return true;
-  }
-
-  private async mapLimited<T, R>(
-    items: T[],
-    limit: number,
-    fn: (item: T) => Promise<R>,
-  ): Promise<R[]> {
-    const results: R[] = [];
-    let next = 0;
-    const workers = Array.from(
-      { length: Math.min(limit, items.length) },
-      async () => {
-        while (next < items.length) {
-          const index = next;
-          next += 1;
-          // Pool de `limit` workers: cada um processa um item por vez.
-          // oxlint-disable-next-line no-await-in-loop
-          results[index] = await fn(items[index]);
-        }
-      },
-    );
-    await Promise.all(workers);
-    return results;
-  }
-
-  private waitForFileBuffer(conn: DataConnection) {
-    const dc = conn.dataChannel;
-    if (!dc || dc.bufferedAmount < FILE_BUFFER_HIGH) {
-      return Promise.resolve();
-    }
-    const low = FILE_BUFFER_HIGH / 4;
-    return new Promise<void>((resolve) => {
-      // O evento não dispara se o canal fechar no meio da drenagem, daí a
-      // verificação periódica de segurança em paralelo.
-      const guard = window.setInterval(() => {
-        if (!conn.open || dc.bufferedAmount < low) {
-          settle();
-        }
-      }, 250);
-      const settle = () => {
-        window.clearInterval(guard);
-        dc.removeEventListener("bufferedamountlow", settle);
-        resolve();
-      };
-      dc.bufferedAmountLowThreshold = low;
-      dc.addEventListener("bufferedamountlow", settle);
-    });
-  }
-
-  private takeFileBytes(raw: unknown): ArrayBuffer | Blob | null {
-    // Um ArrayBuffer chega exclusivo por mensagem, então dá para adotá-lo sem
-    // copiar e transferir ao worker. Já uma view pode apontar para um buffer
-    // maior: copiamos só os bytes úteis.
-    if (raw instanceof ArrayBuffer) {
-      return raw;
-    }
-    if (ArrayBuffer.isView(raw)) {
-      const view = new Uint8Array(raw.buffer, raw.byteOffset, raw.byteLength);
-      const copy = new Uint8Array(view.byteLength);
-      copy.set(view);
-      return copy.buffer;
-    }
-    if (typeof Blob !== "undefined" && raw instanceof Blob) {
-      return raw;
-    }
-    return null;
-  }
-
-  private onFileBytes(conn: DataConnection, raw: unknown) {
-    const data = this.takeFileBytes(raw);
-    if (!data) {
-      return false;
-    }
-    if (!this.incomingFiles.has(conn.peer)) {
-      return true;
-    }
-    // O remetente fatia em FILE_CHUNK. Pedaço maior é abuso de memória.
-    const bytes = data instanceof Blob ? data.size : data.byteLength;
-    if (bytes > FILE_CHUNK) {
-      this.failIncomingFile(conn.peer);
-      return true;
-    }
-    this.queueIncoming(conn.peer, data);
-    return true;
-  }
-
-  private queueIncoming(peerId: string, data: ArrayBuffer | Blob) {
-    const prev = this.incomingByteTail.get(peerId) ?? Promise.resolve();
-    const next = prev
-      .then(async () => {
-        const incoming = this.incomingFiles.get(peerId);
-        if (!incoming) {
-          return;
-        }
-        const received = await this.files.push(peerId, data);
-        if (received === null) {
-          this.failIncomingFile(peerId);
-          return;
-        }
-        setFileProgress(incoming.localId, received / incoming.size);
-      })
-      .catch(() => {
-        this.failIncomingFile(peerId);
-      });
-    this.incomingByteTail.set(peerId, next);
-  }
-
-  private isKnownPeer(peerId: string) {
-    return (
-      this.roomMembers.some((p) => p.peerId === peerId) ||
-      this.state.remotes.some((r) => r.peerId === peerId)
-    );
-  }
-
-  /**
-   * O anúncio do remetente não reserva memória: os bytes só são guardados à
-   * medida que chegam, e um teto global cobre o caso de vários peers hostis
-   * transmitindo ao mesmo tempo.
-   */
-  private beginIncomingFile(
-    peerId: string,
-    msg: Extract<WireMessage, { type: "file-start" }>,
-  ) {
-    if (!this.isKnownPeer(peerId)) {
-      return;
-    }
-
-    const now = Date.now();
-    const previous = this.lastFileStart.get(peerId) ?? 0;
-    if (now - previous < FILE_START_COOLDOWN) {
-      return;
-    }
-    this.lastFileStart.set(peerId, now);
-
-    if (this.incomingFiles.has(peerId)) {
-      this.failIncomingFile(peerId);
-    }
-    if (this.incomingFiles.size >= MAX_CONCURRENT_INCOMING) {
-      return;
-    }
-
-    const name = safeFileName(msg.name);
-    const localId = crypto.randomUUID();
-    this.incomingFiles.set(peerId, {
-      remoteId: msg.id,
-      localId,
-      name,
-      mime: msg.mime,
-      size: msg.size,
-    });
-    const prev = this.incomingByteTail.get(peerId) ?? Promise.resolve();
-    this.incomingByteTail.set(
-      peerId,
-      prev
-        .then(() =>
-          this.files.openReceive({
-            peerId,
-            remoteId: msg.id,
-            localId,
-            mime: msg.mime,
-            size: msg.size,
-          }),
-        )
-        .catch(() => {
-          this.failIncomingFile(peerId);
-        }),
-    );
-    this.appendMessage({
-      id: localId,
-      fromPeerId: peerId,
-      fromName: this.names.get(peerId) ?? t("common.someone"),
-      text: "",
-      at: now,
-      file: {
-        id: localId,
-        name,
-        mime: msg.mime,
-        size: msg.size,
-        status: "receiving",
-        blobUrl: null,
-      },
-    });
-  }
-
-  private finishIncomingFile(peerId: string, remoteId: string) {
-    const tail = this.incomingByteTail.get(peerId) ?? Promise.resolve();
-    const done = tail.then(async () => {
-      const incoming = this.incomingFiles.get(peerId);
-      if (!incoming || incoming.remoteId !== remoteId) {
-        return;
-      }
-      this.incomingFiles.delete(peerId);
-      try {
-        const blob = await this.files.finish(peerId);
-        if (!blob) {
-          this.patchFile(incoming.localId, { status: "error" });
-          return;
-        }
-        setFileProgress(incoming.localId, 1);
-        const typed =
-          blob.type && blob.type !== "application/octet-stream"
-            ? blob
-            : new Blob([blob], { type: incoming.mime });
-        this.patchFile(incoming.localId, {
-          status: "ready",
-          blobUrl: URL.createObjectURL(typed),
-        });
-      } catch {
-        this.patchFile(incoming.localId, { status: "error" });
-      }
-    });
-    this.incomingByteTail.set(peerId, done);
-  }
-
-  /**
-   * O abort entra na fila do peer em vez de furá-la: bytes já enfileirados do
-   * arquivo que falhou não podem cair no próximo `openReceive`.
-   */
-  private failIncomingFile(peerId: string) {
-    const incoming = this.incomingFiles.get(peerId);
-    this.incomingFiles.delete(peerId);
-    const tail = this.incomingByteTail.get(peerId) ?? Promise.resolve();
-    this.incomingByteTail.set(
-      peerId,
-      tail.then(() => this.files.abort(peerId)).catch(() => {}),
-    );
-    if (incoming) {
-      this.patchFile(incoming.localId, { status: "error" });
-    }
-  }
-
-  private patchFile(id: string, file: Partial<ChatFile>) {
-    this.patch({
-      messages: this.state.messages.map((message) => {
-        if (message.id !== id || !message.file) {
-          return message;
-        }
-        return { ...message, file: { ...message.file, ...file } };
-      }),
-    });
-  }
-
-  private revokeMessageFiles() {
-    for (const message of this.state.messages) {
-      if (!message.file) {
-        continue;
-      }
-      if (message.file.blobUrl) {
-        URL.revokeObjectURL(message.file.blobUrl);
-      }
-      void this.files.release(message.file.id);
+      this.chat.appendLeaveNotice(peerId, name);
     }
   }
 
@@ -2788,40 +1044,19 @@ export class PeerSession {
    * Conexões que já valem como sala. Quem está na porta tem data channel
    * aberto para poder ser avisado, mas não entra em nada que seja conversa.
    */
-  private activeConnections() {
+  activeConnections() {
     const open: DataConnection[] = [];
     for (const [peerId, conn] of this.data) {
-      if (conn.open && !this.notAdmitted(peerId)) {
+      if (conn.open && !this.room.notAdmitted(peerId)) {
         open.push(conn);
       }
     }
     return open;
   }
 
-  private broadcast(message: WireMessage) {
+  broadcast(message: WireMessage) {
     for (const conn of this.activeConnections()) {
       void conn.send(message);
-    }
-  }
-
-  private applyLimitsToAll() {
-    for (const call of this.media.values()) {
-      const pc = call.peerConnection;
-      if (!pc) {
-        continue;
-      }
-      for (const sender of pc.getSenders()) {
-        void applySenderLimits(sender, "camera");
-      }
-    }
-    for (const call of this.screenOut.values()) {
-      const pc = call.peerConnection;
-      if (!pc) {
-        continue;
-      }
-      for (const sender of pc.getSenders()) {
-        void applySenderLimits(sender, "screen");
-      }
     }
   }
 
@@ -2831,7 +1066,7 @@ export class PeerSession {
    * descartado por engano. As data connections são as únicas que esperam, o
    * bastante para o último aviso escoar pelo canal antes do fechamento.
    */
-  private resetCall(endedReason?: MessageKey) {
+  resetCall(endedReason?: MessageKey) {
     if (this.tearingDown) {
       return;
     }
@@ -2844,41 +1079,16 @@ export class PeerSession {
         conn.close();
       }
     }, FLUSH_MS);
-    for (const call of this.media.values()) {
+    for (const call of this.calls.values()) {
       call.close();
     }
-    for (const call of this.screenOut.values()) {
-      call.close();
-    }
-    for (const call of this.screenIn.values()) {
-      call.close();
-    }
+    this.media.closeScreens();
     this.data.clear();
-    this.media.clear();
-    this.screenOut.clear();
-    this.screenIn.clear();
-    this.incomingFiles.clear();
-    this.incomingByteTail.clear();
-    this.lastFileStart.clear();
-    this.lastChatAt.clear();
-    this.lastMentionToastAt = 0;
-    this.clearAllTimerAlarms();
-    this.sendingFile = false;
-    void this.files.abortAll();
-    clearAllFileProgress();
-    this.revokeMessageFiles();
-    this.setRoomMembers([]);
-    this.banned.clear();
-    this.removed.clear();
-    this.dialedPeerId = null;
-    this.joinSecret = null;
-    this.screenTrack?.stop();
-    this.screenTrack = null;
-    this.placeholderVideo?.stop();
-    this.placeholderVideo = null;
-    this.cameraDeviceId = null;
-    this.switchingCamera = false;
-    this.state.localStream?.getTracks().forEach((track) => track.stop());
+    this.calls.clear();
+    this.files.reset();
+    this.chat.reset();
+    this.room.reset();
+    this.media.reset();
     this.names.clear();
     if (endedReason) {
       playCallEnded();
@@ -2907,7 +1117,7 @@ export class PeerSession {
       callStatus: "idle",
       incoming: null,
       // De volta à home, o convite exibido volta a ser o da nossa própria sala.
-      roomSecret: this.hostSecret,
+      roomSecret: this.room.hostSecret,
       pending: [],
       leavePrompt: false,
       pathHint: false,
@@ -2923,10 +1133,7 @@ export class PeerSession {
 
   private destroyPeer() {
     window.clearTimeout(this.reconnectTimer);
-    navigator.mediaDevices?.removeEventListener?.(
-      "devicechange",
-      this.onDeviceChange,
-    );
+    this.media.unwatchDevices();
     this.peer?.destroy();
     this.peer = null;
   }
