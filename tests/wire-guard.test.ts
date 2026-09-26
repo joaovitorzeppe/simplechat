@@ -371,6 +371,13 @@ describe("parseWire", () => {
     expect(parseWire({ type: "room-peers", peers: "todos" })).toBeNull();
   });
 
+  it("descarta peerId repetido na lista de peers", () => {
+    const ana = { peerId: "ana-1", displayName: "Ana" };
+    expect(
+      parseWire({ type: "room-peers", peers: [ana, { ...ana, displayName: "X" }] }),
+    ).toEqual({ type: "room-peers", peers: [ana] });
+  });
+
   it("rejeita file-start acima do teto absoluto", () => {
     expect(parseWire(fileStart(MAX_FILE_BYTES))).not.toBeNull();
     expect(parseWire(fileStart(MAX_FILE_BYTES + 1))).toBeNull();

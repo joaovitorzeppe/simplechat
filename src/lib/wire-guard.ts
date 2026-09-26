@@ -362,9 +362,12 @@ export const parseWire = (raw: unknown): WireMessage | null => {
       if (!Array.isArray(raw.peers) || raw.peers.length > MAX_PEERS)
         return null;
       const peers: PeerInfo[] = [];
+      const seen = new Set<string>();
       for (const entry of raw.peers) {
         const peer = peerInfo(entry);
         if (!peer) return null;
+        if (seen.has(peer.peerId)) continue;
+        seen.add(peer.peerId);
         peers.push(peer);
       }
       const hostPeerId = optionalStr(raw.hostPeerId, MAX_PEER_ID);
