@@ -29,7 +29,9 @@ const isLocale = (value: string): value is Locale => {
 export const detectLocale = (): Locale => {
   try {
     const saved = localStorage.getItem(KEY);
-    if (saved && isLocale(saved)) return saved;
+    if (saved && isLocale(saved)) {
+      return saved;
+    }
   } catch {
     // ignore
   }
@@ -38,7 +40,9 @@ export const detectLocale = (): Locale => {
     .map((lang) => lang.toLowerCase());
   for (const lang of candidates) {
     const hit = supportedLocales.find((code) => lang.startsWith(code));
-    if (hit) return hit;
+    if (hit) {
+      return hit;
+    }
   }
   return "en";
 };
@@ -63,7 +67,9 @@ export const translate = (
 const applyDocument = (next: Locale) => {
   document.documentElement.lang = localeTags[next];
   const meta = document.querySelector('meta[name="description"]');
-  if (meta) meta.setAttribute("content", translate(next, "meta.description"));
+  if (meta) {
+    meta.setAttribute("content", translate(next, "meta.description"));
+  }
 };
 
 export const getLocale = () => {
@@ -78,7 +84,9 @@ export const subscribe = (listener: () => void) => {
 };
 
 export const setLocale = (next: Locale) => {
-  if (locale === next) return;
+  if (locale === next) {
+    return;
+  }
   locale = next;
   try {
     localStorage.setItem(KEY, next);
@@ -86,7 +94,9 @@ export const setLocale = (next: Locale) => {
     // ignore
   }
   applyDocument(next);
-  for (const listener of listeners) listener();
+  for (const listener of listeners) {
+    listener();
+  }
 };
 
 export const t = (key: MessageKey, vars?: Record<string, string | number>) => {

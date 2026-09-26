@@ -29,8 +29,12 @@ export class FileBridge {
   }
 
   private spawn() {
-    if (typeof Worker === "undefined") return null;
-    if (import.meta.env.MODE === "test") return null;
+    if (typeof Worker === "undefined") {
+      return null;
+    }
+    if (import.meta.env.MODE === "test") {
+      return null;
+    }
     try {
       const worker = new Worker(new URL("./file-worker.ts", import.meta.url), {
         type: "module",
@@ -40,10 +44,15 @@ export class FileBridge {
           | { id: number; type: "ok" } & WorkerOk
           | { id: number; type: "err"; message: string };
         const pending = this.pending.get(data.id);
-        if (!pending) return;
+        if (!pending) {
+          return;
+        }
         this.pending.delete(data.id);
-        if (data.type === "err") pending.reject(new Error(data.message));
-        else pending.resolve(data);
+        if (data.type === "err") {
+          pending.reject(new Error(data.message));
+        } else {
+          pending.resolve(data);
+        }
       });
       worker.addEventListener("error", () => this.dropWorker());
       worker.addEventListener("messageerror", () => this.dropWorker());
@@ -67,7 +76,9 @@ export class FileBridge {
     transfer: Transferable[] = [],
   ) {
     const worker = this.worker;
-    if (!worker) return null;
+    if (!worker) {
+      return null;
+    }
     const id = this.seq++;
     return new Promise<WorkerOk>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
@@ -77,7 +88,9 @@ export class FileBridge {
 
   private held() {
     let total = 0;
-    for (const incoming of this.recvs.values()) total += incoming.received;
+    for (const incoming of this.recvs.values()) {
+      total += incoming.received;
+    }
     return total;
   }
 
@@ -94,11 +107,15 @@ export class FileBridge {
     const remote = this.request({ type: "send-slice", fileId, offset, length });
     if (remote) {
       const result = await remote;
-      if (!result.buffer) throw new Error("empty slice");
+      if (!result.buffer) {
+        throw new Error("empty slice");
+      }
       return result.buffer;
     }
     const file = this.sends.get(fileId);
-    if (!file) throw new Error("missing send");
+    if (!file) {
+      throw new Error("missing send");
+    }
     return readFileSlice(file, offset, length);
   }
 
@@ -136,7 +153,9 @@ export class FileBridge {
       return result.received ?? 0;
     }
     const incoming = this.recvs.get(peerId);
-    if (!incoming) return null;
+    if (!incoming) {
+      return null;
+    }
     const ok = await incoming.push(data, this.held());
     return ok ? incoming.received : null;
   }
@@ -149,16 +168,23 @@ export class FileBridge {
     }
     const incoming = this.recvs.get(peerId);
     this.recvs.delete(peerId);
-    if (!incoming) return null;
+    if (!incoming) {
+      return null;
+    }
     const blob = await incoming.finish();
-    if (blob) this.kept.set(incoming.meta.localId, incoming);
-    else await incoming.dispose();
+    if (blob) {
+      this.kept.set(incoming.meta.localId, incoming);
+    } else {
+      await incoming.dispose();
+    }
     return blob;
   }
 
   async release(localId: string) {
     const incoming = this.kept.get(localId);
-    if (!incoming) return;
+    if (!incoming) {
+      return;
+    }
     this.kept.delete(localId);
     await incoming.dispose();
   }

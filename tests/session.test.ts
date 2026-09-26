@@ -844,7 +844,9 @@ const gumStream = (...kinds: ("audio" | "video")[]) => {
 describe("entrada sem câmera ou microfone", () => {
   it("cria a sala só com áudio se a câmera falhar", async () => {
     mockGum(async (constraints) => {
-      if (constraints.video) throw new Error("sem camera");
+      if (constraints.video) {
+        throw new Error("sem camera");
+      }
       return gumStream("audio");
     });
     core.patch({ identity: { peerId: ME, displayName: "Eu" } });
@@ -870,7 +872,9 @@ describe("entrada sem câmera ou microfone", () => {
 
   it("cria a sala com câmera se só o microfone falhar", async () => {
     mockGum(async (constraints) => {
-      if (constraints.audio) throw new Error("sem mic");
+      if (constraints.audio) {
+        throw new Error("sem mic");
+      }
       return gumStream("video");
     });
     core.patch({ identity: { peerId: ME, displayName: "Eu" } });
@@ -1312,7 +1316,9 @@ describe("troca de câmera", () => {
     core.patch({ cameraOff: false, localStream: streamWith(oldVideo) });
     await session.switchCamera();
     const args = gum.mock.calls[0];
-    if (!args) throw new Error("expected getUserMedia call");
+    if (!args) {
+      throw new Error("expected getUserMedia call");
+    }
     expect(args[0].video).toEqual({ deviceId: { exact: "dual" } });
     expect(oldVideo.stop).toHaveBeenCalled();
     expect(core.state.localStream?.getVideoTracks()[0]).toBe(newVideo);
@@ -1330,7 +1336,9 @@ describe("troca de câmera", () => {
     });
     await session.switchCamera();
     const args = gum.mock.calls[0];
-    if (!args) throw new Error("expected getUserMedia call");
+    if (!args) {
+      throw new Error("expected getUserMedia call");
+    }
     expect(args[0].video).toEqual({ deviceId: { exact: "front" } });
   });
 
@@ -1368,14 +1376,18 @@ describe("troca de câmera", () => {
     });
     await session.switchCamera();
     const args = gum.mock.calls[0];
-    if (!args) throw new Error("expected getUserMedia call");
+    if (!args) {
+      throw new Error("expected getUserMedia call");
+    }
     expect(args[0].video).toEqual({ deviceId: { exact: "back" } });
   });
 
   it("se o deviceId falha, tenta facingMode ideal", async () => {
     const gum = vi.fn(async (constraints: MediaStreamConstraints) => {
       const video = constraints.video as MediaTrackConstraints;
-      if (video.deviceId) throw new Error("id recusado");
+      if (video.deviceId) {
+        throw new Error("id recusado");
+      }
       return streamWith(videoCam("back", "environment"));
     });
     mockCams(["front", "back"], gum);

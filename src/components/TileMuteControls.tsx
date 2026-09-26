@@ -28,12 +28,18 @@ export const TileMuteControls = ({
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const onPointer = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(null);
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(null);
+      }
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(null);
+      if (event.key === "Escape") {
+        setOpen(null);
+      }
     };
     document.addEventListener("pointerdown", onPointer);
     document.addEventListener("keydown", onKey);
@@ -135,9 +141,14 @@ const MuteButton = ({
       aria-controls={isHostViewer && open ? menuId : undefined}
       aria-label={`${label}: ${name}`}
       onClick={() => {
-        if (locked) return;
-        if (isHostViewer && onSetRoom) onOpen();
-        else onToggleLocal(kind);
+        if (locked) {
+          return;
+        }
+        if (isHostViewer && onSetRoom) {
+          onOpen();
+        } else {
+          onToggleLocal(kind);
+        }
       }}
       className={cn(
         "grid size-8 place-items-center rounded-full border",

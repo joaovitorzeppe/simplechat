@@ -27,7 +27,9 @@ export const MentionPicker = ({
   onPick,
   onActive,
 }: Props) => {
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    return null;
+  }
 
   return (
     <ul

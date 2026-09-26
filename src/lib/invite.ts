@@ -46,23 +46,31 @@ const stripWrap = (raw: string) => {
 
 export const parseInvite = (raw: string): Invite | null => {
   const text = stripWrap(raw);
-  if (!text) return null;
+  if (!text) {
+    return null;
+  }
 
   const url = toUrl(text);
   if (url) {
     const hash = hashParams(url.hash);
     const secret = secretFrom(hash);
     const fromSearch = fromParams(url.searchParams);
-    if (fromSearch) return { peerId: fromSearch, secret };
+    if (fromSearch) {
+      return { peerId: fromSearch, secret };
+    }
     const fromHash = fromParams(hash);
-    if (fromHash) return { peerId: fromHash, secret };
+    if (fromHash) {
+      return { peerId: fromHash, secret };
+    }
   }
 
   if (text.includes("=")) {
     const fromLoose = fromParams(
       new URLSearchParams(text.startsWith("?") ? text.slice(1) : text),
     );
-    if (fromLoose) return { peerId: fromLoose, secret: null };
+    if (fromLoose) {
+      return { peerId: fromLoose, secret: null };
+    }
   }
 
   const embedded = text.match(/[?&](?:room|call)=([^&\s#]+)/i);
@@ -71,12 +79,16 @@ export const parseInvite = (raw: string): Invite | null => {
     return { peerId: decode(embedded[1]), secret: secretFrom(hashParams(fragment)) };
   }
 
-  if (/^https?:\/\//i.test(text) || text.includes("/?")) return null;
+  if (/^https?:\/\//i.test(text) || text.includes("/?")) {
+    return null;
+  }
 
   // Forma nua: a chave sozinha, ou `chave#k=segredo` como o app mostra ao
   // colar só o essencial.
   const [bare = "", fragment = ""] = text.split("#", 2);
-  if (!bare.trim()) return null;
+  if (!bare.trim()) {
+    return null;
+  }
   return { peerId: bare.trim(), secret: secretFrom(hashParams(fragment)) };
 };
 
@@ -97,7 +109,9 @@ export const deepLinkJoinArg = (
   myPeerId: string,
 ): string | null => {
   const invite = parseInvite(href);
-  if (!invite?.peerId || invite.peerId === myPeerId) return null;
+  if (!invite?.peerId || invite.peerId === myPeerId) {
+    return null;
+  }
   return inviteJoinArg(invite);
 };
 
@@ -115,7 +129,9 @@ export const inviteLink = (peerId: string, secret: string | null) => {
  * Usado ao sair da chamada para não reentrar no refresh nem no histórico atual.
  */
 export const hrefWithoutInvite = (href: string): string | null => {
-  if (!parseInvite(href)) return null;
+  if (!parseInvite(href)) {
+    return null;
+  }
   let url: URL;
   try {
     url = new URL(href);
@@ -139,8 +155,12 @@ export const hrefWithoutInvite = (href: string): string | null => {
 /** Substitui a entrada atual do histórico, sem empilhar outra. */
 export const clearInviteLocation = () => {
   const next = hrefWithoutInvite(window.location.href);
-  if (next === null) return;
+  if (next === null) {
+    return;
+  }
   const current = `${canonicalizePath(window.location.pathname)}${window.location.search}${window.location.hash}`;
-  if (next === current) return;
+  if (next === current) {
+    return;
+  }
   window.history.replaceState(null, "", next);
 };

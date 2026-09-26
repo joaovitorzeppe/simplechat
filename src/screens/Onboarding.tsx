@@ -26,10 +26,15 @@ export const Onboarding = ({ onDone }: Props) => {
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      return;
+    }
     const identity = createIdentity(trimmed);
-    if (remember) persistIdentity(identity);
-    else clearIdentity();
+    if (remember) {
+      persistIdentity(identity);
+    } else {
+      clearIdentity();
+    }
     onDone(identity);
   };
 

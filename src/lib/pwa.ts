@@ -21,13 +21,19 @@ const isIos = () => {
 };
 
 export const registerPwa = () => {
-  if (!("serviceWorker" in navigator)) return;
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
   if (import.meta.env.DEV) {
     void navigator.serviceWorker.getRegistrations().then((regs) => {
-      for (const reg of regs) void reg.unregister();
+      for (const reg of regs) {
+        void reg.unregister();
+      }
     });
     void caches.keys().then((keys) => {
-      for (const key of keys) void caches.delete(key);
+      for (const key of keys) {
+        void caches.delete(key);
+      }
     });
     return;
   }
@@ -62,7 +68,9 @@ export const useInstallPrompt = () => {
     canInstall: Boolean(event) && !installed,
     showIosHelp: isIos() && !installed,
     install: async () => {
-      if (!event) return;
+      if (!event) {
+        return;
+      }
       await event.prompt();
       const choice = await event.userChoice;
       if (choice.outcome === "accepted") {

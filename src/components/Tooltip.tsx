@@ -50,7 +50,9 @@ export const Tooltip = ({ label, children, className, touchToast }: Props) => {
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const close = () => {
       window.clearTimeout(timer.current);
       setOpen(false);
@@ -65,10 +67,14 @@ export const Tooltip = ({ label, children, className, touchToast }: Props) => {
   }, [open]);
 
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const trigger = triggerRef.current?.getBoundingClientRect();
     const tip = tipRef.current?.getBoundingClientRect();
-    if (!trigger || !tip || tip.width === 0) return;
+    if (!trigger || !tip || tip.width === 0) {
+      return;
+    }
     const side: "top" | "bottom" =
       trigger.top >= tip.height + GAP + 8 ? "top" : "bottom";
     const top =
@@ -90,7 +96,9 @@ export const Tooltip = ({ label, children, className, touchToast }: Props) => {
         className,
       )}
       onPointerEnter={(event) => {
-        if (event.pointerType === "touch") return;
+        if (event.pointerType === "touch") {
+          return;
+        }
         show();
       }}
       onPointerLeave={hide}
@@ -100,7 +108,9 @@ export const Tooltip = ({ label, children, className, touchToast }: Props) => {
       }}
       onBlur={hide}
       onClick={() => {
-        if (!touchToast) return;
+        if (!touchToast) {
+          return;
+        }
         if (window.matchMedia("(pointer: coarse)").matches) {
           showPlainToast(label);
         }

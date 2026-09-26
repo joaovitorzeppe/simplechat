@@ -18,10 +18,14 @@ const inlineCssAndPreloadFont = (): Plugin => ({
     order: "post",
     handler(html, ctx) {
       const bundle = ctx.bundle;
-      if (!bundle) return html;
+      if (!bundle) {
+        return html;
+      }
       let next = html;
       for (const item of Object.values(bundle)) {
-        if (item.type !== "asset" || !item.fileName.endsWith(".css")) continue;
+        if (item.type !== "asset" || !item.fileName.endsWith(".css")) {
+          continue;
+        }
         const source =
           typeof item.source === "string"
             ? item.source
@@ -39,7 +43,7 @@ const inlineCssAndPreloadFont = (): Plugin => ({
           item.fileName.includes("outfit-latin-600-normal") &&
           item.fileName.endsWith(".woff2"),
       );
-      if (font && font.type === "asset") {
+      if (font?.type === "asset") {
         next = next.replace(
           "</head>",
           `    <link rel="preload" href="/${font.fileName}" as="font" type="font/woff2" crossorigin>\n  </head>`,

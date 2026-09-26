@@ -4,7 +4,9 @@ export const SPEAK_GATE = 0.016;
 const SPEAK_PEAK = 0.1;
 
 export const rmsFromTimeDomain = (samples: Uint8Array): number => {
-  if (samples.length === 0) return 0;
+  if (samples.length === 0) {
+    return 0;
+  }
   let sum = 0;
   for (const sample of samples) {
     const value = (sample - 128) / 128;
@@ -14,7 +16,9 @@ export const rmsFromTimeDomain = (samples: Uint8Array): number => {
 };
 
 export const intensityFromRms = (rms: number): number => {
-  if (rms <= SPEAK_GATE) return 0;
+  if (rms <= SPEAK_GATE) {
+    return 0;
+  }
   const linear = Math.min(1, (rms - SPEAK_GATE) / (SPEAK_PEAK - SPEAK_GATE));
   return Math.sqrt(linear);
 };

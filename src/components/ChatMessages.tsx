@@ -92,7 +92,9 @@ const MessageBody = ({
 };
 
 const saveFile = (file: ChatFile) => {
-  if (!file.blobUrl) return;
+  if (!file.blobUrl) {
+    return;
+  }
   const link = document.createElement("a");
   link.href = file.blobUrl;
   link.download = file.name || "file";
@@ -250,12 +252,18 @@ const TimerCard = ({
     );
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (state.status !== "running") return;
-    if (timerRemaining(state, Date.now()) <= 0) return;
+    if (state.status !== "running") {
+      return;
+    }
+    if (timerRemaining(state, Date.now()) <= 0) {
+      return;
+    }
     const id = window.setInterval(() => {
       const next = Date.now();
       setNow(next);
-      if (timerRemaining(state, next) <= 0) window.clearInterval(id);
+      if (timerRemaining(state, next) <= 0) {
+        window.clearInterval(id);
+      }
     }, 250);
     return () => window.clearInterval(id);
   }, [state]);
@@ -346,7 +354,9 @@ const PollCard = ({
   const mine = votes[selfId];
   const counts = Array.from({ length: poll.options.length }, () => 0);
   for (const vote of Object.values(votes)) {
-    if (vote >= 0 && vote < counts.length) counts[vote] += 1;
+    if (vote >= 0 && vote < counts.length) {
+      counts[vote] += 1;
+    }
   }
   return (
     <div className="min-w-48 space-y-1.5">
@@ -390,7 +400,9 @@ export const ChatMessages = memo(({
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   const openPending = () => {
-    if (!pendingHref) return;
+    if (!pendingHref) {
+      return;
+    }
     window.open(pendingHref, "_blank", "noopener,noreferrer");
     setPendingHref(null);
   };

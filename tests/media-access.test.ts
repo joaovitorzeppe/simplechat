@@ -36,7 +36,9 @@ describe("acquireLocalMedia", () => {
 
   it("cai para só áudio se a câmera falhar", async () => {
     const gum = vi.fn(async (constraints: MediaStreamConstraints) => {
-      if (constraints.video) throw new Error("sem camera");
+      if (constraints.video) {
+        throw new Error("sem camera");
+      }
       return streamOf("audio");
     });
     const media = await acquireLocalMedia(gum, { audio: true, video: true });
@@ -49,7 +51,9 @@ describe("acquireLocalMedia", () => {
 
   it("cai para só vídeo se o microfone falhar", async () => {
     const gum = vi.fn(async (constraints: MediaStreamConstraints) => {
-      if (constraints.audio) throw new Error("sem mic");
+      if (constraints.audio) {
+        throw new Error("sem mic");
+      }
       return streamOf("video");
     });
     const media = await acquireLocalMedia(gum, { audio: true, video: true });
@@ -125,7 +129,7 @@ describe("canShareScreen", () => {
     expect(
       canShareScreen({
         getDisplayMedia: vi.fn(),
-      } as unknown as MediaDevices),
+      }),
     ).toBe(true);
   });
 

@@ -48,8 +48,12 @@ export const applyTrackConstraints = async (
   kind: MediaKind,
 ) => {
   const video = stream.getVideoTracks()[0];
-  if (!video) return;
-  if (kind === "screen") video.contentHint = "detail";
+  if (!video) {
+    return;
+  }
+  if (kind === "screen") {
+    video.contentHint = "detail";
+  }
   try {
     await video.applyConstraints(sizeConstraints(LIMITS[kind]));
   } catch {
@@ -61,7 +65,9 @@ export const applySenderLimits = async (
   sender: RTCRtpSender,
   kind: MediaKind,
 ) => {
-  if (sender.track?.kind !== "video") return;
+  if (sender.track?.kind !== "video") {
+    return;
+  }
   const bitrate = LIMITS[kind].maxBitrate;
   try {
     const params = sender.getParameters();
@@ -69,7 +75,9 @@ export const applySenderLimits = async (
       params.encodings = [{}];
     }
     params.encodings[0].maxBitrate = bitrate;
-    if (kind === "screen") params.degradationPreference = "maintain-resolution";
+    if (kind === "screen") {
+      params.degradationPreference = "maintain-resolution";
+    }
     await sender.setParameters(params);
   } catch {
     // alguns browsers só aceitam setParameters depois da negociação

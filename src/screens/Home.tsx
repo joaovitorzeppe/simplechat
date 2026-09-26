@@ -23,11 +23,17 @@ export const Home = () => {
   const joiningInvite = Boolean(deepLinkJoinArg(window.location.href, myId));
 
   useEffect(() => {
-    if (!myId || !state.peerReady || state.callStatus !== "idle") return;
+    if (!myId || !state.peerReady || state.callStatus !== "idle") {
+      return;
+    }
     const href = window.location.href;
-    if (consumedJoinHref === href) return;
+    if (consumedJoinHref === href) {
+      return;
+    }
     const arg = deepLinkJoinArg(href, myId);
-    if (!arg) return;
+    if (!arg) {
+      return;
+    }
     consumedJoinHref = href;
     void session.joinRoom(arg);
   }, [myId, session, state.callStatus, state.peerReady]);

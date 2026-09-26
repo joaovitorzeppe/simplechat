@@ -25,8 +25,12 @@ export type CameraFlip =
 
 export const facingFromLabel = (label: string) => {
   const l = label.toLowerCase();
-  if (/front|facetime|\buser\b|frontal/.test(l)) return "user" as const;
-  if (/back|rear|environment|traseir/.test(l)) return "environment" as const;
+  if (/front|facetime|\buser\b|frontal/.test(l)) {
+    return "user" as const;
+  }
+  if (/back|rear|environment|traseir/.test(l)) {
+    return "environment" as const;
+  }
 };
 
 /** Frente ↔ uma traseira. Não cicla ultra-wide/tele. Desktop sem facing: cicla id. */
@@ -35,7 +39,9 @@ export const nextCameraFlip = (
   current: { deviceId?: string; facingMode?: string },
 ): CameraFlip | null => {
   const cams = devices.filter((d) => d.kind === "videoinput");
-  if (cams.length < 2) return null;
+  if (cams.length < 2) {
+    return null;
+  }
 
   const currentLabel =
     cams.find((d) => d.deviceId && d.deviceId === current.deviceId)?.label ??
@@ -50,7 +56,9 @@ export const nextCameraFlip = (
   }
 
   const withId = cams.filter((d) => d.deviceId);
-  if (withId.length < 2) return null;
+  if (withId.length < 2) {
+    return null;
+  }
   const idx = withId.findIndex((d) => d.deviceId === current.deviceId);
   const next = withId[(idx < 0 ? 1 : idx + 1) % withId.length];
   return next?.deviceId ? { deviceId: next.deviceId } : null;
@@ -61,14 +69,18 @@ export const cameraFlipConstraints = (
   flip: CameraFlip,
   devices: readonly VideoDevice[] = [],
 ): MediaTrackConstraints[] => {
-  if ("deviceId" in flip) return [{ deviceId: { exact: flip.deviceId } }];
+  if ("deviceId" in flip) {
+    return [{ deviceId: { exact: flip.deviceId } }];
+  }
   const match = devices.find(
     (device) =>
       device.kind === "videoinput" &&
       facingFromLabel(device.label) === flip.facingMode,
   );
   const next: MediaTrackConstraints[] = [];
-  if (match?.deviceId) next.push({ deviceId: { exact: match.deviceId } });
+  if (match?.deviceId) {
+    next.push({ deviceId: { exact: match.deviceId } });
+  }
   next.push({ facingMode: { ideal: flip.facingMode } });
   return next;
 };
@@ -84,16 +96,24 @@ const placeholderPins = new WeakMap<MediaStreamTrack, HTMLCanvasElement>();
  * não chega nos outros (PeerJS não renegocia `addTrack`).
  */
 export const placeholderVideoTrack = (): MediaStreamTrack | null => {
-  if (typeof document === "undefined") return null;
+  if (typeof document === "undefined") {
+    return null;
+  }
   const canvas = document.createElement("canvas");
   canvas.width = 2;
   canvas.height = 2;
-  if (typeof canvas.captureStream !== "function") return null;
+  if (typeof canvas.captureStream !== "function") {
+    return null;
+  }
   const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
+  if (!ctx) {
+    return null;
+  }
   ctx.fillRect(0, 0, 2, 2);
   const track = canvas.captureStream(1).getVideoTracks()[0];
-  if (!track) return null;
+  if (!track) {
+    return null;
+  }
   placeholderPins.set(track, canvas);
   return track;
 };
@@ -121,8 +141,10 @@ const listenOnly = (): AcquiredMedia => ({
 });
 
 const isPermissionDenied = (error: unknown) => {
-  if (!error || typeof error !== "object" || !("name" in error)) return false;
-  const name = String((error as { name: unknown }).name);
+  if (!error || typeof error !== "object" || !("name" in error)) {
+    return false;
+  }
+  const name = String((error).name);
   return name === "NotAllowedError" || name === "PermissionDeniedError";
 };
 
@@ -137,7 +159,9 @@ const tryGetUserMedia = async (
     const media = fromStream(stream);
     return media.fallback === "listen" ? null : media;
   } catch (error) {
-    if (isPermissionDenied(error)) return "denied";
+    if (isPermissionDenied(error)) {
+      return "denied";
+    }
     return null;
   }
 };
@@ -174,7 +198,9 @@ export const acquireLocalMedia = async (
   getUserMedia: GetUserMedia | undefined,
   preferred: MediaStreamConstraints,
 ): Promise<AcquiredMedia> => {
-  if (!getUserMedia) return listenOnly();
+  if (!getUserMedia) {
+    return listenOnly();
+  }
 
   const attempts = [
     preferred,
@@ -185,8 +211,12 @@ export const acquireLocalMedia = async (
 
   for (const constraints of attempts) {
     const result = await tryGetUserMedia(getUserMedia, constraints);
-    if (result === "denied") return listenOnly();
-    if (result) return result;
+    if (result === "denied") {
+      return listenOnly();
+    }
+    if (result) {
+      return result;
+    }
   }
   return listenOnly();
 };

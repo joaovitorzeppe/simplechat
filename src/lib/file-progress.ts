@@ -12,10 +12,14 @@ export const setFileProgress = (id: string, value: number) => {
   // Quantizar em passos de 1% limita a no máximo cem renders por transferência,
   // em vez de um por pedaço de 16 KB.
   const quantized = Math.round(Math.min(1, Math.max(0, value)) * 100) / 100;
-  if (values.get(id) === quantized) return;
+  if (values.get(id) === quantized) {
+    return;
+  }
   values.set(id, quantized);
   const subscribers = listeners.get(id);
-  if (subscribers) for (const listener of subscribers) listener();
+  if (subscribers) {
+    for (const listener of subscribers) listener();
+  }
 };
 
 export const getFileProgress = (id: string) => values.get(id) ?? 0;
@@ -37,7 +41,9 @@ const subscribe = (id: string, listener: () => void) => {
   subscribers.add(listener);
   return () => {
     subscribers.delete(listener);
-    if (subscribers.size === 0) listeners.delete(id);
+    if (subscribers.size === 0) {
+      listeners.delete(id);
+    }
   };
 };
 

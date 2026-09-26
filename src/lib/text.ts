@@ -9,7 +9,9 @@ const segmenter =
     : null;
 
 export const graphemes = (value: string): string[] => {
-  if (!segmenter) return [...value];
+  if (!segmenter) {
+    return [...value];
+  }
   return [...segmenter.segment(value)].map((part) => part.segment);
 };
 
@@ -19,10 +21,14 @@ export const graphemes = (value: string): string[] => {
  * a interface deixa digitar é exatamente o que passa na outra ponta.
  */
 export const truncateText = (value: string, maxUnits: number) => {
-  if (value.length <= maxUnits) return value;
+  if (value.length <= maxUnits) {
+    return value;
+  }
   let out = "";
   for (const grapheme of graphemes(value)) {
-    if (out.length + grapheme.length > maxUnits) break;
+    if (out.length + grapheme.length > maxUnits) {
+      break;
+    }
     out += grapheme;
   }
   return out;
@@ -43,7 +49,9 @@ export const displayLabel = (
 ) => {
   const key = foldedName(name);
   const same = people.filter((person) => foldedName(person.displayName) === key);
-  if (same.length < 2) return name;
+  if (same.length < 2) {
+    return name;
+  }
   const at = same.findIndex((person) => person.peerId === peerId);
   return `${name} - ${at < 0 ? same.length + 1 : at + 1}`;
 };

@@ -27,18 +27,23 @@ export const setMuteFlag = (
 ): MuteMap => {
   const next: MuteFlags = { ...muteOf(map, peerId), [kind]: value };
   if (!next.audio && !next.video) {
-    if (!(peerId in map)) return map;
+    if (!(peerId in map)) {
+      return map;
+    }
     const { [peerId]: _, ...rest } = map;
     return rest;
   }
   const current = map[peerId];
-  if (current && current.audio === next.audio && current.video === next.video)
+  if (current && current.audio === next.audio && current.video === next.video) {
     return map;
+  }
   return { ...map, [peerId]: next };
 };
 
 export const dropMute = (map: MuteMap, peerId: string): MuteMap => {
-  if (!(peerId in map)) return map;
+  if (!(peerId in map)) {
+    return map;
+  }
   const { [peerId]: _, ...rest } = map;
   return rest;
 };
@@ -49,8 +54,12 @@ export const roomMutesFromWire = (
 ): MuteMap => {
   const out: MuteMap = {};
   for (const entry of entries) {
-    if (entry.peerId === hostPeerId) continue;
-    if (!entry.audio && !entry.video) continue;
+    if (entry.peerId === hostPeerId) {
+      continue;
+    }
+    if (!entry.audio && !entry.video) {
+      continue;
+    }
     out[entry.peerId] = { audio: entry.audio, video: entry.video };
   }
   return out;
@@ -62,7 +71,9 @@ export const roomMutesToWire = (
 ): RoomMuteEntry[] => {
   const out: RoomMuteEntry[] = [];
   for (const [peerId, flags] of Object.entries(map)) {
-    if (peerId === hostPeerId || (!flags.audio && !flags.video)) continue;
+    if (peerId === hostPeerId || (!flags.audio && !flags.video)) {
+      continue;
+    }
     out.push({ peerId, audio: flags.audio, video: flags.video });
   }
   return out;

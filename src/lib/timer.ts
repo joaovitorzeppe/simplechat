@@ -13,19 +13,29 @@ export const initialTimerState = (ms: number, at: number): TimerState => ({
 });
 
 export const resolveTimerState = (message: ChatMessage): TimerState | null => {
-  if (message.command?.kind !== "timer") return null;
+  if (message.command?.kind !== "timer") {
+    return null;
+  }
   return message.timer ?? initialTimerState(message.command.ms, message.at);
 };
 
 export const timerRemaining = (state: TimerState, now: number) => {
-  if (state.status === "cancelled") return 0;
-  if (state.status === "paused") return Math.max(0, state.remainingMs);
+  if (state.status === "cancelled") {
+    return 0;
+  }
+  if (state.status === "paused") {
+    return Math.max(0, state.remainingMs);
+  }
   return Math.max(0, state.endsAt - now);
 };
 
 export const isTimerActive = (state: TimerState, now: number) => {
-  if (state.status === "cancelled") return false;
-  if (state.status === "paused") return state.remainingMs > 0;
+  if (state.status === "cancelled") {
+    return false;
+  }
+  if (state.status === "paused") {
+    return state.remainingMs > 0;
+  }
   return state.endsAt > now;
 };
 
@@ -47,17 +57,27 @@ export const applyTimerAction = (
   now: number,
 ): TimerState | null => {
   if (action === "pause") {
-    if (state.status !== "running") return null;
+    if (state.status !== "running") {
+      return null;
+    }
     const remainingMs = Math.max(0, state.endsAt - now);
-    if (remainingMs <= 0) return null;
+    if (remainingMs <= 0) {
+      return null;
+    }
     return { status: "paused", remainingMs };
   }
   if (action === "resume") {
-    if (state.status !== "paused" || state.remainingMs <= 0) return null;
+    if (state.status !== "paused" || state.remainingMs <= 0) {
+      return null;
+    }
     return { status: "running", endsAt: now + state.remainingMs };
   }
-  if (state.status === "cancelled") return null;
-  if (state.status === "running" && state.endsAt <= now) return null;
+  if (state.status === "cancelled") {
+    return null;
+  }
+  if (state.status === "running" && state.endsAt <= now) {
+    return null;
+  }
   return { status: "cancelled" };
 };
 

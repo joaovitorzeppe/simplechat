@@ -3,7 +3,9 @@ let ctx: AudioContext | null = null
 const audio = (): AudioContext | null => {
   try {
     ctx ??= new AudioContext()
-    if (ctx.state === 'suspended') void ctx.resume()
+    if (ctx.state === 'suspended') {
+      void ctx.resume()
+    }
     return ctx
   } catch {
     return null
@@ -14,7 +16,9 @@ export const getAudioContext = () => audio()
 
 export const unlockAudio = () => {
   const c = audio()
-  if (c?.state === 'suspended') void c.resume()
+  if (c?.state === 'suspended') {
+    void c.resume()
+  }
 }
 
 const tone = (
@@ -40,12 +44,16 @@ const tone = (
 
 export const playRingtone = () => {
   const context = audio()
-  if (!context) return () => {}
+  if (!context) {
+    return () => {}
+  }
   let timer = 0
   let stopped = false
 
   const ring = () => {
-    if (stopped) return
+    if (stopped) {
+      return
+    }
     tone(context, 440, 0, 0.32, 0.07)
     tone(context, 480, 0, 0.32, 0.05)
     tone(context, 440, 0.4, 0.32, 0.07)
@@ -62,7 +70,9 @@ export const playRingtone = () => {
 
 export const playCallEnded = () => {
   const context = audio()
-  if (!context) return
+  if (!context) {
+    return
+  }
   tone(context, 620, 0, 0.14, 0.09)
   tone(context, 392, 0.16, 0.28, 0.08)
 }

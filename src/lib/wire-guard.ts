@@ -41,8 +41,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 };
 
 const str = (value: unknown, max: number): string | null => {
-  if (typeof value !== "string" || value.length === 0 || value.length > max)
+  if (typeof value !== "string" || value.length === 0 || value.length > max) {
     return null;
+  }
   return value;
 };
 
@@ -52,25 +53,39 @@ const optionalBool = (value: unknown) => {
 
 /** `null` quando ausente, `false` quando presente e inválido. */
 const optionalStr = (value: unknown, max: number): string | null | false => {
-  if (value === undefined) return null;
+  if (value === undefined) {
+    return null;
+  }
   return str(value, max) ?? false;
 };
 
 const int = (value: unknown, min: number, max: number): number | null => {
-  if (typeof value !== "number" || !Number.isInteger(value)) return null;
+  if (typeof value !== "number" || !Number.isInteger(value)) {
+    return null;
+  }
   return value >= min && value <= max ? value : null;
 };
 
 const timestamp = (value: unknown): number | null => {
-  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
   return value >= 0 ? value : null;
 };
 
 const parseMentions = (value: unknown): string[] | null | false => {
-  if (value === undefined) return null;
-  if (!Array.isArray(value)) return false;
-  if (value.length === 0) return null;
-  if (value.length > MAX_PEERS) return false;
+  if (value === undefined) {
+    return null;
+  }
+  if (!Array.isArray(value)) {
+    return false;
+  }
+  if (value.length === 0) {
+    return null;
+  }
+  if (value.length > MAX_PEERS) {
+    return false;
+  }
   const out: string[] = [];
   const seen = new Set<string>();
   for (const entry of value) {
@@ -82,8 +97,12 @@ const parseMentions = (value: unknown): string[] | null | false => {
       continue;
     }
     const id = str(entry, MAX_PEER_ID);
-    if (!id) return false;
-    if (seen.has(id)) continue;
+    if (!id) {
+      return false;
+    }
+    if (seen.has(id)) {
+      continue;
+    }
     seen.add(id);
     out.push(id);
   }
@@ -95,98 +114,143 @@ const parseCommandValues = (
   n: number,
   sides: number,
 ): number[] | null => {
-  if (!Array.isArray(value) || value.length !== n) return null;
+  if (!Array.isArray(value) || value.length !== n) {
+    return null;
+  }
   const values: number[] = [];
   for (const entry of value) {
     const roll = int(entry, 1, sides);
-    if (roll === null) return null;
+    if (roll === null) {
+      return null;
+    }
     values.push(roll);
   }
   return values;
 };
 
 const parseExprOp = (value: unknown): RollExprOp | null => {
-  if (value === "+" || value === "-" || value === "*" || value === "/")
+  if (value === "+" || value === "-" || value === "*" || value === "/") {
     return value;
+  }
   return null;
 };
 
 const parseExprTerm = (value: unknown): RollExprTerm | null => {
-  if (!isRecord(value) || typeof value.kind !== "string") return null;
+  if (!isRecord(value) || typeof value.kind !== "string") {
+    return null;
+  }
   const op = parseExprOp(value.op);
-  if (!op) return null;
+  if (!op) {
+    return null;
+  }
   if (value.kind === "dice") {
     const n = int(value.n, 1, MAX_COMMAND_DICE);
     const sides = int(value.sides, 2, MAX_COMMAND_SIDES);
-    if (n === null || sides === null) return null;
+    if (n === null || sides === null) {
+      return null;
+    }
     const values = parseCommandValues(value.values, n, sides);
-    if (!values) return null;
+    if (!values) {
+      return null;
+    }
     return { kind: "dice", n, sides, op, values };
   }
   if (value.kind === "mod") {
     const raw = int(value.value, 1, MAX_COMMAND_MOD);
-    if (raw === null) return null;
+    if (raw === null) {
+      return null;
+    }
     return { kind: "mod", value: raw, op };
   }
   return null;
 };
 
 const exprTermKey = (term: RollExprTerm) => {
-  if (term.kind === "mod") return `mod:${term.op}:${term.value}`;
+  if (term.kind === "mod") {
+    return `mod:${term.op}:${term.value}`;
+  }
   return `dice:${term.op}:${term.n}:${term.sides}`;
 };
 
 const parseExprPass = (value: unknown) => {
-  if (!isRecord(value) || !Array.isArray(value.terms)) return null;
-  if (value.terms.length < 1 || value.terms.length > MAX_COMMAND_TERMS)
+  if (!isRecord(value) || !Array.isArray(value.terms)) {
     return null;
+  }
+  if (value.terms.length < 1 || value.terms.length > MAX_COMMAND_TERMS) {
+    return null;
+  }
   const terms: RollExprTerm[] = [];
   for (const entry of value.terms) {
     const term = parseExprTerm(entry);
-    if (!term) return null;
+    if (!term) {
+      return null;
+    }
     terms.push(term);
   }
-  if (!terms.some((term) => term.kind === "dice")) return null;
-  if (terms[0]?.op === "*" || terms[0]?.op === "/") return null;
+  if (!terms.some((term) => term.kind === "dice")) {
+    return null;
+  }
+  if (terms[0]?.op === "*" || terms[0]?.op === "/") {
+    return null;
+  }
   const diceCount = terms.reduce(
     (sum, term) => sum + (term.kind === "dice" ? term.n : 0),
     0,
   );
-  if (diceCount < 1 || diceCount > MAX_COMMAND_DICE) return null;
+  if (diceCount < 1 || diceCount > MAX_COMMAND_DICE) {
+    return null;
+  }
   const total = exprPassTotal(terms);
-  if (total === null || value.total !== total) return null;
+  if (total === null || value.total !== total) {
+    return null;
+  }
   return { terms, total };
 };
 
 const parseExprPayload = (value: Record<string, unknown>) => {
-  if (!Array.isArray(value.passes)) return null;
-  if (value.passes.length < 1 || value.passes.length > MAX_COMMAND_REPEATS)
+  if (!Array.isArray(value.passes)) {
     return null;
+  }
+  if (value.passes.length < 1 || value.passes.length > MAX_COMMAND_REPEATS) {
+    return null;
+  }
   const passes: Array<{ terms: RollExprTerm[]; total: number }> = [];
   let specKey = "";
   for (const entry of value.passes) {
     const pass = parseExprPass(entry);
-    if (!pass) return null;
+    if (!pass) {
+      return null;
+    }
     const key = pass.terms.map(exprTermKey).join("|");
-    if (!specKey) specKey = key;
-    else if (key !== specKey) return null;
+    if (!specKey) {
+      specKey = key;
+    } else if (key !== specKey) {
+      return null;
+    }
     passes.push(pass);
   }
   const total = passes.reduce((sum, pass) => sum + pass.total, 0);
-  if (value.total !== total) return null;
+  if (value.total !== total) {
+    return null;
+  }
   return { kind: "expr" as const, passes, total };
 };
 
 const parseOrderPeople = (value: unknown) => {
-  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_PEERS)
+  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_PEERS) {
     return null;
+  }
   const people: Array<{ name: string; peerId: string }> = [];
   const seen = new Set<string>();
   for (const entry of value) {
-    if (!isRecord(entry)) return null;
+    if (!isRecord(entry)) {
+      return null;
+    }
     const name = str(entry.name, MAX_DISPLAY_NAME);
     const peerId = str(entry.peerId, MAX_PEER_ID);
-    if (!name || !peerId || seen.has(peerId)) return null;
+    if (!name || !peerId || seen.has(peerId)) {
+      return null;
+    }
     seen.add(peerId);
     people.push({ name, peerId });
   }
@@ -197,35 +261,53 @@ const parseOrderPeople = (value: unknown) => {
 const parseChatCommandPayload = (
   value: unknown,
 ): ChatCommandPayload | null | false => {
-  if (value === undefined) return null;
-  if (!isRecord(value) || typeof value.kind !== "string") return false;
+  if (value === undefined) {
+    return null;
+  }
+  if (!isRecord(value) || typeof value.kind !== "string") {
+    return false;
+  }
   if (value.kind === "die") {
     const n = int(value.n, 1, 1);
     const sides = int(value.sides, 2, MAX_COMMAND_SIDES);
-    if (n === null || sides === null) return false;
+    if (n === null || sides === null) {
+      return false;
+    }
     const roll = int(value.value, 1, sides);
-    if (roll === null) return false;
+    if (roll === null) {
+      return false;
+    }
     return { kind: "die", n, sides, value: roll };
   }
   if (value.kind === "dice") {
     const n = int(value.n, 2, MAX_COMMAND_DICE);
     const sides = int(value.sides, 2, MAX_COMMAND_SIDES);
-    if (n === null || sides === null) return false;
+    if (n === null || sides === null) {
+      return false;
+    }
     const values = parseCommandValues(value.values, n, sides);
     const total = int(value.total, n, n * sides);
-    if (!values || total === null) return false;
+    if (!values || total === null) {
+      return false;
+    }
     const sum = values.reduce((acc, roll) => acc + roll, 0);
-    if (sum !== total) return false;
+    if (sum !== total) {
+      return false;
+    }
     return { kind: "dice", n, sides, values, total };
   }
   if (value.kind === "range") {
     const min = int(value.min, 0, MAX_COMMAND_RANGE);
     const max = int(value.max, 0, MAX_COMMAND_RANGE);
-    if (min === null || max === null) return false;
+    if (min === null || max === null) {
+      return false;
+    }
     const lo = Math.min(min, max);
     const hi = Math.max(min, max);
     const roll = int(value.value, lo, hi);
-    if (roll === null) return false;
+    if (roll === null) {
+      return false;
+    }
     return { kind: "range", min: lo, max: hi, value: roll };
   }
   if (value.kind === "expr") {
@@ -235,66 +317,95 @@ const parseChatCommandPayload = (
   if (value.kind === "pick") {
     const name = str(value.name, MAX_DISPLAY_NAME);
     const peerId = str(value.peerId, MAX_PEER_ID);
-    if (!name || !peerId) return false;
+    if (!name || !peerId) {
+      return false;
+    }
     return { kind: "pick", name, peerId };
   }
   if (value.kind === "choice") {
     const option = str(value.option, MAX_COMMAND_CHOICE_LENGTH);
-    if (!option) return false;
+    if (!option) {
+      return false;
+    }
     const options = parsePollOptions(value.options);
     if (options) {
-      if (!options.includes(option)) return false;
+      if (!options.includes(option)) {
+        return false;
+      }
       return { kind: "choice", option, options };
     }
     // Legado: só vinha a opção sorteada.
-    if (value.options !== undefined) return false;
+    if (value.options !== undefined) {
+      return false;
+    }
     return { kind: "choice", option, options: [option] };
   }
   if (value.kind === "order") {
     const people = parseOrderPeople(value.people);
-    if (!people) return false;
+    if (!people) {
+      return false;
+    }
     return { kind: "order", people };
   }
   if (value.kind === "coin") {
-    if (value.face !== "heads" && value.face !== "tails") return false;
+    if (value.face !== "heads" && value.face !== "tails") {
+      return false;
+    }
     return { kind: "coin", face: value.face };
   }
   if (value.kind === "emote") {
     const action = str(value.action, MAX_COMMAND_EMOTE);
-    if (!action) return false;
+    if (!action) {
+      return false;
+    }
     return { kind: "emote", action };
   }
   if (value.kind === "timer") {
     const ms = int(value.ms, MIN_TIMER_MS, MAX_TIMER_MS);
-    if (ms === null) return false;
+    if (ms === null) {
+      return false;
+    }
     return { kind: "timer", ms };
   }
   if (value.kind === "poll") {
     const id = str(value.id, MAX_TRANSFER_ID);
     const options = parsePollOptions(value.options);
-    if (!id || !options) return false;
+    if (!id || !options) {
+      return false;
+    }
     return { kind: "poll", id, options };
   }
   if (value.kind === "code") {
-    if (typeof value.language !== "string" || !isCodeLanguage(value.language))
+    if (typeof value.language !== "string" || !isCodeLanguage(value.language)) {
       return false;
+    }
     const source = str(value.source, MAX_COMMAND_CODE);
-    if (!source) return false;
+    if (!source) {
+      return false;
+    }
     return { kind: "code", language: value.language, source };
   }
   return false;
 };
 
 const parsePollOptions = (value: unknown): string[] | null => {
-  if (!Array.isArray(value)) return null;
-  if (value.length < 2 || value.length > MAX_COMMAND_CHOICE_OPTIONS) return null;
+  if (!Array.isArray(value)) {
+    return null;
+  }
+  if (value.length < 2 || value.length > MAX_COMMAND_CHOICE_OPTIONS) {
+    return null;
+  }
   const options: string[] = [];
   const seen = new Set<string>();
   for (const entry of value) {
     const option = str(entry, MAX_COMMAND_CHOICE_LENGTH);
-    if (!option) return null;
+    if (!option) {
+      return null;
+    }
     const key = option.toLowerCase();
-    if (seen.has(key)) return null;
+    if (seen.has(key)) {
+      return null;
+    }
     seen.add(key);
     options.push(option);
   }
@@ -302,32 +413,49 @@ const parsePollOptions = (value: unknown): string[] | null => {
 };
 
 const peerInfo = (value: unknown): PeerInfo | null => {
-  if (!isRecord(value)) return null;
+  if (!isRecord(value)) {
+    return null;
+  }
   const peerId = str(value.peerId, MAX_PEER_ID);
   const displayName = str(value.displayName, MAX_DISPLAY_NAME);
-  if (!peerId || !displayName) return null;
+  if (!peerId || !displayName) {
+    return null;
+  }
   return { peerId, displayName };
 };
 
 const roomMuteEntry = (value: unknown): RoomMuteEntry | null => {
-  if (!isRecord(value)) return null;
-  const peerId = str(value.peerId, MAX_PEER_ID);
-  if (!peerId) return null;
-  if (typeof value.audio !== "boolean" || typeof value.video !== "boolean")
+  if (!isRecord(value)) {
     return null;
+  }
+  const peerId = str(value.peerId, MAX_PEER_ID);
+  if (!peerId) {
+    return null;
+  }
+  if (typeof value.audio !== "boolean" || typeof value.video !== "boolean") {
+    return null;
+  }
   return { peerId, audio: value.audio, video: value.video };
 };
 
 /** `null` quando ausente, `false` quando presente e inválido. */
 const parseRoomMutes = (value: unknown): RoomMuteEntry[] | null | false => {
-  if (value === undefined) return null;
-  if (!Array.isArray(value) || value.length > MAX_PEERS) return false;
+  if (value === undefined) {
+    return null;
+  }
+  if (!Array.isArray(value) || value.length > MAX_PEERS) {
+    return false;
+  }
   const out: RoomMuteEntry[] = [];
   const seen = new Set<string>();
   for (const entry of value) {
     const mute = roomMuteEntry(entry);
-    if (!mute) return false;
-    if (seen.has(mute.peerId)) continue;
+    if (!mute) {
+      return false;
+    }
+    if (seen.has(mute.peerId)) {
+      continue;
+    }
     seen.add(mute.peerId);
     out.push(mute);
   }
@@ -340,16 +468,24 @@ const parseRoomMutes = (value: unknown): RoomMuteEntry[] | null | false => {
  * com o contrato são descartadas, nunca corrigidas.
  */
 export const parseWire = (raw: unknown): WireMessage | null => {
-  if (!isRecord(raw) || typeof raw.type !== "string") return null;
+  if (!isRecord(raw) || typeof raw.type !== "string") {
+    return null;
+  }
 
   switch (raw.type) {
     case "hello": {
       const displayName = str(raw.displayName, MAX_DISPLAY_NAME);
       const peerId = str(raw.peerId, MAX_PEER_ID);
-      if (!displayName || !peerId) return null;
-      if (raw.kind !== "direct" && raw.kind !== "room-join") return null;
+      if (!displayName || !peerId) {
+        return null;
+      }
+      if (raw.kind !== "direct" && raw.kind !== "room-join") {
+        return null;
+      }
       const secret = optionalStr(raw.secret, MAX_ROOM_SECRET);
-      if (secret === false) return null;
+      if (secret === false) {
+        return null;
+      }
       return {
         type: "hello",
         displayName,
@@ -360,22 +496,28 @@ export const parseWire = (raw: unknown): WireMessage | null => {
     }
 
     case "room-peers": {
-      if (!Array.isArray(raw.peers) || raw.peers.length > MAX_PEERS)
+      if (!Array.isArray(raw.peers) || raw.peers.length > MAX_PEERS) {
         return null;
+      }
       const peers: PeerInfo[] = [];
       const seen = new Set<string>();
       for (const entry of raw.peers) {
         const peer = peerInfo(entry);
-        if (!peer) return null;
-        if (seen.has(peer.peerId)) continue;
+        if (!peer) {
+          return null;
+        }
+        if (seen.has(peer.peerId)) {
+          continue;
+        }
         seen.add(peer.peerId);
         peers.push(peer);
       }
       const hostPeerId = optionalStr(raw.hostPeerId, MAX_PEER_ID);
       const secret = optionalStr(raw.secret, MAX_ROOM_SECRET);
       const mutes = parseRoomMutes(raw.mutes);
-      if (hostPeerId === false || secret === false || mutes === false)
+      if (hostPeerId === false || secret === false || mutes === false) {
         return null;
+      }
       return {
         type: "room-peers",
         peers,
@@ -387,14 +529,20 @@ export const parseWire = (raw: unknown): WireMessage | null => {
 
     case "room-mute": {
       const peerId = str(raw.peerId, MAX_PEER_ID);
-      if (!peerId) return null;
-      if (!optionalBool(raw.audio) || !optionalBool(raw.video)) return null;
-      if (raw.audio === undefined && raw.video === undefined) return null;
+      if (!peerId) {
+        return null;
+      }
+      if (!optionalBool(raw.audio) || !optionalBool(raw.video)) {
+        return null;
+      }
+      if (raw.audio === undefined && raw.video === undefined) {
+        return null;
+      }
       return {
         type: "room-mute",
         peerId,
-        ...(raw.audio !== undefined ? { audio: raw.audio as boolean } : {}),
-        ...(raw.video !== undefined ? { video: raw.video as boolean } : {}),
+        ...(raw.audio !== undefined ? { audio: raw.audio } : {}),
+        ...(raw.video !== undefined ? { video: raw.video } : {}),
       };
     }
 
@@ -411,8 +559,12 @@ export const parseWire = (raw: unknown): WireMessage | null => {
       const at = timestamp(raw.at);
       const mentions = parseMentions(raw.mentions);
       const command = parseChatCommandPayload(raw.command);
-      if (!id || !text || !fromPeerId || !fromName || at === null) return null;
-      if (mentions === false || command === false) return null;
+      if (!id || !text || !fromPeerId || !fromName || at === null) {
+        return null;
+      }
+      if (mentions === false || command === false) {
+        return null;
+      }
       return {
         type: "chat",
         id,
@@ -435,7 +587,9 @@ export const parseWire = (raw: unknown): WireMessage | null => {
       return { type: "room-waiting" };
 
     case "room-denied":
-      if (raw.reason !== undefined && raw.reason !== "stale") return null;
+      if (raw.reason !== undefined && raw.reason !== "stale") {
+        return null;
+      }
       return {
         type: "room-denied",
         ...(raw.reason === "stale" ? { reason: "stale" as const } : {}),
@@ -451,20 +605,23 @@ export const parseWire = (raw: unknown): WireMessage | null => {
 
     case "hangup": {
       const displayName = optionalStr(raw.displayName, MAX_DISPLAY_NAME);
-      if (displayName === false) return null;
+      if (displayName === false) {
+        return null;
+      }
       return { type: "hangup", ...(displayName ? { displayName } : {}) };
     }
 
     case "media-meta": {
-      if (!optionalBool(raw.sharingScreen) || !optionalBool(raw.cameraOff))
+      if (!optionalBool(raw.sharingScreen) || !optionalBool(raw.cameraOff)) {
         return null;
+      }
       return {
         type: "media-meta",
         ...(raw.sharingScreen !== undefined
-          ? { sharingScreen: raw.sharingScreen as boolean }
+          ? { sharingScreen: raw.sharingScreen }
           : {}),
         ...(raw.cameraOff !== undefined
-          ? { cameraOff: raw.cameraOff as boolean }
+          ? { cameraOff: raw.cameraOff }
           : {}),
       };
     }
@@ -477,8 +634,12 @@ export const parseWire = (raw: unknown): WireMessage | null => {
       const fromPeerId = str(raw.fromPeerId, MAX_PEER_ID);
       const fromName = str(raw.fromName, MAX_DISPLAY_NAME);
       const at = timestamp(raw.at);
-      if (!id || !name || !mime || size === null) return null;
-      if (!fromPeerId || !fromName || at === null) return null;
+      if (!id || !name || !mime || size === null) {
+        return null;
+      }
+      if (!fromPeerId || !fromName || at === null) {
+        return null;
+      }
       return {
         type: "file-start",
         id,
@@ -499,14 +660,18 @@ export const parseWire = (raw: unknown): WireMessage | null => {
     case "poll-vote": {
       const id = str(raw.id, MAX_TRANSFER_ID);
       const option = int(raw.option, 0, MAX_COMMAND_CHOICE_OPTIONS - 1);
-      if (!id || option === null) return null;
+      if (!id || option === null) {
+        return null;
+      }
       return { type: "poll-vote", id, option };
     }
 
     case "timer-control": {
       const id = str(raw.id, MAX_TRANSFER_ID);
       const timer = parseTimerState(raw.timer);
-      if (!id || !timer) return null;
+      if (!id || !timer) {
+        return null;
+      }
       return { type: "timer-control", id, timer };
     }
 
@@ -516,7 +681,9 @@ export const parseWire = (raw: unknown): WireMessage | null => {
 };
 
 const parseTimerState = (value: unknown): TimerState | null => {
-  if (!isRecord(value) || typeof value.status !== "string") return null;
+  if (!isRecord(value) || typeof value.status !== "string") {
+    return null;
+  }
   const byHost = value.byHost === true ? (true as const) : undefined;
   if (value.status === "cancelled") {
     return byHost
@@ -525,14 +692,18 @@ const parseTimerState = (value: unknown): TimerState | null => {
   }
   if (value.status === "paused") {
     const remainingMs = int(value.remainingMs, 0, MAX_TIMER_MS);
-    if (remainingMs === null) return null;
+    if (remainingMs === null) {
+      return null;
+    }
     return byHost
       ? { status: "paused", remainingMs, byHost }
       : { status: "paused", remainingMs };
   }
   if (value.status === "running") {
     const endsAt = timestamp(value.endsAt);
-    if (endsAt === null) return null;
+    if (endsAt === null) {
+      return null;
+    }
     return { status: "running", endsAt };
   }
   return null;

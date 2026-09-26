@@ -41,7 +41,9 @@ class SpeakBus {
       data: null,
       prev: 0,
       onTrack: (event) => {
-        if (event.track.kind === "audio") this.rebuild(entry);
+        if (event.track.kind === "audio") {
+          this.rebuild(entry);
+        }
       },
     };
     this.entries.set(key, entry);
@@ -53,7 +55,9 @@ class SpeakBus {
 
   unwatch(key: object) {
     const entry = this.entries.get(key);
-    if (!entry) return;
+    if (!entry) {
+      return;
+    }
     entry.stream.removeEventListener("addtrack", entry.onTrack);
     entry.stream.removeEventListener("removetrack", entry.onTrack);
     this.teardown(entry);
@@ -77,7 +81,9 @@ class SpeakBus {
       return;
     }
     const ctx = getAudioContext();
-    if (!ctx) return;
+    if (!ctx) {
+      return;
+    }
     try {
       entry.clones = lives.map((track) => track.clone());
     } catch {
@@ -116,15 +122,21 @@ class SpeakBus {
     entry.source = null;
     entry.analyser = null;
     entry.data = null;
-    for (const track of entry.clones) track.stop();
+    for (const track of entry.clones) {
+      track.stop();
+    }
     entry.clones = [];
   }
 
   private kick() {
-    if (this.raf || this.entries.size === 0) return;
+    if (this.raf || this.entries.size === 0) {
+      return;
+    }
     const tick = () => {
       this.raf = 0;
-      if (this.entries.size === 0) return;
+      if (this.entries.size === 0) {
+        return;
+      }
       if (typeof document !== "undefined" && document.hidden) {
         this.raf = window.requestAnimationFrame(tick);
         return;

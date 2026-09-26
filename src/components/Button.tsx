@@ -52,7 +52,9 @@ export const Button = ({
     />
   );
 
-  if (!title) return button;
+  if (!title) {
+    return button;
+  }
 
   return (
     <Tooltip

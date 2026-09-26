@@ -12,7 +12,9 @@ let timer = 0;
 const listeners = new Set<() => void>();
 
 const emit = () => {
-  for (const listener of listeners) listener();
+  for (const listener of listeners) {
+    listener();
+  }
 };
 
 export const subscribeToast = (listener: () => void) => {

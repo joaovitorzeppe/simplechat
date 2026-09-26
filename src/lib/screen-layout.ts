@@ -7,8 +7,14 @@ export const screenStageKind = (
   hasPin: boolean,
   showCameras: boolean,
 ) => {
-  if (screenCount <= 0) return "cameras" as const;
-  if (hasPin && !showCameras) return "pinned-solo" as const;
-  if (hasPin) return "pinned-strip" as const;
+  if (screenCount <= 0) {
+    return "cameras" as const;
+  }
+  if (hasPin && !showCameras) {
+    return "pinned-solo" as const;
+  }
+  if (hasPin) {
+    return "pinned-strip" as const;
+  }
   return "split" as const;
 };

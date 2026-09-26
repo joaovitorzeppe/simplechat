@@ -52,7 +52,7 @@ const votePoll = (pollId: string, option: number) =>
 const controlTimer = (id: string, action: TimerAction) =>
   session.controlTimer(id, action);
 
-const CallChatDock = memo(function CallChatDock({
+const CallChatDock = memo(({
   open,
   people,
   onClose,
@@ -60,7 +60,7 @@ const CallChatDock = memo(function CallChatDock({
   open: boolean;
   people: PeerInfo[];
   onClose: () => void;
-}) {
+}) => {
   const messages = useSessionSelector((s) => s.messages);
   const selfId = useSessionSelector((s) => s.identity?.peerId ?? "");
   const hostPeerId = useSessionSelector((s) => s.hostPeerId);
@@ -111,7 +111,7 @@ const CallChatDock = memo(function CallChatDock({
   );
 });
 
-const CallStage = memo(function CallStage({
+const CallStage = memo(({
   roster,
   pinnedId,
   showCameras,
@@ -123,7 +123,7 @@ const CallStage = memo(function CallStage({
   showCameras: boolean;
   onPin: (id: string) => void;
   onAskRemove?: (peerId: string) => void;
-}) {
+}) => {
   const { t } = useI18n();
   const remotes = useSessionSelector((s) => s.remotes);
   const localStream = useSessionSelector((s) => s.localStream);
@@ -353,8 +353,12 @@ export const Call = () => {
   const invite = roomId ? inviteLink(roomId, roomSecret) : "";
 
   const people = useMemo(() => {
-    if (members.length > 0) return members;
-    if (!me) return [];
+    if (members.length > 0) {
+      return members;
+    }
+    if (!me) {
+      return [];
+    }
     return [
       { peerId: me.peerId, displayName: me.displayName },
       ...remotes.map((remote) => ({
@@ -367,7 +371,9 @@ export const Call = () => {
   const askRemove = useCallback(
     (peerId: string) => {
       const remote = remotes.find((item) => item.peerId === peerId);
-      if (!remote) return;
+      if (!remote) {
+        return;
+      }
       setKickRequest({
         peerId,
         name: displayLabel(remote.displayName, remote.peerId, people),

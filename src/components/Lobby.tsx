@@ -19,14 +19,20 @@ export const Lobby = ({ pending, roster, onAdmit, onDeny }: Props) => {
   const names = [...roster, ...pending];
 
   useEffect(() => {
-    if (pending.length === 0) return;
+    if (pending.length === 0) {
+      return;
+    }
     const stop = playRingtone();
     return stop;
   }, [pending.length]);
 
-  if (pending.length === 0) return null;
+  if (pending.length === 0) {
+    return null;
+  }
   const first = pending[0];
-  if (!first) return null;
+  if (!first) {
+    return null;
+  }
   const alone = pending.length === 1;
 
   return (

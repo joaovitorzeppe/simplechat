@@ -31,11 +31,15 @@ export const useDialogFocus = <T extends HTMLElement>(onDismiss?: () => void) =>
         dismiss.current?.();
         return;
       }
-      if (event.key !== "Tab" || !node) return;
+      if (event.key !== "Tab" || !node) {
+        return;
+      }
       const items = [...node.querySelectorAll<HTMLElement>(FOCUSABLE)];
       const first = items[0];
       const last = items.at(-1);
-      if (!first || !last) return;
+      if (!first || !last) {
+        return;
+      }
       if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
         last.focus();

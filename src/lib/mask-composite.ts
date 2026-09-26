@@ -3,7 +3,9 @@
  * Um único canal de confiança é probabilidade da pessoa.
  */
 export const personConfidence = (masks: Float32Array[]): Float32Array => {
-  if (masks.length === 0) return new Float32Array(0);
+  if (masks.length === 0) {
+    return new Float32Array(0);
+  }
   return masks.length > 1 ? masks[1] : masks[0];
 };
 

@@ -25,7 +25,9 @@ const ROOM_SECRET = /^[0-9a-z]{16}$/;
 const randomBase36 = (bytes: number, width: number) => {
   const buffer = crypto.getRandomValues(new Uint8Array(bytes));
   let value = 0n;
-  for (const byte of buffer) value = (value << 8n) | BigInt(byte);
+  for (const byte of buffer) {
+    value = (value << 8n) | BigInt(byte);
+  }
   return value.toString(36).padStart(width, "0");
 };
 
@@ -60,7 +62,9 @@ const writeStored = (key: string, value: string) => {
 
 export const loadRoomSecret = (): string => {
   const stored = readStored(SECRET_KEY);
-  if (stored && ROOM_SECRET.test(stored)) return stored;
+  if (stored && ROOM_SECRET.test(stored)) {
+    return stored;
+  }
   return rotateRoomSecret();
 };
 
@@ -73,13 +77,20 @@ export const rotateRoomSecret = (): string => {
 export const loadIdentity = (): Identity | null => {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<Identity>;
-    if (typeof parsed.displayName !== "string") return null;
-    if (typeof parsed.peerId !== "string") return null;
-    const displayName = clampDisplayName(parsed.displayName);
-    if (!displayName || !parsed.peerId || parsed.peerId.length > MAX_PEER_ID)
+    if (!raw) {
       return null;
+    }
+    const parsed = JSON.parse(raw) as Partial<Identity>;
+    if (typeof parsed.displayName !== "string") {
+      return null;
+    }
+    if (typeof parsed.peerId !== "string") {
+      return null;
+    }
+    const displayName = clampDisplayName(parsed.displayName);
+    if (!displayName || !parsed.peerId || parsed.peerId.length > MAX_PEER_ID) {
+      return null;
+    }
     // Chaves antigas embutiam o primeiro nome. Trocamos na primeira carga para
     // que o nome pare de trafegar pelo broker; links antigos morrem junto.
     if (!OPAQUE_ID.test(parsed.peerId)) {

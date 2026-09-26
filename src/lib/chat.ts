@@ -74,7 +74,9 @@ export const formatMessageTime = (
     minute: "2-digit",
   }).format(date);
 
-  if (sameCalendarDay(date, today)) return time;
+  if (sameCalendarDay(date, today)) {
+    return time;
+  }
 
   if (date.getFullYear() === today.getFullYear()) {
     const dayMonth = new Intl.DateTimeFormat(tag, {
@@ -101,7 +103,9 @@ const LINK_RE = /\b(?:https?:\/\/|www\.)[^\s<>"]+/gi;
 
 const peelTrail = (raw: string) => {
   let url = raw;
-  while (/[.,;:!?]+$/.test(url)) url = url.slice(0, -1);
+  while (/[.,;:!?]+$/.test(url)) {
+    url = url.slice(0, -1);
+  }
   while (
     url.endsWith(")") &&
     (url.match(/\(/g)?.length ?? 0) < (url.match(/\)/g)?.length ?? 0)
@@ -115,7 +119,9 @@ export const hrefForLabel = (label: string) => {
   const hierarchical = /^([a-z][a-z0-9+.-]*):\/\//i.exec(label);
   if (hierarchical) {
     const scheme = hierarchical[1].toLowerCase();
-    if (scheme !== "http" && scheme !== "https") return null;
+    if (scheme !== "http" && scheme !== "https") {
+      return null;
+    }
   } else if (/^[a-z][a-z0-9+.-]*:(?!\d)/i.test(label)) {
     // javascript:, data:, mailto: e afins nunca viram link clicável. O que vem
     // depois de dois-pontos com dígito é porta, como em exemplo.com:8080.
@@ -124,8 +130,9 @@ export const hrefForLabel = (label: string) => {
   const candidate = hierarchical ? label : `https://${label}`;
   try {
     const parsed = new URL(candidate);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:")
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
       return null;
+    }
     return parsed.href;
   } catch {
     return null;
@@ -156,7 +163,9 @@ const splitLinks = (text: string): MessagePart[] => {
 };
 
 const splitMentions = (text: string, marks: MentionMark[]): MessagePart[] => {
-  if (!marks.length || !text) return text ? [{ type: "text", value: text }] : [];
+  if (!marks.length || !text) {
+    return text ? [{ type: "text", value: text }] : [];
+  }
   const labels = [...marks].toSorted(
     (a, b) => b.label.length - a.label.length,
   );
@@ -178,7 +187,9 @@ const splitMentions = (text: string, marks: MentionMark[]): MessagePart[] => {
       if (text.startsWith(token, at)) {
         const after = at + token.length;
         const next = text[after];
-        if (next && !/[\s.,!?;:…]/.test(next)) continue;
+        if (next && !/[\s.,!?;:…]/.test(next)) {
+          continue;
+        }
         if (token.length > hitLen) {
           nextAt = at;
           hit = mark;
@@ -210,7 +221,9 @@ export const splitMessageText = (
   marks: MentionMark[] = [],
 ): MessagePart[] => {
   const withLinks = splitLinks(text);
-  if (!marks.length) return withLinks;
+  if (!marks.length) {
+    return withLinks;
+  }
   return withLinks.flatMap((part) =>
     part.type === "text" ? splitMentions(part.value, marks) : [part],
   );
@@ -243,7 +256,11 @@ export const formatFileSize = (bytes: number, locale: Locale) => {
     }).format(value);
     return `${n} ${unit}`;
   };
-  if (bytes < 1024) return format(bytes, "B");
-  if (bytes < 1024 * 1024) return format(bytes / 1024, "KB");
+  if (bytes < 1024) {
+    return format(bytes, "B");
+  }
+  if (bytes < 1024 * 1024) {
+    return format(bytes / 1024, "KB");
+  }
   return format(bytes / (1024 * 1024), "MB");
 };

@@ -123,13 +123,21 @@ export const commandQueryAt = (
   text: string,
   caret: number,
 ): CommandQuery | null => {
-  if (caret < 0 || caret > text.length) return null;
+  if (caret < 0 || caret > text.length) {
+    return null;
+  }
   const before = text.slice(0, caret);
   const at = before.lastIndexOf("/");
-  if (at < 0) return null;
-  if (at > 0 && !/\s/.test(before[at - 1] ?? "")) return null;
+  if (at < 0) {
+    return null;
+  }
+  if (at > 0 && !/\s/.test(before[at - 1] ?? "")) {
+    return null;
+  }
   const query = before.slice(at + 1);
-  if (query.includes("\n") || query.includes(" ")) return null;
+  if (query.includes("\n") || query.includes(" ")) {
+    return null;
+  }
   return { start: at, query };
 };
 
@@ -142,7 +150,9 @@ export const filterChatCommands = (query: string) => {
 
 export const insertCommand = (text: string, caret: number, name: string) => {
   const active = commandQueryAt(text, caret);
-  if (!active) return { text, caret };
+  if (!active) {
+    return { text, caret };
+  }
   const inserted = `/${name.replace(/^\//, "")} `;
   return {
     text: text.slice(0, active.start) + inserted + text.slice(caret),
@@ -172,7 +182,9 @@ export const shuffle = <T,>(items: readonly T[], rng: Rng = defaultRng): T[] => 
     const j = randomInt(0, i, rng);
     const a = next[i];
     const b = next[j];
-    if (a === undefined || b === undefined) continue;
+    if (a === undefined || b === undefined) {
+      continue;
+    }
     next[i] = b;
     next[j] = a;
   }
@@ -181,21 +193,30 @@ export const shuffle = <T,>(items: readonly T[], rng: Rng = defaultRng): T[] => 
 
 export const parseChoiceOptions = (args: string): string[] | null => {
   const raw = args.trim();
-  if (!raw) return null;
+  if (!raw) {
+    return null;
+  }
   const parts = raw.includes(",") ? raw.split(",") : raw.split(/\s+/);
   const unique: string[] = [];
   const seen = new Set<string>();
   for (const part of parts) {
     const option = part.trim();
-    if (!option) continue;
-    if (option.length > MAX_COMMAND_CHOICE_LENGTH) return null;
+    if (!option) {
+      continue;
+    }
+    if (option.length > MAX_COMMAND_CHOICE_LENGTH) {
+      return null;
+    }
     const key = option.toLowerCase();
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     unique.push(option);
   }
-  if (unique.length < 2 || unique.length > MAX_COMMAND_CHOICE_OPTIONS)
+  if (unique.length < 2 || unique.length > MAX_COMMAND_CHOICE_OPTIONS) {
     return null;
+  }
   return unique;
 };
 
@@ -214,17 +235,23 @@ export const MAX_TIMER_MS = 2 * 60 * 60 * 1000;
 
 export const parseTimerArgs = (args: string): number | null => {
   const raw = args.trim().toLowerCase().replace(/\s+/g, "");
-  if (!raw) return null;
+  if (!raw) {
+    return null;
+  }
   if (/^\d+$/.test(raw)) {
     const minutes = Number(raw);
-    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 120) return null;
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 120) {
+      return null;
+    }
     const ms = minutes * 60_000;
     return ms >= MIN_TIMER_MS && ms <= MAX_TIMER_MS ? ms : null;
   }
   const match = raw.match(
     /^(?:(\d+)h)?(?:(\d+)m(?:in)?)?(?:(\d+)s(?:ec|eg)?)?$/,
   );
-  if (!match || (!match[1] && !match[2] && !match[3])) return null;
+  if (!match || (!match[1] && !match[2] && !match[3])) {
+    return null;
+  }
   const hours = match[1] ? Number(match[1]) : 0;
   const minutes = match[2] ? Number(match[2]) : 0;
   const seconds = match[3] ? Number(match[3]) : 0;
@@ -236,7 +263,9 @@ export const parseTimerArgs = (args: string): number | null => {
     return null;
   }
   const ms = ((hours * 60 + minutes) * 60 + seconds) * 1000;
-  if (ms < MIN_TIMER_MS || ms > MAX_TIMER_MS) return null;
+  if (ms < MIN_TIMER_MS || ms > MAX_TIMER_MS) {
+    return null;
+  }
   return ms;
 };
 
@@ -263,10 +292,18 @@ export type RollSpec =
   | { kind: "expr"; repeats: number; terms: RollTermSpec[] };
 
 const parseRangePair = (min: number, max: number): RollSpec | null => {
-  if (!Number.isInteger(min) || !Number.isInteger(max)) return null;
-  if (min < 0 || max < 0) return null;
-  if (min > MAX_COMMAND_RANGE || max > MAX_COMMAND_RANGE) return null;
-  if (Math.abs(max - min) > MAX_COMMAND_RANGE) return null;
+  if (!Number.isInteger(min) || !Number.isInteger(max)) {
+    return null;
+  }
+  if (min < 0 || max < 0) {
+    return null;
+  }
+  if (min > MAX_COMMAND_RANGE || max > MAX_COMMAND_RANGE) {
+    return null;
+  }
+  if (Math.abs(max - min) > MAX_COMMAND_RANGE) {
+    return null;
+  }
   return { kind: "range", min, max };
 };
 
@@ -285,22 +322,33 @@ const parseExprAtom = (
   if (dice) {
     const n = dice[1] ? Number(dice[1]) : 1;
     const sides = Number(dice[2]);
-    if (!Number.isInteger(n) || !Number.isInteger(sides)) return null;
-    if (n < 1 || n > MAX_COMMAND_DICE) return null;
-    if (sides < 2 || sides > MAX_COMMAND_SIDES) return null;
+    if (!Number.isInteger(n) || !Number.isInteger(sides)) {
+      return null;
+    }
+    if (n < 1 || n > MAX_COMMAND_DICE) {
+      return null;
+    }
+    if (sides < 2 || sides > MAX_COMMAND_SIDES) {
+      return null;
+    }
     return { spec: { kind: "dice", n, sides }, length: dice[0].length };
   }
   const mod = rest.match(/^(\d+)/);
-  if (!mod) return null;
-  const value = Number(mod[1]);
-  if (!Number.isInteger(value) || value < 1 || value > MAX_COMMAND_MOD)
+  if (!mod) {
     return null;
+  }
+  const value = Number(mod[1]);
+  if (!Number.isInteger(value) || value < 1 || value > MAX_COMMAND_MOD) {
+    return null;
+  }
   return { spec: { kind: "mod", value }, length: mod[0].length };
 };
 
 export const parseExprTerms = (expr: string): RollTermSpec[] | null => {
   const compact = expr.replace(/\s+/g, "");
-  if (!compact || !/[dD]/.test(compact)) return null;
+  if (!compact || !/[dD]/.test(compact)) {
+    return null;
+  }
   const terms: RollTermSpec[] = [];
   let i = 0;
   let op: RollExprOp = "+";
@@ -308,44 +356,66 @@ export const parseExprTerms = (expr: string): RollTermSpec[] | null => {
   if (lead === "+" || lead === "-") {
     op = lead;
     i += 1;
-    if (i >= compact.length) return null;
+    if (i >= compact.length) {
+      return null;
+    }
   }
   const first = parseExprAtom(compact.slice(i));
-  if (!first) return null;
+  if (!first) {
+    return null;
+  }
   terms.push({ ...first.spec, op });
   i += first.length;
   while (i < compact.length) {
     const next = compact[i] ?? "";
-    if (!isExprOp(next)) return null;
+    if (!isExprOp(next)) {
+      return null;
+    }
     i += 1;
-    if (i >= compact.length) return null;
+    if (i >= compact.length) {
+      return null;
+    }
     const atom = parseExprAtom(compact.slice(i));
-    if (!atom) return null;
+    if (!atom) {
+      return null;
+    }
     terms.push({ ...atom.spec, op: next });
     i += atom.length;
   }
-  if (terms.length === 0 || terms.length > MAX_COMMAND_TERMS) return null;
-  if (!terms.some((term) => term.kind === "dice")) return null;
+  if (terms.length === 0 || terms.length > MAX_COMMAND_TERMS) {
+    return null;
+  }
+  if (!terms.some((term) => term.kind === "dice")) {
+    return null;
+  }
   const diceCount = terms.reduce(
     (sum, term) => sum + (term.kind === "dice" ? term.n : 0),
     0,
   );
-  if (diceCount < 1 || diceCount > MAX_COMMAND_DICE) return null;
+  if (diceCount < 1 || diceCount > MAX_COMMAND_DICE) {
+    return null;
+  }
   return terms;
 };
 
 export const parseRollArgs = (args: string): RollSpec | null => {
   const raw = args.trim();
-  if (!raw) return { kind: "dice", n: 1, sides: 20 };
+  if (!raw) {
+    return { kind: "dice", n: 1, sides: 20 };
+  }
   if (/^\d+$/.test(raw)) {
     const sides = Number(raw);
-    if (sides < 2 || sides > MAX_COMMAND_SIDES) return null;
+    if (sides < 2 || sides > MAX_COMMAND_SIDES) {
+      return null;
+    }
     return { kind: "dice", n: 1, sides };
   }
   if (!/[dD]/.test(raw)) {
     const range =
       raw.match(/^(\d+)\s*-\s*(\d+)$/) ?? raw.match(/^(\d+)\s+(\d+)$/);
-    if (!range) return null;
+    if (!range) {
+      return null;
+    }
     return parseRangePair(Number(range[1]), Number(range[2]));
   }
   let repeats = 1;
@@ -354,11 +424,14 @@ export const parseRollArgs = (args: string): RollSpec | null => {
   if (repeated) {
     repeats = Number(repeated[1]);
     expr = repeated[2] ?? "";
-    if (!Number.isInteger(repeats) || repeats < 1 || repeats > MAX_COMMAND_REPEATS)
+    if (!Number.isInteger(repeats) || repeats < 1 || repeats > MAX_COMMAND_REPEATS) {
       return null;
+    }
   }
   const terms = parseExprTerms(expr);
-  if (!terms) return null;
+  if (!terms) {
+    return null;
+  }
   const only = terms[0];
   if (
     repeats === 1 &&
@@ -376,7 +449,9 @@ export const formatRollFormula = (terms: RollTermSpec[]) => {
     .map((term, index) => {
       const body =
         term.kind === "mod" ? String(term.value) : `${term.n}d${term.sides}`;
-      if (index === 0) return term.op === "-" ? `-${body}` : body;
+      if (index === 0) {
+        return term.op === "-" ? `-${body}` : body;
+      }
       return `${term.op}${body}`;
     })
     .join("");
@@ -385,21 +460,27 @@ export const formatRollFormula = (terms: RollTermSpec[]) => {
 export const joinSigned = (values: number[]) => {
   return values
     .map((value, index) => {
-      if (index === 0) return String(value);
+      if (index === 0) {
+        return String(value);
+      }
       return value < 0 ? ` - ${-value}` : ` + ${value}`;
     })
     .join("");
 };
 
 const atomValue = (term: RollExprTerm) => {
-  if (term.kind === "mod") return term.value;
+  if (term.kind === "mod") {
+    return term.value;
+  }
   return term.values.reduce((sum, value) => sum + value, 0);
 };
 
 /** `*` e `/` primeiro, da esquerda para a direita; divisão truncada em direção a zero. */
 export const exprPassTotal = (terms: RollExprTerm[]): number | null => {
   const first = terms[0];
-  if (!first || first.op === "*" || first.op === "/") return null;
+  if (!first || first.op === "*" || first.op === "/") {
+    return null;
+  }
   let acc = atomValue(first);
   let accOp: "+" | "-" = first.op === "-" ? "-" : "+";
   const parts: number[] = [];
@@ -408,15 +489,22 @@ export const exprPassTotal = (terms: RollExprTerm[]): number | null => {
   };
   for (let i = 1; i < terms.length; i += 1) {
     const term = terms[i];
-    if (!term) return null;
+    if (!term) {
+      return null;
+    }
     const value = atomValue(term);
     if (term.op === "*" || term.op === "/") {
-      if (term.op === "*") acc *= value;
-      else {
-        if (value === 0) return null;
+      if (term.op === "*") {
+        acc *= value;
+      } else {
+        if (value === 0) {
+          return null;
+        }
         acc = Math.trunc(acc / value);
       }
-      if (!Number.isSafeInteger(acc)) return null;
+      if (!Number.isSafeInteger(acc)) {
+        return null;
+      }
       continue;
     }
     flush();
@@ -437,14 +525,18 @@ export const formatExprParts = (terms: RollExprTerm[]) => {
           : term.values.length === 1
             ? String(term.values[0])
             : `(${term.values.join(" + ")})`;
-      if (index === 0) return term.op === "-" ? `-${body}` : body;
+      if (index === 0) {
+        return term.op === "-" ? `-${body}` : body;
+      }
       return ` ${term.op} ${body}`;
     })
     .join("");
 };
 
 const specFromExprTerm = (term: RollExprTerm): RollTermSpec => {
-  if (term.kind === "mod") return { kind: "mod", value: term.value, op: term.op };
+  if (term.kind === "mod") {
+    return { kind: "mod", value: term.value, op: term.op };
+  }
   return { kind: "dice", n: term.n, sides: term.sides, op: term.op };
 };
 
@@ -455,13 +547,17 @@ const commandByName = (name: string) => {
 
 export const parseChatCommand = (text: string) => {
   const trimmed = text.trim();
-  if (!trimmed.startsWith("/")) return null;
+  if (!trimmed.startsWith("/")) {
+    return null;
+  }
   const rest = trimmed.slice(1);
   const space = rest.search(/\s/);
   const name = space < 0 ? rest : rest.slice(0, space);
   const args = space < 0 ? "" : rest.slice(space + 1).trim();
   const command = commandByName(name);
-  if (!command) return null;
+  if (!command) {
+    return null;
+  }
   return { id: command.id, args };
 };
 
@@ -504,7 +600,9 @@ export const formatCommandText = (
   }
   if (command.kind === "expr") {
     const first = command.passes[0];
-    if (!first) return "";
+    if (!first) {
+      return "";
+    }
     const formula = formatRollFormula(first.terms.map(specFromExprTerm));
     if (command.passes.length === 1) {
       return translate("chat.command.rollExpr", {
@@ -579,7 +677,9 @@ export const formatCommandText = (
 };
 
 export const mentionsForCommand = (command: ChatCommandPayload) => {
-  if (command.kind === "pick") return [command.peerId];
+  if (command.kind === "pick") {
+    return [command.peerId];
+  }
   if (command.kind === "order") {
     return command.people.map((person) => person.peerId);
   }
@@ -596,7 +696,9 @@ export const peopleForCommandMentions = (
         ? { ...person, displayName: command.name }
         : person,
     );
-    if (mapped.some((person) => person.peerId === command.peerId)) return mapped;
+    if (mapped.some((person) => person.peerId === command.peerId)) {
+      return mapped;
+    }
     return [...mapped, { peerId: command.peerId, displayName: command.name }];
   }
   if (command?.kind === "order") {
@@ -622,10 +724,14 @@ export const runChatCommand = (
   rng: Rng = defaultRng,
 ): CommandResult | null => {
   const parsed = parseChatCommand(text);
-  if (!parsed) return null;
+  if (!parsed) {
+    return null;
+  }
   if (parsed.id === "roll") {
     const spec = parseRollArgs(parsed.args);
-    if (!spec) return { ok: false, error: "chat.command.rollInvalid" };
+    if (!spec) {
+      return { ok: false, error: "chat.command.rollInvalid" };
+    }
     if (spec.kind === "dice") {
       const values = Array.from({ length: spec.n }, () =>
         randomInt(1, spec.sides, rng),
@@ -657,7 +763,9 @@ export const runChatCommand = (
       const passes: Array<{ terms: RollExprTerm[]; total: number }> = [];
       for (let i = 0; i < spec.repeats; i += 1) {
         const terms: RollExprTerm[] = spec.terms.map((term) => {
-          if (term.kind === "mod") return term;
+          if (term.kind === "mod") {
+            return term;
+          }
           return {
             kind: "dice" as const,
             n: term.n,
@@ -691,9 +799,13 @@ export const runChatCommand = (
   }
   if (parsed.id === "choose") {
     const options = parseChoiceOptions(parsed.args);
-    if (!options) return { ok: false, error: "chat.command.chooseInvalid" };
+    if (!options) {
+      return { ok: false, error: "chat.command.chooseInvalid" };
+    }
     const option = options[randomInt(0, options.length - 1, rng)];
-    if (!option) return { ok: false, error: "chat.command.chooseInvalid" };
+    if (!option) {
+      return { ok: false, error: "chat.command.chooseInvalid" };
+    }
     return { ok: true, command: { kind: "choice", option, options } };
   }
   if (parsed.id === "order") {
@@ -722,17 +834,23 @@ export const runChatCommand = (
   }
   if (parsed.id === "emote") {
     const action = parsed.args.trim().slice(0, MAX_COMMAND_EMOTE);
-    if (!action) return { ok: false, error: "chat.command.emoteEmpty" };
+    if (!action) {
+      return { ok: false, error: "chat.command.emoteEmpty" };
+    }
     return { ok: true, command: { kind: "emote", action } };
   }
   if (parsed.id === "timer") {
     const ms = parseTimerArgs(parsed.args);
-    if (ms === null) return { ok: false, error: "chat.command.timerInvalid" };
+    if (ms === null) {
+      return { ok: false, error: "chat.command.timerInvalid" };
+    }
     return { ok: true, command: { kind: "timer", ms } };
   }
   if (parsed.id === "poll") {
     const options = parseChoiceOptions(parsed.args);
-    if (!options) return { ok: false, error: "chat.command.pollInvalid" };
+    if (!options) {
+      return { ok: false, error: "chat.command.pollInvalid" };
+    }
     return {
       ok: true,
       command: { kind: "poll", id: crypto.randomUUID(), options },
@@ -740,7 +858,9 @@ export const runChatCommand = (
   }
   if (parsed.id === "code") {
     const snippet = parseCodeArgs(parsed.args);
-    if (!snippet) return { ok: false, error: "chat.command.codeEmpty" };
+    if (!snippet) {
+      return { ok: false, error: "chat.command.codeEmpty" };
+    }
     return {
       ok: true,
       command: {
@@ -757,7 +877,9 @@ export const runChatCommand = (
     return { ok: false, error: "chat.command.pickEmpty" };
   }
   const person = people[randomInt(0, people.length - 1, rng)];
-  if (!person) return { ok: false, error: "chat.command.pickEmpty" };
+  if (!person) {
+    return { ok: false, error: "chat.command.pickEmpty" };
+  }
   return {
     ok: true,
     command: {

@@ -31,7 +31,9 @@ const App = () => {
   useEffect(() => {
     // getUserMedia e crypto.randomUUID exigem contexto seguro, então acessar
     // pelo IP da rede local em HTTP quebra o app sem mensagem nenhuma.
-    if (!window.isSecureContext) showToast("error.insecureContext");
+    if (!window.isSecureContext) {
+      showToast("error.insecureContext");
+    }
   }, []);
 
   useEffect(() => {

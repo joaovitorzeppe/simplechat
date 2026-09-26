@@ -4,7 +4,9 @@ import { useToast } from "@libs/toast";
 export const Toast = () => {
   const { t } = useI18n();
   const toast = useToast();
-  if (!toast) return null;
+  if (!toast) {
+    return null;
+  }
 
   return (
     <div

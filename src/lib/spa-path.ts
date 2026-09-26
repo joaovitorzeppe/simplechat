@@ -20,8 +20,12 @@ export const canonicalizePath = (pathname: string) => {
 
 export const parseLegalPath = (pathname: string): LegalKind | null => {
   const path = canonicalizePath(pathname);
-  if (path === "/privacy") return "privacy";
-  if (path === "/terms") return "terms";
+  if (path === "/privacy") {
+    return "privacy";
+  }
+  if (path === "/terms") {
+    return "terms";
+  }
   return null;
 };
 
@@ -29,7 +33,9 @@ export const legalHref = (kind: LegalKind) => LEGAL_HREF[kind];
 
 /** Volta no histórico se a página anterior for deste origin; senão vai para `/`. */
 export const sameOriginReferrer = (referrer: string, origin: string) => {
-  if (!referrer) return false;
+  if (!referrer) {
+    return false;
+  }
   try {
     return new URL(referrer).origin === origin;
   } catch {
@@ -43,7 +49,9 @@ export const spaHomeHref = (url: {
   hash: string;
 }) => {
   const path = canonicalizePath(url.pathname);
-  if (path === "/" || path === "") return null;
+  if (path === "/" || path === "") {
+    return null;
+  }
   const legal = parseLegalPath(path);
   if (legal) {
     const href = `${legalHref(legal)}${url.search}${url.hash}`;
@@ -55,6 +63,8 @@ export const spaHomeHref = (url: {
 
 export const settleSpaPath = () => {
   const next = spaHomeHref(window.location);
-  if (!next) return;
+  if (!next) {
+    return;
+  }
   window.history.replaceState(null, "", next);
 };

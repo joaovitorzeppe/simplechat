@@ -26,7 +26,7 @@ type Props = {
   onSetRoom?: (peerId: string, kind: MuteKind, muted: boolean) => void;
 };
 
-export const VideoTile = memo(function VideoTile({
+export const VideoTile = memo(({
   stream,
   name,
   peerId,
@@ -42,7 +42,7 @@ export const VideoTile = memo(function VideoTile({
   roomMute,
   onToggleLocal,
   onSetRoom,
-}: Props) {
+}: Props) => {
   const ref = useRef<HTMLVideoElement>(null);
   const tileRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();

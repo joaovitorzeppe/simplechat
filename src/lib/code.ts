@@ -111,21 +111,27 @@ const unwrapFence = (
   const match = raw
     .trim()
     .match(/^```([a-zA-Z0-9_+-]*)[ \t]*\r?\n([\s\S]*?)\r?\n?```$/);
-  if (!match) return { language: null, source: raw };
+  if (!match) {
+    return { language: null, source: raw };
+  }
   return { language: match[1] || null, source: match[2] ?? "" };
 };
 
 const countHits = (source: string, patterns: RegExp[]) => {
   let total = 0;
   for (const pattern of patterns) {
-    if (pattern.test(source)) total += 1;
+    if (pattern.test(source)) {
+      total += 1;
+    }
   }
   return total;
 };
 
 export const detectCodeLanguage = (source: string): CodeLanguage => {
   const text = source.trim();
-  if (!text) return "text";
+  if (!text) {
+    return "text";
+  }
 
   const scores: Record<Exclude<CodeLanguage, "text">, number> = {
     js: 0,
@@ -303,23 +309,49 @@ export const detectCodeLanguage = (source: string): CodeLanguage => {
     /\*\*[^*\n]+\*\*/,
   ]);
 
-  if (scores.json >= 6) return "json";
-  if (scores.rust >= 2) return "rust";
-  if (scores.go >= 2 && scores.go >= scores.swift) return "go";
-  if (scores.swift >= 2) return "swift";
-  if (scores.kotlin >= 2) return "kotlin";
-  if (scores.csharp >= 2) return "csharp";
-  if (scores.php >= 2) return "php";
-  if (scores.cpp >= scores.c && scores.cpp >= 2) return "cpp";
-  if (scores.c >= 2 && scores.c > scores.java) return "c";
-  if (scores.java >= scores.js && scores.java >= 2) return "java";
-  if (scores.ts > 0 && scores.ts >= scores.js) return "ts";
-  if (scores.markdown >= 3 && scores.html < 2) return "markdown";
+  if (scores.json >= 6) {
+    return "json";
+  }
+  if (scores.rust >= 2) {
+    return "rust";
+  }
+  if (scores.go >= 2 && scores.go >= scores.swift) {
+    return "go";
+  }
+  if (scores.swift >= 2) {
+    return "swift";
+  }
+  if (scores.kotlin >= 2) {
+    return "kotlin";
+  }
+  if (scores.csharp >= 2) {
+    return "csharp";
+  }
+  if (scores.php >= 2) {
+    return "php";
+  }
+  if (scores.cpp >= scores.c && scores.cpp >= 2) {
+    return "cpp";
+  }
+  if (scores.c >= 2 && scores.c > scores.java) {
+    return "c";
+  }
+  if (scores.java >= scores.js && scores.java >= 2) {
+    return "java";
+  }
+  if (scores.ts > 0 && scores.ts >= scores.js) {
+    return "ts";
+  }
+  if (scores.markdown >= 3 && scores.html < 2) {
+    return "markdown";
+  }
 
   let best: CodeLanguage = "text";
   let bestScore = 0;
   for (const language of CODE_LANGUAGES) {
-    if (language === "text") continue;
+    if (language === "text") {
+      continue;
+    }
     const score = scores[language];
     if (score > bestScore) {
       best = language;
@@ -333,13 +365,19 @@ export const parseCodeArgs = (
   args: string,
 ): { language: CodeLanguage; source: string } | null => {
   const raw = args.trim();
-  if (!raw) return null;
-  if (resolveCodeLanguage(raw) && !/\s/.test(raw)) return null;
+  if (!raw) {
+    return null;
+  }
+  if (resolveCodeLanguage(raw) && !/\s/.test(raw)) {
+    return null;
+  }
 
   const fenced = unwrapFence(raw);
   if (fenced.language !== null || fenced.source !== raw) {
     const source = fenced.source.trim();
-    if (!source) return null;
+    if (!source) {
+      return null;
+    }
     const language =
       (fenced.language ? resolveCodeLanguage(fenced.language) : null) ??
       detectCodeLanguage(source);
@@ -352,7 +390,9 @@ export const parseCodeArgs = (
     if (hinted) {
       const inner = unwrapFence(match[3].trim());
       const source = inner.source.trim();
-      if (!source) return null;
+      if (!source) {
+        return null;
+      }
       const language =
         (inner.language ? resolveCodeLanguage(inner.language) : null) ?? hinted;
       return { language, source: source.slice(0, MAX_COMMAND_CODE) };
@@ -1269,9 +1309,11 @@ const pushToken = (
   type: CodeToken["type"],
   value: string,
 ) => {
-  if (!value) return;
+  if (!value) {
+    return;
+  }
   const last = tokens[tokens.length - 1];
-  if (last && last.type === type) {
+  if (last?.type === type) {
     last.value += value;
     return;
   }
@@ -1291,7 +1333,9 @@ const scanCLike = (
     const next = source[i + 1] ?? "";
     if (ch === "/" && next === "/") {
       let end = source.indexOf("\n", i);
-      if (end < 0) end = n;
+      if (end < 0) {
+        end = n;
+      }
       pushToken(tokens, "comment", source.slice(i, end));
       i = end;
       continue;
@@ -1305,7 +1349,9 @@ const scanCLike = (
     }
     if (options.hashes && ch === "#" && (i === 0 || /\s/.test(source[i - 1] ?? ""))) {
       let end = source.indexOf("\n", i);
-      if (end < 0) end = n;
+      if (end < 0) {
+        end = n;
+      }
       pushToken(tokens, "comment", source.slice(i, end));
       i = end;
       continue;
@@ -1331,14 +1377,18 @@ const scanCLike = (
     }
     if (/\d/.test(ch)) {
       let j = i + 1;
-      while (j < n && /[\d._]/.test(source[j] ?? "")) j += 1;
+      while (j < n && /[\d._]/.test(source[j] ?? "")) {
+        j += 1;
+      }
       pushToken(tokens, "number", source.slice(i, j));
       i = j;
       continue;
     }
     if (isIdentStart(ch)) {
       let j = i + 1;
-      while (j < n && isIdent(source[j] ?? "")) j += 1;
+      while (j < n && isIdent(source[j] ?? "")) {
+        j += 1;
+      }
       const ident = source.slice(i, j);
       const key = options.insensitive ? ident.toLowerCase() : ident;
       pushToken(tokens, keywords.has(key) ? "keyword" : "plain", ident);
@@ -1365,7 +1415,9 @@ const scanPython = (source: string): CodeToken[] => {
     const ch = source[i] ?? "";
     if (ch === "#") {
       let end = source.indexOf("\n", i);
-      if (end < 0) end = n;
+      if (end < 0) {
+        end = n;
+      }
       pushToken(tokens, "comment", source.slice(i, end));
       i = end;
       continue;
@@ -1399,14 +1451,18 @@ const scanPython = (source: string): CodeToken[] => {
     }
     if (/\d/.test(ch)) {
       let j = i + 1;
-      while (j < n && /[\d._]/.test(source[j] ?? "")) j += 1;
+      while (j < n && /[\d._]/.test(source[j] ?? "")) {
+        j += 1;
+      }
       pushToken(tokens, "number", source.slice(i, j));
       i = j;
       continue;
     }
     if (isIdentStart(ch)) {
       let j = i + 1;
-      while (j < n && isIdent(source[j] ?? "")) j += 1;
+      while (j < n && isIdent(source[j] ?? "")) {
+        j += 1;
+      }
       const ident = source.slice(i, j);
       pushToken(tokens, keywords.has(ident) ? "keyword" : "plain", ident);
       i = j;
@@ -1433,7 +1489,9 @@ const scanSql = (source: string): CodeToken[] => {
     const next = source[i + 1] ?? "";
     if (ch === "-" && next === "-") {
       let end = source.indexOf("\n", i);
-      if (end < 0) end = n;
+      if (end < 0) {
+        end = n;
+      }
       pushToken(tokens, "comment", source.slice(i, end));
       i = end;
       continue;
@@ -1464,14 +1522,18 @@ const scanSql = (source: string): CodeToken[] => {
     }
     if (/\d/.test(ch)) {
       let j = i + 1;
-      while (j < n && /[\d.]/.test(source[j] ?? "")) j += 1;
+      while (j < n && /[\d.]/.test(source[j] ?? "")) {
+        j += 1;
+      }
       pushToken(tokens, "number", source.slice(i, j));
       i = j;
       continue;
     }
     if (isIdentStart(ch)) {
       let j = i + 1;
-      while (j < n && isIdent(source[j] ?? "")) j += 1;
+      while (j < n && isIdent(source[j] ?? "")) {
+        j += 1;
+      }
       const ident = source.slice(i, j);
       pushToken(
         tokens,
@@ -1510,7 +1572,9 @@ const scanHtml = (source: string): CodeToken[] => {
       const tag = source.slice(i, stop);
       const attr = tag.split(/(\s+|(?:=)|(?:"[^"]*"|'[^']*'))/g);
       for (const part of attr) {
-        if (!part) continue;
+        if (!part) {
+          continue;
+        }
         if (part.startsWith('"') || part.startsWith("'")) {
           pushToken(tokens, "string", part);
         } else if (part.startsWith("<") || part.startsWith("/") || part === ">") {
@@ -1552,10 +1616,14 @@ const scanMarkdown = (source: string): CodeToken[] => {
     const atLine = i === 0 || source[i - 1] === "\n";
     if (atLine && source[i] === "#") {
       let j = i;
-      while (j < n && source[j] === "#") j += 1;
+      while (j < n && source[j] === "#") {
+        j += 1;
+      }
       if (j < n && /\s/.test(source[j] ?? "")) {
         let end = source.indexOf("\n", i);
-        if (end < 0) end = n;
+        if (end < 0) {
+          end = n;
+        }
         pushToken(tokens, "keyword", source.slice(i, end));
         i = end;
         continue;
@@ -1596,11 +1664,21 @@ export const highlightCode = (
   source: string,
   language: CodeLanguage,
 ): CodeToken[] => {
-  if (language === "text") return [{ type: "plain", value: source }];
-  if (language === "python") return scanPython(source);
-  if (language === "sql") return scanSql(source);
-  if (language === "html") return scanHtml(source);
-  if (language === "markdown") return scanMarkdown(source);
+  if (language === "text") {
+    return [{ type: "plain", value: source }];
+  }
+  if (language === "python") {
+    return scanPython(source);
+  }
+  if (language === "sql") {
+    return scanSql(source);
+  }
+  if (language === "html") {
+    return scanHtml(source);
+  }
+  if (language === "markdown") {
+    return scanMarkdown(source);
+  }
   if (language === "js") {
     return scanCLike(source, KEYWORDS.js, { template: true });
   }

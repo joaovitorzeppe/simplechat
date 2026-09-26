@@ -21,7 +21,9 @@ const prefersLight = () => {
 const savedTheme = (): Theme | null => {
   try {
     const saved = localStorage.getItem(KEY);
-    if (saved && isTheme(saved)) return saved;
+    if (saved && isTheme(saved)) {
+      return saved;
+    }
   } catch {
     // ignore
   }
@@ -38,7 +40,9 @@ const listeners = new Set<() => void>();
 const applyDocument = (next: Theme) => {
   document.documentElement.classList.toggle("light", next === "light");
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", CANVAS[next]);
+  if (meta) {
+    meta.setAttribute("content", CANVAS[next]);
+  }
   const status = document.querySelector(
     'meta[name="apple-mobile-web-app-status-bar-style"]',
   );
@@ -64,7 +68,9 @@ export const subscribe = (listener: () => void) => {
 export const setTheme = (next: Theme, options?: { persist?: boolean }) => {
   if (theme !== next) {
     theme = next;
-    for (const listener of listeners) listener();
+    for (const listener of listeners) {
+      listener();
+    }
   }
   if (options?.persist !== false) {
     try {
@@ -86,7 +92,9 @@ try {
   window
     .matchMedia("(prefers-color-scheme: light)")
     .addEventListener("change", () => {
-      if (savedTheme()) return;
+      if (savedTheme()) {
+        return;
+      }
       setTheme(prefersLight() ? "light" : "dark", { persist: false });
     });
 } catch {

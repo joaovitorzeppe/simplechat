@@ -22,7 +22,9 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   render() {
-    if (!this.state.crashed) return this.props.children;
+    if (!this.state.crashed) {
+      return this.props.children;
+    }
 
     return (
       <main className="min-h-dvh grid place-items-center px-4">

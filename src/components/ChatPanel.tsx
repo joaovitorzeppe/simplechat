@@ -87,14 +87,22 @@ export const ChatPanel = ({
     mentionQuery && matchAllOption(mentionQuery.query, others.length > 0),
   );
   const mentionItems: PickerItem[] = useMemo(() => {
-    if (!mentionQuery) return [];
+    if (!mentionQuery) {
+      return [];
+    }
     const next: PickerItem[] = [];
-    if (showAll) next.push({ kind: "all", label: ALL_MENTION });
-    for (const person of filtered) next.push({ kind: "peer", person });
+    if (showAll) {
+      next.push({ kind: "all", label: ALL_MENTION });
+    }
+    for (const person of filtered) {
+      next.push({ kind: "peer", person });
+    }
     return next;
   }, [filtered, mentionQuery, showAll]);
   const commandItems: CommandPickerItem[] = useMemo(() => {
-    if (!commandQuery) return [];
+    if (!commandQuery) {
+      return [];
+    }
     return filterChatCommands(commandQuery.query).map((command) => ({
       id: command.id,
       slash: `/${t(command.nameKey)}`,
@@ -105,7 +113,9 @@ export const ChatPanel = ({
 
   useEffect(() => {
     const list = listRef.current;
-    if (!list) return;
+    if (!list) {
+      return;
+    }
     const onScroll = () => {
       const distance = list.scrollHeight - list.scrollTop - list.clientHeight;
       pinnedToBottom.current = distance < 80;
@@ -116,7 +126,9 @@ export const ChatPanel = ({
 
   useLayoutEffect(() => {
     const list = listRef.current;
-    if (!list || !pinnedToBottom.current) return;
+    if (!list || !pinnedToBottom.current) {
+      return;
+    }
     list.scrollTop = list.scrollHeight;
     // oxlint-disable-next-line exhaustive-effect-dependencies
   }, [messages.length]);
@@ -126,7 +138,9 @@ export const ChatPanel = ({
     setCaret(next.caret);
     requestAnimationFrame(() => {
       const input = inputRef.current;
-      if (!input) return;
+      if (!input) {
+        return;
+      }
       input.focus();
       input.setSelectionRange(next.caret, next.caret);
     });
@@ -148,7 +162,9 @@ export const ChatPanel = ({
     event.preventDefault();
     pinnedToBottom.current = true;
     const sent = onSend(text);
-    if (sent === false) return;
+    if (sent === false) {
+      return;
+    }
     setText("");
     setCaret(0);
     setDismissedAt(null);
@@ -174,10 +190,14 @@ export const ChatPanel = ({
         event.preventDefault();
         if (pickerKind === "mention") {
           const item = mentionItems[active] ?? mentionItems[0];
-          if (item) applyMention(item);
+          if (item) {
+            applyMention(item);
+          }
         } else {
           const item = commandItems[active] ?? commandItems[0];
-          if (item) applyCommand(item);
+          if (item) {
+            applyCommand(item);
+          }
         }
         return;
       }
@@ -185,7 +205,9 @@ export const ChatPanel = ({
       event.currentTarget.form?.requestSubmit();
       return;
     }
-    if (!pickerOpen || !pickerCount) return;
+    if (!pickerOpen || !pickerCount) {
+      return;
+    }
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setActive((index) => (index + 1) % pickerCount);
@@ -200,10 +222,14 @@ export const ChatPanel = ({
       event.preventDefault();
       if (pickerKind === "mention") {
         const item = mentionItems[active] ?? mentionItems[0];
-        if (item) applyMention(item);
+        if (item) {
+          applyMention(item);
+        }
       } else {
         const item = commandItems[active] ?? commandItems[0];
-        if (item) applyCommand(item);
+        if (item) {
+          applyCommand(item);
+        }
       }
       return;
     }
@@ -253,7 +279,9 @@ export const ChatPanel = ({
           onChange={(event) => {
             const file = event.target.files?.[0];
             event.target.value = "";
-            if (file) onSendFile(file);
+            if (file) {
+              onSendFile(file);
+            }
           }}
         />
         <Button

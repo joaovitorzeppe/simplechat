@@ -24,7 +24,9 @@ export const CommandPicker = ({
   onPick,
   onActive,
 }: Props) => {
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    return null;
+  }
 
   return (
     <div className="absolute inset-x-0 bottom-full z-20 mb-2 overflow-hidden rounded-2xl border border-line bg-zinc-900">

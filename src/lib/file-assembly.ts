@@ -31,7 +31,9 @@ export class IncomingBuffer {
   private async open() {
     try {
       const storage = navigator.storage;
-      if (!storage?.getDirectory) return;
+      if (!storage?.getDirectory) {
+        return;
+      }
       const root = await storage.getDirectory();
       this.opfsName = `sc-file-${this.meta.localId}`;
       this.handle = await root.getFileHandle(this.opfsName, { create: true });
@@ -53,8 +55,11 @@ export class IncomingBuffer {
     if (next > this.meta.size || heldTotal + bytes.byteLength > MAX_INCOMING_BYTES) {
       return false;
     }
-    if (this.writable) await this.writable.write(bytes);
-    else this.chunks.push(bytes);
+    if (this.writable) {
+      await this.writable.write(bytes);
+    } else {
+      this.chunks.push(bytes);
+    }
     this.received = next;
     return true;
   }
@@ -81,13 +86,17 @@ export class IncomingBuffer {
 
   async dispose() {
     try {
-      if (this.writable) await this.writable.abort();
+      if (this.writable) {
+        await this.writable.abort();
+      }
     } catch {
       // já fechado ou nunca chegou a abrir
     }
     this.writable = null;
     this.chunks = [];
-    if (!this.opfsName) return;
+    if (!this.opfsName) {
+      return;
+    }
     try {
       const root = await navigator.storage.getDirectory();
       await root.removeEntry(this.opfsName);

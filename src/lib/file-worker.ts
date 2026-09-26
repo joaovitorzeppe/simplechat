@@ -35,7 +35,9 @@ const recvs = new Map<string, IncomingBuffer>();
 
 const held = () => {
   let total = 0;
-  for (const incoming of recvs.values()) total += incoming.received;
+  for (const incoming of recvs.values()) {
+    total += incoming.received;
+  }
   return total;
 };
 
@@ -53,7 +55,9 @@ const onMessage = async (event: MessageEvent<InMessage>) => {
         return;
       case "send-slice": {
         const file = sends.get(msg.fileId);
-        if (!file) throw new Error("missing send");
+        if (!file) {
+          throw new Error("missing send");
+        }
         const buffer = await readFileSlice(file, msg.offset, msg.length);
         reply({ id: msg.id, type: "ok", buffer }, [buffer]);
         return;
@@ -69,18 +73,26 @@ const onMessage = async (event: MessageEvent<InMessage>) => {
         return;
       case "recv-push": {
         const incoming = recvs.get(msg.peerId);
-        if (!incoming) throw new Error("missing recv");
+        if (!incoming) {
+          throw new Error("missing recv");
+        }
         const data = msg.buffer ?? msg.blob;
-        if (!data) throw new Error("missing bytes");
+        if (!data) {
+          throw new Error("missing bytes");
+        }
         const ok = await incoming.push(data, held());
-        if (!ok) throw new Error("overflow");
+        if (!ok) {
+          throw new Error("overflow");
+        }
         reply({ id: msg.id, type: "ok", received: incoming.received });
         return;
       }
       case "recv-finish": {
         const incoming = recvs.get(msg.peerId);
         recvs.delete(msg.peerId);
-        if (!incoming) throw new Error("incomplete");
+        if (!incoming) {
+          throw new Error("incomplete");
+        }
         const blob = await incoming.finish();
         if (!blob) {
           await incoming.dispose();

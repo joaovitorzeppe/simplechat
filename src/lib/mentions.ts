@@ -28,13 +28,21 @@ export const mentionQueryAt = (
   text: string,
   caret: number,
 ): MentionQuery | null => {
-  if (caret < 0 || caret > text.length) return null;
+  if (caret < 0 || caret > text.length) {
+    return null;
+  }
   const before = text.slice(0, caret);
   const at = before.lastIndexOf("@");
-  if (at < 0) return null;
-  if (at > 0 && !/\s/.test(before[at - 1] ?? "")) return null;
+  if (at < 0) {
+    return null;
+  }
+  if (at > 0 && !/\s/.test(before[at - 1] ?? "")) {
+    return null;
+  }
   const query = before.slice(at + 1);
-  if (query.includes("\n")) return null;
+  if (query.includes("\n")) {
+    return null;
+  }
   return { start: at, query };
 };
 
@@ -47,7 +55,9 @@ export const filterMentionPeople = (
   return people
     .filter((person) => person.peerId !== selfId)
     .filter((person) => {
-      if (folded(person.displayName).includes(q)) return true;
+      if (folded(person.displayName).includes(q)) {
+        return true;
+      }
       return folded(
         displayLabel(person.displayName, person.peerId, people),
       ).includes(q);
@@ -60,7 +70,9 @@ export const filterMentionPeople = (
 };
 
 export const matchAllOption = (query: string, hasOthers: boolean) => {
-  if (!hasOthers) return false;
+  if (!hasOthers) {
+    return false;
+  }
   const q = folded(query);
   return !q || ALL_MENTION.startsWith(q);
 };
@@ -71,7 +83,9 @@ export const insertMention = (
   label: string,
 ) => {
   const active = mentionQueryAt(text, caret);
-  if (!active) return { text, caret };
+  if (!active) {
+    return { text, caret };
+  }
   const inserted = `@${label} `;
   return {
     text: text.slice(0, active.start) + inserted + text.slice(caret),
@@ -91,17 +105,25 @@ export const resolveMentions = (
   const seen = new Set<string>();
   const used: Array<{ start: number; end: number }> = [];
   const add = (id: string, start: number, end: number) => {
-    if (seen.has(id)) return;
+    if (seen.has(id)) {
+      return;
+    }
     const clash = used.find((span) => start < span.end && end > span.start);
     // Mesmo token (`@Ana` duas vezes na lista) marca todo mundo. Span
     // diferente ainda perde para o nome mais longo (`@Ana Maria`).
-    if (clash && (clash.start !== start || clash.end !== end)) return;
+    if (clash && (clash.start !== start || clash.end !== end)) {
+      return;
+    }
     seen.add(id);
-    if (!clash) used.push({ start, end });
+    if (!clash) {
+      used.push({ start, end });
+    }
     found.push(id);
   };
   const consider = (id: string, name: string) => {
-    if (!name) return;
+    if (!name) {
+      return;
+    }
     for (const match of text.matchAll(tokenAfter(name))) {
       const prefix = match[1]?.length ?? 0;
       const start = (match.index ?? 0) + prefix;
@@ -118,7 +140,9 @@ export const resolveMentions = (
     }
   }
   tokens.sort((a, b) => b.name.length - a.name.length);
-  for (const token of tokens) consider(token.id, token.name);
+  for (const token of tokens) {
+    consider(token.id, token.name);
+  }
   return found;
 };
 
@@ -126,7 +150,9 @@ export const isSelfMentioned = (
   mentions: string[] | undefined,
   selfId: string,
 ) => {
-  if (!mentions?.length) return false;
+  if (!mentions?.length) {
+    return false;
+  }
   return mentions.includes(ALL_MENTION) || mentions.includes(selfId);
 };
 
@@ -143,7 +169,9 @@ export const mentionMarks = (
   people: MentionPerson[],
   selfId: string,
 ): MentionMark[] => {
-  if (!mentions?.length) return [];
+  if (!mentions?.length) {
+    return [];
+  }
   const marks: MentionMark[] = [];
   if (mentions.includes(ALL_MENTION)) {
     marks.push({ label: ALL_MENTION, mine: true });
@@ -151,7 +179,9 @@ export const mentionMarks = (
   const named = people.filter((person) => mentions.includes(person.peerId));
   named.sort((a, b) => b.displayName.length - a.displayName.length);
   for (const person of named) {
-    if (person.displayName.toLowerCase() === ALL_MENTION) continue;
+    if (person.displayName.toLowerCase() === ALL_MENTION) {
+      continue;
+    }
     const unique = displayLabel(person.displayName, person.peerId, people);
     const marked = person.peerId === selfId;
     marks.push({ label: unique, mine: marked });

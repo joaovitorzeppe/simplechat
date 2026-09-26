@@ -24,7 +24,9 @@ export const useSessionSelector = <T,>(
     () => {
       const next = select(session.getState());
       const prev = cache.current;
-      if (prev && isEqual(prev.value, next)) return prev.value;
+      if (prev && isEqual(prev.value, next)) {
+        return prev.value;
+      }
       cache.current = { value: next };
       return next;
     },
