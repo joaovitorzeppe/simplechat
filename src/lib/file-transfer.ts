@@ -39,10 +39,15 @@ export class FileBridge {
       const worker = new Worker(new URL("./file-worker.ts", import.meta.url), {
         type: "module",
       });
-      worker.addEventListener("message", (event: MessageEvent) => {
-        const data = event.data as
-          | { id: number; type: "ok" } & WorkerOk
-          | { id: number; type: "err"; message: string };
+      worker.addEventListener(
+        "message",
+        (
+          event: MessageEvent<
+            | ({ id: number; type: "ok" } & WorkerOk)
+            | { id: number; type: "err"; message: string }
+          >,
+        ) => {
+        const data = event.data;
         const pending = this.pending.get(data.id);
         if (!pending) {
           return;
@@ -53,7 +58,8 @@ export class FileBridge {
         } else {
           pending.resolve(data);
         }
-      });
+        },
+      );
       worker.addEventListener("error", () => this.dropWorker());
       worker.addEventListener("messageerror", () => this.dropWorker());
       return worker;

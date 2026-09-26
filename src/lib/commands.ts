@@ -269,11 +269,12 @@ export const parseTimerArgs = (args: string): number | null => {
   return ms;
 };
 
+const pad = (value: number) => String(value).padStart(2, "0");
+
 export const formatTimerClock = (ms: number) => {
   const total = Math.max(0, Math.floor(ms / 1000));
   const seconds = total % 60;
   const minuteTotal = Math.floor(total / 60);
-  const pad = (value: number) => String(value).padStart(2, "0");
   if (minuteTotal >= 60) {
     const hours = Math.floor(minuteTotal / 60);
     const minutes = minuteTotal % 60;

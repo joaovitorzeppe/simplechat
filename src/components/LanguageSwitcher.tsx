@@ -1,5 +1,5 @@
 import { GlobeIcon } from "./Icons";
-import { localeNames, supportedLocales, type Locale } from "@i18n/i18n";
+import { isLocale, localeNames, supportedLocales } from "@i18n/i18n";
 import { useI18n } from "@i18n/use-i18n";
 import { cn } from "@libs/cn";
 
@@ -18,7 +18,11 @@ export const LanguageSwitcher = ({ className }: { className?: string }) => {
       <select
         value={locale}
         aria-label={t("language.label")}
-        onChange={(e) => setLocale(e.target.value as Locale)}
+        onChange={(e) => {
+          if (isLocale(e.target.value)) {
+            setLocale(e.target.value);
+          }
+        }}
         className="rounded-xl border border-line bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-100 outline-none focus:border-accent cursor-pointer"
       >
         {supportedLocales.map((code) => (

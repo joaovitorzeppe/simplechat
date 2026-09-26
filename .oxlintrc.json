@@ -93,7 +93,10 @@
       "env": { "jest": true },
       "rules": {
         "typescript/no-explicit-any": "off",
-        "typescript/unbound-method": "off"
+        "typescript/no-unsafe-type-assertion": "off",
+        "typescript/no-unsafe-argument": "off",
+        "typescript/unbound-method": "off",
+        "unicorn/consistent-function-scoping": "off"
       }
     },
     {

@@ -80,11 +80,15 @@ export const loadIdentity = (): Identity | null => {
     if (!raw) {
       return null;
     }
-    const parsed = JSON.parse(raw) as Partial<Identity>;
-    if (typeof parsed.displayName !== "string") {
-      return null;
-    }
-    if (typeof parsed.peerId !== "string") {
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      !("displayName" in parsed) ||
+      !("peerId" in parsed) ||
+      typeof parsed.displayName !== "string" ||
+      typeof parsed.peerId !== "string"
+    ) {
       return null;
     }
     const displayName = clampDisplayName(parsed.displayName);

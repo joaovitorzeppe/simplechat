@@ -246,6 +246,8 @@ export class PeerSession {
 
   private patch(partial: Partial<SessionState>) {
     let changed = false;
+    // As chaves de um Partial<SessionState> são chaves de SessionState.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     for (const key of Object.keys(partial) as (keyof SessionState)[]) {
       if (!Object.is(this.state[key], partial[key])) {
         changed = true;
@@ -306,7 +308,7 @@ export class PeerSession {
 
     peer.on("error", (err) => {
       this.starting = false;
-      const type = "type" in err ? String(err.type) : "";
+      const type = "type" in err ? err.type : "";
       if (type === "unavailable-id") {
         this.patch({
           peerReady: false,
@@ -539,7 +541,7 @@ export class PeerSession {
     }
     const conn = this.data.get(incoming.peerId);
     if (conn?.open) {
-      conn.send({
+      void conn.send({
         type: "hello",
         ...this.helloPayload(),
         kind: "room-join",
@@ -620,7 +622,7 @@ export class PeerSession {
     this.setRoomMembers(this.roomMembers.filter((p) => p.peerId !== peerId));
     const conn = this.data.get(peerId);
     if (conn?.open) {
-      conn.send({ type: "room-kicked" });
+      void conn.send({ type: "room-kicked" });
     }
     // Quem saiu já está fora de `roomMembers`, então `activeConnections` o
     // exclui daqui em diante: ele não recebe o segredo novo e o link que tem
@@ -856,7 +858,7 @@ export class PeerSession {
         return;
       }
       for (const conn of peers) {
-        conn.send(start);
+        void conn.send(start);
       }
       await this.files.openSend(id, file);
 
@@ -1416,18 +1418,18 @@ export class PeerSession {
       watchDataIce();
       this.iceEverConnected.add(conn.peer);
       if (outgoing && first) {
-        conn.send(first);
+        void conn.send(first);
       } else if (outgoing && this.state.callMode) {
-        conn.send({
+        void conn.send({
           type: "hello",
           ...this.helloPayload(),
           kind: "room-join",
         });
       }
       if (this.state.sharingScreen) {
-        conn.send({ type: "media-meta", sharingScreen: true });
+        void conn.send({ type: "media-meta", sharingScreen: true });
       }
-      conn.send({ type: "media-meta", cameraOff: this.state.cameraOff });
+      void conn.send({ type: "media-meta", cameraOff: this.state.cameraOff });
       this.offerExistingHost(conn);
     });
     conn.on("data", (raw) => {
@@ -1481,9 +1483,11 @@ export class PeerSession {
   }
 
   private async onIncomingCall(call: MediaConnection) {
-    const meta = call.metadata as
-      | { displayName?: string; kind?: string }
-      | undefined;
+    // Metadata vem do outro peer: campos `unknown` até serem checados.
+    const meta: { displayName?: unknown; kind?: unknown } | undefined =
+      typeof call.metadata === "object" && call.metadata !== null
+        ? call.metadata
+        : undefined;
     const metaName = this.nameFromMeta(meta?.displayName, call.peer);
     if (meta?.kind === "screen") {
       if (
@@ -2162,7 +2166,7 @@ export class PeerSession {
     const conn = this.data.get(peerId);
     const call = this.media.get(peerId);
     if (conn?.open) {
-      conn.send(message);
+      void conn.send(message);
     }
     this.data.delete(peerId);
     this.media.delete(peerId);
@@ -2178,7 +2182,7 @@ export class PeerSession {
     }
     this.patch({ pending: [...this.state.pending, { peerId, displayName }] });
     if (conn.open) {
-      conn.send({ type: "room-waiting" });
+      void conn.send({ type: "room-waiting" });
     }
   }
 
@@ -2272,7 +2276,7 @@ export class PeerSession {
     ) {
       return;
     }
-    conn.send({ type: "room-host", hostPeerId: me });
+    void conn.send({ type: "room-host", hostPeerId: me });
   }
 
   private becomeGuest(hostPeerId: string) {
@@ -2516,7 +2520,7 @@ export class PeerSession {
         return false;
       }
       const chunk = await this.files.readSlice(id, offset, FILE_CHUNK);
-      conn.send(chunk);
+      void conn.send(chunk);
       sent.set(conn, offset + chunk.byteLength);
       report();
     }
@@ -2524,7 +2528,7 @@ export class PeerSession {
     if (!conn.open) {
       return false;
     }
-    conn.send({ type: "file-end", id });
+    void conn.send({ type: "file-end", id });
     return true;
   }
 
@@ -2533,7 +2537,7 @@ export class PeerSession {
     limit: number,
     fn: (item: T) => Promise<R>,
   ): Promise<R[]> {
-    const results = new Array<R>(items.length);
+    const results: R[] = [];
     let next = 0;
     const workers = Array.from(
       { length: Math.min(limit, items.length) },
@@ -2541,6 +2545,8 @@ export class PeerSession {
         while (next < items.length) {
           const index = next;
           next += 1;
+          // Pool de `limit` workers: cada um processa um item por vez.
+          // oxlint-disable-next-line no-await-in-loop
           results[index] = await fn(items[index]);
         }
       },
@@ -2794,7 +2800,7 @@ export class PeerSession {
 
   private broadcast(message: WireMessage) {
     for (const conn of this.activeConnections()) {
-      conn.send(message);
+      void conn.send(message);
     }
   }
 

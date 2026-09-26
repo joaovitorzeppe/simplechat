@@ -50,9 +50,13 @@ export const VideoTile = memo(({
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     el.srcObject = stream;
-    if (stream) void el.play().catch(() => undefined);
+    if (stream) {
+      void el.play().catch(() => undefined);
+    }
     return () => {
       el.srcObject = null;
     };

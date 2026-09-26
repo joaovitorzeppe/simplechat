@@ -4,7 +4,11 @@ export type Locale = keyof typeof dictionaries;
 
 const KEY = "simplechat.locale";
 
-export const supportedLocales = Object.keys(dictionaries) as Locale[];
+export const isLocale = (value: string): value is Locale => {
+  return value in dictionaries;
+};
+
+export const supportedLocales = Object.keys(dictionaries).filter(isLocale);
 
 export const localeNames: Record<Locale, MessageKey> = {
   pt: "language.pt",
@@ -20,10 +24,6 @@ export const localeTags: Record<Locale, string> = {
   es: "es",
   fr: "fr",
   it: "it",
-};
-
-const isLocale = (value: string): value is Locale => {
-  return value in dictionaries;
 };
 
 export const detectLocale = (): Locale => {

@@ -10,6 +10,8 @@ const segmenter =
 
 export const graphemes = (value: string): string[] => {
   if (!segmenter) {
+    // Sem Intl.Segmenter, code points é o melhor disponível.
+    // oxlint-disable-next-line typescript/no-misused-spread
     return [...value];
   }
   return [...segmenter.segment(value)].map((part) => part.segment);

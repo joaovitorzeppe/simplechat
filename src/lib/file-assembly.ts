@@ -17,7 +17,7 @@ export type IncomingMeta = {
 export class IncomingBuffer {
   received = 0;
   readonly meta: IncomingMeta;
-  private chunks: Uint8Array[] = [];
+  private chunks: Uint8Array<ArrayBuffer>[] = [];
   private writable: FileSystemWritableFileStream | null = null;
   private handle: FileSystemFileHandle | null = null;
   private opfsName: string | null = null;
@@ -81,7 +81,7 @@ export class IncomingBuffer {
       await this.dispose();
       return blob;
     }
-    return new Blob(this.chunks as BlobPart[], { type: this.meta.mime });
+    return new Blob(this.chunks, { type: this.meta.mime });
   }
 
   async dispose() {

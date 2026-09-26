@@ -18,7 +18,9 @@ export const setFileProgress = (id: string, value: number) => {
   values.set(id, quantized);
   const subscribers = listeners.get(id);
   if (subscribers) {
-    for (const listener of subscribers) listener();
+    for (const listener of subscribers) {
+      listener();
+    }
   }
 };
 

@@ -771,7 +771,7 @@ describe("silenciar áudio e vídeo", () => {
     expect(core.state.roomMutes[ME]).toEqual({ audio: true, video: false });
     expect(core.state.muted).toBe(true);
     expect(track.enabled).toBe(false);
-    session.toggleMute();
+    void session.toggleMute();
     expect(core.state.muted).toBe(true);
     expect(track.enabled).toBe(false);
   });

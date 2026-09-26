@@ -32,7 +32,10 @@ export const TileMuteControls = ({
       return;
     }
     const onPointer = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      if (
+        !(event.target instanceof Node) ||
+        !rootRef.current?.contains(event.target)
+      ) {
         setOpen(null);
       }
     };

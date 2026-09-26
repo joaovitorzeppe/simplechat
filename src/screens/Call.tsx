@@ -65,7 +65,9 @@ const CallChatDock = memo(({
   const selfId = useSessionSelector((s) => s.identity?.peerId ?? "");
   const hostPeerId = useSessionSelector((s) => s.hostPeerId);
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const onKey = (event: KeyboardEvent) => {
       // Só no mobile o chat cobre a tela. Diálogos modais e o picker de
       // menção tratam o próprio Escape.
@@ -74,14 +76,17 @@ const CallChatDock = memo(({
         event.defaultPrevented ||
         window.matchMedia("(min-width: 768px)").matches ||
         document.querySelector('[aria-modal="true"]')
-      )
+      ) {
         return;
+      }
       onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
-  if (!open || !selfId) return null;
+  if (!open || !selfId) {
+    return null;
+  }
   return (
     <>
       <div
@@ -138,7 +143,9 @@ const CallStage = memo(({
   const screens = useMemo(() => {
     const items: ScreenItem[] = [];
     for (const remote of remotes) {
-      if (!remote.screenStream) continue;
+      if (!remote.screenStream) {
+        continue;
+      }
       items.push({
         id: remote.peerId,
         stream: remote.screenStream,
@@ -252,7 +259,9 @@ const CallStage = memo(({
 
   if (kind === "pinned-solo" && userPinned) {
     const focused = screens.find((item) => item.id === userPinned);
-    if (!focused) return null;
+    if (!focused) {
+      return null;
+    }
     return (
       <div className="flex min-h-0 flex-1 flex-col p-3">
         {screenTile(focused, "min-h-0 flex-1")}
@@ -263,7 +272,9 @@ const CallStage = memo(({
 
   if (kind === "pinned-strip" && userPinned) {
     const focused = screens.find((item) => item.id === userPinned);
-    if (!focused) return null;
+    if (!focused) {
+      return null;
+    }
     const others = screens.filter((item) => item.id !== userPinned);
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">

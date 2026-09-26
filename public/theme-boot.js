@@ -6,4 +6,6 @@ try {
   if (light) {
     document.documentElement.classList.add("light");
   }
-} catch (e) {}
+} catch {
+  // localStorage bloqueado: fica o tema padrão
+}

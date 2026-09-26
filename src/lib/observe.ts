@@ -13,10 +13,11 @@ export const publicObserveUrl = (raw: string) => {
   }
 };
 
+const beforeSend = <T extends { url: string }>(event: T) => {
+  return { ...event, url: publicObserveUrl(event.url) };
+};
+
 export const startVercelObserve = () => {
-  const beforeSend = <T extends { url: string }>(event: T) => {
-    return { ...event, url: publicObserveUrl(event.url) };
-  };
   inject({ beforeSend });
   injectSpeedInsights({ beforeSend });
 };

@@ -8,8 +8,7 @@ type InstallPromptEvent = Event & {
 const isStandalone = () => {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
-    ("standalone" in navigator &&
-      Boolean((navigator as { standalone?: boolean }).standalone))
+    ("standalone" in navigator && navigator.standalone === true)
   );
 };
 
@@ -49,6 +48,8 @@ export const useInstallPrompt = () => {
   useEffect(() => {
     const onPrompt = (e: Event) => {
       e.preventDefault();
+      // `beforeinstallprompt` não está no lib.dom; o evento é sempre este.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion
       setEvent(e as InstallPromptEvent);
     };
     const onInstalled = () => {

@@ -137,10 +137,6 @@ class SpeakBus {
       if (this.entries.size === 0) {
         return;
       }
-      if (typeof document !== "undefined" && document.hidden) {
-        this.raf = window.requestAnimationFrame(tick);
-        return;
-      }
       for (const entry of this.entries.values()) {
         if (!entry.analyser || !entry.data) {
           writeSpeak(entry.node, 0);

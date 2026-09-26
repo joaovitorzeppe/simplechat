@@ -22,7 +22,8 @@ export const useDialogFocus = <T extends HTMLElement>(onDismiss?: () => void) =>
   }, [onDismiss]);
 
   useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
+    const active = document.activeElement;
+    const previous = active instanceof HTMLElement ? active : null;
     const node = ref.current;
     node?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
 

@@ -31,6 +31,7 @@ export const facingFromLabel = (label: string) => {
   if (/back|rear|environment|traseir/.test(l)) {
     return "environment" as const;
   }
+  return undefined;
 };
 
 /** Frente ↔ uma traseira. Não cicla ultra-wide/tele. Desktop sem facing: cicla id. */
@@ -126,11 +127,14 @@ export const mediaStreamOf = (tracks: MediaStreamTrack[]): MediaStream => {
       // tracks falsos nos testes não passam no construtor nativo
     }
   }
-  return {
+  const partial = {
     getTracks: () => tracks,
     getAudioTracks: () => tracks.filter((track) => track.kind === "audio"),
     getVideoTracks: () => tracks.filter((track) => track.kind === "video"),
-  } as unknown as MediaStream;
+  };
+  // Só o que a sessão usa de um MediaStream; cobre ambientes sem o construtor.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  return partial as unknown as MediaStream;
 };
 
 const listenOnly = (): AcquiredMedia => ({
@@ -210,6 +214,8 @@ export const acquireLocalMedia = async (
   ] as const;
 
   for (const constraints of attempts) {
+    // Fallback em ordem: cada tentativa só roda se a anterior falhou.
+    // oxlint-disable-next-line no-await-in-loop
     const result = await tryGetUserMedia(getUserMedia, constraints);
     if (result === "denied") {
       return listenOnly();

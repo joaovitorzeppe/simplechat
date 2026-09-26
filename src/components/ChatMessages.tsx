@@ -364,7 +364,7 @@ const PollCard = ({
         const selected = mine === index;
         return (
           <button
-            key={`${poll.id}-${index}`}
+            key={option}
             type="button"
             aria-pressed={selected}
             onClick={() => onVote(poll.id, index)}
