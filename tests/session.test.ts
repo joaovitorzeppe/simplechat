@@ -9,6 +9,7 @@ type FakeConn = {
   sent: WireMessage[];
   send: (message: WireMessage) => void;
   close: () => void;
+  removeAllListeners: () => void;
 };
 
 type Internals = {
@@ -28,6 +29,16 @@ type Internals = {
   dialedPeerId: string | null;
   incomingFiles: Map<string, unknown>;
   outboundStream: () => MediaStream;
+  attachMedia: (call: unknown) => void;
+  redialPeer: (peerId: string) => void;
+  queueIncoming: (peerId: string, data: ArrayBuffer) => void;
+  onFileBytes: (conn: unknown, raw: unknown) => boolean;
+  failIncomingFile: (peerId: string) => void;
+  files: {
+    openReceive: () => Promise<void>;
+    push: () => Promise<number>;
+    abort: () => Promise<void>;
+  };
 };
 
 const internals = (session: PeerSession) => session as unknown as Internals;
@@ -40,6 +51,7 @@ const conn = (peer: string): FakeConn => ({
     this.sent.push(message);
   },
   close: () => {},
+  removeAllListeners: () => {},
 });
 
 const remote = (peerId: string, displayName: string): RemotePeer => ({
@@ -298,6 +310,41 @@ describe("recepção de arquivos", () => {
     asGuest();
     core.onWire(conn(HOST), fileStart);
     expect(core.state.messages.at(-1)?.id).not.toBe("f1");
+  });
+
+  it("falha a recepção quando chega um pedaço maior que FILE_CHUNK", () => {
+    asGuest();
+    core.onWire(conn(HOST), fileStart);
+    core.onFileBytes(conn(HOST), new ArrayBuffer(16 * 1024 + 1));
+    expect(core.incomingFiles.size).toBe(0);
+    expect(core.state.messages.at(-1)?.file?.status).toBe("error");
+  });
+
+  it("aborta só depois dos bytes que já estavam na fila", async () => {
+    asGuest();
+    const calls: string[] = [];
+    let release = () => {};
+    core.files = {
+      openReceive: async () => {
+        calls.push("open");
+      },
+      push: () =>
+        new Promise<number>((resolve) => {
+          calls.push("push");
+          release = () => resolve(10);
+        }),
+      abort: async () => {
+        calls.push("abort");
+      },
+    };
+    core.onWire(conn(HOST), fileStart);
+    core.queueIncoming(HOST, new ArrayBuffer(10));
+    await vi.waitFor(() => expect(calls).toEqual(["open", "push"]));
+    core.failIncomingFile(HOST);
+    await Promise.resolve();
+    expect(calls).toEqual(["open", "push"]);
+    release();
+    await vi.waitFor(() => expect(calls).toEqual(["open", "push", "abort"]));
   });
 });
 
@@ -988,6 +1035,21 @@ describe("falha de caminho ICE", () => {
     expect(left).toHaveLength(1);
     expect(getToast()?.key).toBe("toast.peerLeft");
   });
+
+  it("religar a mídia não trata o fim da chamada antiga como saída", () => {
+    asGuest();
+    core.roomMembers = [...core.roomMembers, { peerId: ANA, displayName: "Ana" }];
+    core.patch({ remotes: [remote(ANA, "Ana")] });
+    const handlers = new Map<string, () => void>();
+    core.attachMedia({
+      peer: ANA,
+      on: (event: string, handler: () => void) => handlers.set(event, handler),
+      close: () => handlers.get("close")?.(),
+    });
+    core.redialPeer(ANA);
+    expect(core.state.remotes).toHaveLength(1);
+    expect(core.roomMembers.some((member) => member.peerId === ANA)).toBe(true);
+  });
 });
 
 describe("envio de arquivo", () => {
@@ -1177,6 +1239,19 @@ describe("timer e voto no chat", () => {
     core.onWire(conn(HOST), poll);
     core.onWire(conn(HOST), { type: "poll-vote", id: "poll-1", option: 9 });
     expect(core.state.messages.at(-1)?.pollVotes).toBeUndefined();
+  });
+
+  it("recusa enquete com id repetido para não sequestrar os votos", () => {
+    asGuest();
+    core.roomMembers = [
+      ...core.roomMembers,
+      { peerId: "bruno-1", displayName: "Bruno" },
+    ];
+    core.onWire(conn(HOST), poll);
+    core.onWire(conn("bruno-1"), { ...poll, id: "p2", fromPeerId: "bruno-1" });
+    expect(core.state.messages).toHaveLength(1);
+    core.onWire(conn("bruno-1"), { type: "poll-vote", id: "poll-1", option: 1 });
+    expect(core.state.messages[0]?.pollVotes).toEqual({ "bruno-1": 1 });
   });
 });
 

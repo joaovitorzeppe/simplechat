@@ -442,8 +442,9 @@ export class PeerSession {
   private redialPeer(peerId: string) {
     const me = this.state.identity?.peerId;
     if (!me || this.state.callStatus === "idle" || this.tearingDown) return;
-    this.media.get(peerId)?.close();
+    const stale = this.media.get(peerId);
     this.media.delete(peerId);
+    stale?.close();
     // Só o lado de ID menor disca, igual ao caminho normal, para evitar glare.
     if (me < peerId) this.openMedia(peerId);
   }
@@ -1104,6 +1105,8 @@ export class PeerSession {
     this.state.localStream?.getVideoTracks().forEach((track) => track.stop());
     const stream = mediaStreamOf([...audio, video]);
     this.syncOutgoingTrack("video", video);
+    this.placeholderVideo?.stop();
+    this.placeholderVideo = null;
     this.patch({ cameraOff: false, localStream: stream });
     this.broadcast({ type: "media-meta", cameraOff: false });
     this.applyLimitsToAll();
@@ -1299,6 +1302,10 @@ export class PeerSession {
 
   private attachMedia(call: MediaConnection) {
     this.media.set(call.peer, call);
+    // `redialPeer` fecha a chamada antiga de propósito: o fim dela não é saída.
+    const leftIfCurrent = () => {
+      if (this.media.get(call.peer) === call) this.onPeerLeft(call.peer);
+    };
     call.on("stream", (stream) => {
       if (call.peerConnection) this.watchIce(call.peer, call.peerConnection);
       this.upsertRemote(call.peer, {
@@ -1308,7 +1315,7 @@ export class PeerSession {
       const onRemoteEnded = () => {
         if (stream.getTracks().some((track) => track.readyState === "live"))
           return;
-        this.onPeerLeft(call.peer);
+        leftIfCurrent();
       };
       for (const track of stream.getTracks()) {
         track.addEventListener("ended", onRemoteEnded);
@@ -1317,8 +1324,8 @@ export class PeerSession {
         this.patch({ callStatus: "in-call" });
       window.setTimeout(() => this.applyLimitsToAll(), 400);
     });
-    call.on("close", () => this.onPeerLeft(call.peer));
-    call.on("error", () => this.onPeerLeft(call.peer));
+    call.on("close", leftIfCurrent);
+    call.on("error", leftIfCurrent);
   }
 
   private async onIncomingCall(call: MediaConnection) {
@@ -1518,6 +1525,17 @@ export class PeerSession {
       const now = Date.now();
       if (!cooledDown(this.lastChatAt.get(from), now, CHAT_COOLDOWN_MS)) return;
       this.lastChatAt.set(from, now);
+      // Os ids vêm do remetente. Repetir um já visto desviaria votos de outra
+      // enquete ou o controle de outro timer.
+      const pollId = msg.command?.kind === "poll" ? msg.command.id : null;
+      if (
+        this.state.messages.some(
+          (m) =>
+            m.id === msg.id ||
+            (m.command?.kind === "poll" && m.command.id === pollId),
+        )
+      )
+        return;
       const mentions = (msg.mentions ?? []).filter(
         (id) =>
           id === ALL_MENTION ||
@@ -2266,6 +2284,12 @@ export class PeerSession {
     const data = this.takeFileBytes(raw);
     if (!data) return false;
     if (!this.incomingFiles.has(conn.peer)) return true;
+    // O remetente fatia em FILE_CHUNK. Pedaço maior é abuso de memória.
+    const bytes = data instanceof Blob ? data.size : data.byteLength;
+    if (bytes > FILE_CHUNK) {
+      this.failIncomingFile(conn.peer);
+      return true;
+    }
     this.queueIncoming(conn.peer, data);
     return true;
   }
@@ -2360,11 +2384,10 @@ export class PeerSession {
 
   private finishIncomingFile(peerId: string, remoteId: string) {
     const tail = this.incomingByteTail.get(peerId) ?? Promise.resolve();
-    void tail.then(async () => {
+    const done = tail.then(async () => {
       const incoming = this.incomingFiles.get(peerId);
       if (!incoming || incoming.remoteId !== remoteId) return;
       this.incomingFiles.delete(peerId);
-      this.incomingByteTail.delete(peerId);
       try {
         const blob = await this.files.finish(peerId);
         if (!blob) {
@@ -2384,13 +2407,21 @@ export class PeerSession {
         this.patchFile(incoming.localId, { status: "error" });
       }
     });
+    this.incomingByteTail.set(peerId, done);
   }
 
+  /**
+   * O abort entra na fila do peer em vez de furá-la: bytes já enfileirados do
+   * arquivo que falhou não podem cair no próximo `openReceive`.
+   */
   private failIncomingFile(peerId: string) {
     const incoming = this.incomingFiles.get(peerId);
     this.incomingFiles.delete(peerId);
-    this.incomingByteTail.delete(peerId);
-    void this.files.abort(peerId);
+    const tail = this.incomingByteTail.get(peerId) ?? Promise.resolve();
+    this.incomingByteTail.set(
+      peerId,
+      tail.then(() => this.files.abort(peerId)).catch(() => {}),
+    );
     if (incoming) this.patchFile(incoming.localId, { status: "error" });
   }
 
@@ -2455,7 +2486,11 @@ export class PeerSession {
     this.tearingDown = true;
     const draining = [...this.data.values()];
     window.setTimeout(() => {
-      for (const conn of draining) conn.close();
+      for (const conn of draining) {
+        // O `close` chegaria com a sessão já zerada e seria tratado como saída.
+        conn.removeAllListeners();
+        conn.close();
+      }
     }, FLUSH_MS);
     for (const call of this.media.values()) call.close();
     for (const call of this.screenOut.values()) call.close();
