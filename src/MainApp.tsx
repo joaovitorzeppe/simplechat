@@ -3,7 +3,7 @@ import { IncomingCall } from "@components/IncomingCall";
 import { Toast } from "@components/Toast";
 import { session } from "@libs/session";
 import type { Identity } from "@libs/types";
-import { useSession } from "@libs/use-session";
+import { useSessionSelector } from "@libs/use-session";
 import { Home } from "@screens/Home";
 
 const Call = lazy(() =>
@@ -11,7 +11,10 @@ const Call = lazy(() =>
 );
 
 export const MainApp = ({ identity }: { identity: Identity }) => {
-  const { state } = useSession();
+  const view = useSessionSelector((s) => s.view);
+  const incoming = useSessionSelector((s) =>
+    s.callStatus === "idle" ? s.incoming : null,
+  );
 
   useEffect(() => {
     void session.start(identity);
@@ -19,16 +22,16 @@ export const MainApp = ({ identity }: { identity: Identity }) => {
 
   return (
     <>
-      {state.view === "call" ? (
+      {view === "call" ? (
         <Suspense fallback={null}>
           <Call />
         </Suspense>
       ) : (
         <Home />
       )}
-      {state.incoming && state.callStatus === "idle" && (
+      {incoming && (
         <IncomingCall
-          name={state.incoming.displayName}
+          name={incoming.displayName}
           onAccept={() => void session.acceptIncoming()}
           onReject={() => session.rejectIncoming()}
         />

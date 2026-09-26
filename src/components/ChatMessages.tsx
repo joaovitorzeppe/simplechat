@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@i18n/use-i18n";
 import {
   formatFileSize,
@@ -376,7 +376,8 @@ const PollCard = ({
   );
 };
 
-export const ChatMessages = ({
+/** Memo: o composer do `ChatPanel` re-renderiza a cada tecla. */
+export const ChatMessages = memo(({
   messages,
   selfId,
   hostPeerId,
@@ -496,4 +497,4 @@ export const ChatMessages = ({
       )}
     </>
   );
-};
+});

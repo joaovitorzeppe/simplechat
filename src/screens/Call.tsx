@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@components/Button";
 import { ChatPanel } from "@components/ChatPanel";
 import {
@@ -28,8 +28,9 @@ import { muteOf } from "@libs/mutes";
 import { screenStageKind } from "@libs/screen-layout";
 import { electHost, session } from "@libs/session";
 import { displayLabel } from "@libs/text";
+import type { TimerAction } from "@libs/timer";
 import type { PeerInfo } from "@libs/types";
-import { useSession, useSessionSelector } from "@libs/use-session";
+import { useSessionSelector } from "@libs/use-session";
 
 const canDisplay = canShareScreen();
 
@@ -42,6 +43,14 @@ type ScreenItem = {
 
 const iconOff =
   "bg-red-500! hover:bg-red-400! hover:border-red-400 border-red-500";
+
+// Referências estáveis para não furar o memo de `ChatMessages`.
+const sendChat = (text: string) => session.sendChat(text);
+const sendFile = (file: File) => void session.sendFile(file);
+const votePoll = (pollId: string, option: number) =>
+  session.votePoll(pollId, option);
+const controlTimer = (id: string, action: TimerAction) =>
+  session.controlTimer(id, action);
 
 const CallChatDock = memo(function CallChatDock({
   open,
@@ -74,10 +83,10 @@ const CallChatDock = memo(function CallChatDock({
           selfId={selfId}
           hostPeerId={hostPeerId}
           people={people}
-          onSend={(text) => session.sendChat(text)}
-          onSendFile={(file) => void session.sendFile(file)}
-          onVote={(pollId, option) => session.votePoll(pollId, option)}
-          onTimerControl={(id, action) => session.controlTimer(id, action)}
+          onSend={sendChat}
+          onSendFile={sendFile}
+          onVote={votePoll}
+          onTimerControl={controlTimer}
           onClose={onClose}
         />
       </div>
@@ -284,7 +293,6 @@ const CallStage = memo(function CallStage({
 
 export const Call = () => {
   const { t } = useI18n();
-  const { state, session: peerSession } = useSession();
   const [chatOpen, setChatOpen] = useState(
     () => window.matchMedia("(min-width: 768px)").matches,
   );
@@ -294,55 +302,85 @@ export const Call = () => {
   useEffect(() => () => window.clearTimeout(copiedTimer.current), []);
   const [pinnedId, setPinnedId] = useState<string | null>(null);
   const [showCameras, setShowCameras] = useState(false);
-  const [kickTarget, setKickTarget] = useState<{
+  const [kickRequest, setKickRequest] = useState<{
     peerId: string;
     name: string;
   } | null>(null);
-  const me = state.identity;
-  const selfId = me?.peerId;
-  useEffect(() => {
-    if (!kickTarget) return;
-    if (!state.remotes.some((remote) => remote.peerId === kickTarget.peerId)) {
-      setKickTarget(null);
-    }
-  }, [kickTarget, state.remotes]);
-  const unread = chatOpen
-    ? 0
-    : state.messages
-        .slice(seenCount)
-        .filter((message) => message.fromPeerId !== selfId).length;
+  const me = useSessionSelector((s) => s.identity);
+  const remotes = useSessionSelector((s) => s.remotes);
+  const members = useSessionSelector((s) => s.members);
+  const hostPeerId = useSessionSelector((s) => s.hostPeerId);
+  const roomSecret = useSessionSelector((s) => s.roomSecret);
+  const roomMutes = useSessionSelector((s) => s.roomMutes);
+  const localScreenStream = useSessionSelector((s) => s.localScreenStream);
+  const isHost = useSessionSelector((s) => s.isHost);
+  const callStatus = useSessionSelector((s) => s.callStatus);
+  const pathHint = useSessionSelector((s) => s.pathHint);
+  const muted = useSessionSelector((s) => s.muted);
+  const cameraOff = useSessionSelector((s) => s.cameraOff);
+  const canSwitchCamera = useSessionSelector((s) => s.canSwitchCamera);
+  const sharingScreen = useSessionSelector((s) => s.sharingScreen);
+  const pending = useSessionSelector((s) => s.pending);
+  const leavePrompt = useSessionSelector((s) => s.leavePrompt);
+  const unread = useSessionSelector((s) =>
+    chatOpen
+      ? 0
+      : s.messages
+          .slice(seenCount)
+          .filter((message) => message.fromPeerId !== s.identity?.peerId)
+          .length,
+  );
+  const kickTarget =
+    kickRequest && remotes.some((remote) => remote.peerId === kickRequest.peerId)
+      ? kickRequest
+      : null;
 
-  const setChat = (open: boolean) => {
+  const setChat = useCallback((open: boolean) => {
     setChatOpen(open);
-    setSeenCount(state.messages.length);
-  };
+    setSeenCount(session.getState().messages.length);
+  }, []);
+  const closeChat = useCallback(() => setChat(false), [setChat]);
+  const togglePin = useCallback(
+    (id: string) => setPinnedId((cur) => (cur === id ? null : id)),
+    [],
+  );
 
-  const roomId = state.hostPeerId ?? me?.peerId ?? "";
-  const invite = roomId ? inviteLink(roomId, state.roomSecret) : "";
+  const roomId = hostPeerId ?? me?.peerId ?? "";
+  const invite = roomId ? inviteLink(roomId, roomSecret) : "";
 
   const people = useMemo(() => {
-    if (state.members.length > 0) return state.members;
+    if (members.length > 0) return members;
     if (!me) return [];
     return [
       { peerId: me.peerId, displayName: me.displayName },
-      ...state.remotes.map((remote) => ({
+      ...remotes.map((remote) => ({
         peerId: remote.peerId,
         displayName: remote.displayName,
       })),
     ];
-  }, [me, state.members, state.remotes]);
+  }, [me, members, remotes]);
 
-  const successorId = electHost(state.remotes.map((remote) => remote.peerId));
-  const successor = state.remotes.find(
-    (remote) => remote.peerId === successorId,
+  const askRemove = useCallback(
+    (peerId: string) => {
+      const remote = remotes.find((item) => item.peerId === peerId);
+      if (!remote) return;
+      setKickRequest({
+        peerId,
+        name: displayLabel(remote.displayName, remote.peerId, people),
+      });
+    },
+    [remotes, people],
   );
+
+  const successorId = electHost(remotes.map((remote) => remote.peerId));
+  const successor = remotes.find((remote) => remote.peerId === successorId);
   const successorName = successor
     ? displayLabel(successor.displayName, successor.peerId, people)
     : null;
-  const selfRoom = me ? muteOf(state.roomMutes, me.peerId) : null;
+  const selfRoom = me ? muteOf(roomMutes, me.peerId) : null;
   const screenCount =
-    state.remotes.filter((remote) => remote.screenStream).length +
-    (state.localScreenStream ? 1 : 0);
+    remotes.filter((remote) => remote.screenStream).length +
+    (localScreenStream ? 1 : 0);
 
   return (
     <main className="flex h-dvh overflow-hidden">
@@ -350,15 +388,15 @@ export const Call = () => {
         <header className="flex shrink-0 items-center justify-between gap-2 border-b border-line px-4 py-3 sm:gap-3">
           <div className="min-w-0">
             <p className="text-xs text-zinc-500">
-              {state.isHost ? t("call.host") : t("call.guest")}
+              {isHost ? t("call.host") : t("call.guest")}
             </p>
             <p className="text-sm text-zinc-300">
-              {state.callStatus === "waiting"
+              {callStatus === "waiting"
                 ? t("call.waiting")
-                : state.callStatus === "connecting"
+                : callStatus === "connecting"
                   ? t("call.connecting")
                   : t("call.inCall", {
-                      count: state.remotes.length + 1,
+                      count: remotes.length + 1,
                       max: maxParticipants(),
                     })}
             </p>
@@ -401,7 +439,7 @@ export const Call = () => {
             )}
           </div>
         </header>
-        {state.pathHint && (
+        {pathHint && (
           <p
             role="status"
             className="border-b border-amber-900/60 bg-amber-950/50 px-4 py-2 text-sm text-amber-100"
@@ -413,52 +451,45 @@ export const Call = () => {
         <CallStage
           pinnedId={pinnedId}
           showCameras={showCameras}
-          onPin={(id) => setPinnedId((cur) => (cur === id ? null : id))}
-          onAskRemove={(peerId) => {
-            const remote = state.remotes.find((item) => item.peerId === peerId);
-            if (!remote) return;
-            setKickTarget({
-              peerId,
-              name: displayLabel(remote.displayName, remote.peerId, people),
-            });
-          }}
+          onPin={togglePin}
+          onAskRemove={askRemove}
         />
 
         <div className="safe-bottom flex shrink-0 flex-wrap items-center justify-center gap-2 px-4 pt-4">
           <Button
             variant="icon"
-            className={state.muted ? iconOff : undefined}
-            onClick={() => void peerSession.toggleMute()}
+            className={muted ? iconOff : undefined}
+            onClick={() => void session.toggleMute()}
             disabled={!!selfRoom?.audio}
             title={
               selfRoom?.audio
                 ? t("call.hostMutedYouAudio")
-                : state.muted
+                : muted
                   ? t("call.unmute")
                   : t("call.mute")
             }
           >
-            {state.muted ? <MicOffIcon /> : <MicIcon />}
+            {muted ? <MicOffIcon /> : <MicIcon />}
           </Button>
           <Button
             variant="icon"
-            className={state.cameraOff ? iconOff : undefined}
-            onClick={() => void peerSession.toggleCamera()}
+            className={cameraOff ? iconOff : undefined}
+            onClick={() => void session.toggleCamera()}
             disabled={!!selfRoom?.video}
             title={
               selfRoom?.video
                 ? t("call.hostMutedYouVideo")
-                : state.cameraOff
+                : cameraOff
                   ? t("call.cameraOn")
                   : t("call.cameraOff")
             }
           >
-            {state.cameraOff ? <CameraOffIcon /> : <CameraIcon />}
+            {cameraOff ? <CameraOffIcon /> : <CameraIcon />}
           </Button>
-          {state.canSwitchCamera && !state.cameraOff && (
+          {canSwitchCamera && !cameraOff && (
             <Button
               variant="icon"
-              onClick={() => void peerSession.switchCamera()}
+              onClick={() => void session.switchCamera()}
               disabled={!!selfRoom?.video}
               title={
                 selfRoom?.video
@@ -472,10 +503,10 @@ export const Call = () => {
           {canDisplay && (
             <Button
               variant="icon"
-              className={state.sharingScreen ? iconOff : undefined}
-              onClick={() => void peerSession.shareScreen()}
+              className={sharingScreen ? iconOff : undefined}
+              onClick={() => void session.shareScreen()}
               title={
-                state.sharingScreen
+                sharingScreen
                   ? t("call.stopScreen")
                   : t("call.shareScreen")
               }
@@ -509,7 +540,7 @@ export const Call = () => {
           <Button
             variant="icon"
             className={iconOff}
-            onClick={() => peerSession.hangUp()}
+            onClick={() => session.hangUp()}
             title={t("call.leave")}
           >
             <PhoneOffIcon />
@@ -521,35 +552,35 @@ export const Call = () => {
         <KickDialog
           name={kickTarget.name}
           onConfirm={() => {
-            peerSession.kickPeer(kickTarget.peerId);
-            setKickTarget(null);
+            session.kickPeer(kickTarget.peerId);
+            setKickRequest(null);
           }}
-          onCancel={() => setKickTarget(null)}
+          onCancel={() => setKickRequest(null)}
         />
       )}
 
-      {state.isHost && (
+      {isHost && (
         <Lobby
-          pending={state.pending}
+          pending={pending}
           roster={people}
-          onAdmit={(peerId) => peerSession.admitPeer(peerId)}
-          onDeny={(peerId) => peerSession.denyPeer(peerId)}
+          onAdmit={(peerId) => session.admitPeer(peerId)}
+          onDeny={(peerId) => session.denyPeer(peerId)}
         />
       )}
 
-      {state.leavePrompt && (
+      {leavePrompt && (
         <HostLeaveDialog
           successorName={successorName}
-          onTransfer={() => peerSession.transferHostAndLeave()}
-          onEnd={() => peerSession.endRoomForAll()}
-          onCancel={() => peerSession.cancelLeave()}
+          onTransfer={() => session.transferHostAndLeave()}
+          onEnd={() => session.endRoomForAll()}
+          onCancel={() => session.cancelLeave()}
         />
       )}
 
       <CallChatDock
         open={chatOpen}
         people={people}
-        onClose={() => setChat(false)}
+        onClose={closeChat}
       />
     </main>
   );

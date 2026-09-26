@@ -1,5 +1,14 @@
+import { truncateText } from "./text";
 import type { Identity } from "./types";
-import { clampDisplayName, MAX_PEER_ID } from "./wire-guard";
+
+// Moram aqui, e não no wire-guard, porque este módulo entra no bundle inicial
+// e o wire-guard arrasta o parser de comandos e o highlighter.
+export const MAX_DISPLAY_NAME = 100;
+export const MAX_PEER_ID = 200;
+
+export const clampDisplayName = (value: string) => {
+  return truncateText(value.trim(), MAX_DISPLAY_NAME);
+};
 
 const KEY = "simplechat.identity";
 const SECRET_KEY = "simplechat.roomkey";

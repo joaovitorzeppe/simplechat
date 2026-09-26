@@ -6,11 +6,11 @@ import { ThemeToggle } from "@components/ThemeToggle";
 import {
   clearIdentity,
   createIdentity,
+  MAX_DISPLAY_NAME,
   persistIdentity,
 } from "@libs/identity";
 import { parseInvite } from "@libs/invite";
 import type { Identity } from "@libs/types";
-import { MAX_DISPLAY_NAME } from "@libs/wire-guard";
 import { useI18n } from "@i18n/use-i18n";
 
 type Props = {

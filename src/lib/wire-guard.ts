@@ -25,10 +25,11 @@ import {
   MIN_TIMER_MS,
 } from "./commands";
 import { isCodeLanguage, MAX_COMMAND_CODE } from "./code";
+import { MAX_DISPLAY_NAME, MAX_PEER_ID } from "./identity";
+
+export { clampDisplayName, MAX_DISPLAY_NAME, MAX_PEER_ID } from "./identity";
 
 export const MAX_CHAT_TEXT = 4000;
-export const MAX_DISPLAY_NAME = 100;
-export const MAX_PEER_ID = 200;
 export const MAX_MIME = 120;
 export const MAX_FILE_NAME = 260;
 export const MAX_TRANSFER_ID = 64;
@@ -535,10 +536,6 @@ const parseTimerState = (value: unknown): TimerState | null => {
     return { status: "running", endsAt };
   }
   return null;
-};
-
-export const clampDisplayName = (value: string) => {
-  return truncateText(value.trim(), MAX_DISPLAY_NAME);
 };
 
 export const clampChatText = (value: string) => {
