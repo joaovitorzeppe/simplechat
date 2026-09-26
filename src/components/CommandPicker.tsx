@@ -8,6 +8,7 @@ export type CommandPickerItem = {
 };
 
 type Props = {
+  id: string;
   items: CommandPickerItem[];
   active: number;
   label: string;
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export const CommandPicker = ({
+  id,
   items,
   active,
   label,
@@ -29,12 +31,13 @@ export const CommandPicker = ({
       <p className="px-3 pt-2 pb-1 text-[11px] uppercase tracking-widest text-zinc-500">
         {label}
       </p>
-      <ul role="listbox" aria-label={label} className="max-h-56 overflow-y-auto py-1">
+      <ul id={id} role="listbox" aria-label={label} className="max-h-56 overflow-y-auto py-1">
         {items.map((item, index) => {
           const selected = index === active;
           return (
             <li key={item.id}>
               <button
+                id={`${id}-${index}`}
                 type="button"
                 role="option"
                 aria-selected={selected}

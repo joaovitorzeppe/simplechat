@@ -64,6 +64,23 @@ const CallChatDock = memo(function CallChatDock({
   const messages = useSessionSelector((s) => s.messages);
   const selfId = useSessionSelector((s) => s.identity?.peerId ?? "");
   const hostPeerId = useSessionSelector((s) => s.hostPeerId);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      // Só no mobile o chat cobre a tela. Diálogos modais e o picker de
+      // menção tratam o próprio Escape.
+      if (
+        event.key !== "Escape" ||
+        event.defaultPrevented ||
+        window.matchMedia("(min-width: 768px)").matches ||
+        document.querySelector('[aria-modal="true"]')
+      )
+        return;
+      onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
   if (!open || !selfId) return null;
   return (
     <>
@@ -95,11 +112,13 @@ const CallChatDock = memo(function CallChatDock({
 });
 
 const CallStage = memo(function CallStage({
+  roster,
   pinnedId,
   showCameras,
   onPin,
   onAskRemove,
 }: {
+  roster: PeerInfo[];
   pinnedId: string | null;
   showCameras: boolean;
   onPin: (id: string) => void;
@@ -107,7 +126,6 @@ const CallStage = memo(function CallStage({
 }) {
   const { t } = useI18n();
   const remotes = useSessionSelector((s) => s.remotes);
-  const members = useSessionSelector((s) => s.members);
   const localStream = useSessionSelector((s) => s.localStream);
   const localScreenStream = useSessionSelector((s) => s.localScreenStream);
   const cameraOff = useSessionSelector((s) => s.cameraOff);
@@ -116,20 +134,6 @@ const CallStage = memo(function CallStage({
   const isHost = useSessionSelector((s) => s.isHost);
   const localMutes = useSessionSelector((s) => s.localMutes);
   const roomMutes = useSessionSelector((s) => s.roomMutes);
-  const roster = useMemo(() => {
-    if (members.length > 0) return members;
-    const list: PeerInfo[] = remotes.map((remote) => ({
-      peerId: remote.peerId,
-      displayName: remote.displayName,
-    }));
-    if (identity) {
-      list.unshift({
-        peerId: identity.peerId,
-        displayName: identity.displayName,
-      });
-    }
-    return list;
-  }, [members, remotes, identity]);
 
   const screens = useMemo(() => {
     const items: ScreenItem[] = [];
@@ -449,6 +453,7 @@ export const Call = () => {
         )}
 
         <CallStage
+          roster={people}
           pinnedId={pinnedId}
           showCameras={showCameras}
           onPin={togglePin}
@@ -559,7 +564,7 @@ export const Call = () => {
         />
       )}
 
-      {isHost && (
+      {isHost && pending.length > 0 && (
         <Lobby
           pending={pending}
           roster={people}

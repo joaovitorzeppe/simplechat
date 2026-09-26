@@ -24,7 +24,6 @@ type Props = {
   roomMute?: MuteFlags;
   onToggleLocal?: (peerId: string, kind: MuteKind) => void;
   onSetRoom?: (peerId: string, kind: MuteKind, muted: boolean) => void;
-  badge?: string;
 };
 
 export const VideoTile = memo(function VideoTile({
@@ -43,7 +42,6 @@ export const VideoTile = memo(function VideoTile({
   roomMute,
   onToggleLocal,
   onSetRoom,
-  badge,
 }: Props) {
   const ref = useRef<HTMLVideoElement>(null);
   const tileRef = useRef<HTMLDivElement>(null);
@@ -126,11 +124,6 @@ export const VideoTile = memo(function VideoTile({
           {local ? t("common.youSuffix") : ""}
         </span>
         <div className="flex shrink-0 items-center gap-1">
-          {badge && (
-            <span className="rounded-full bg-black/50 px-1.5 py-0.5 font-mono text-[10px] text-white/80">
-              {badge}
-            </span>
-          )}
           {onToggleLocal && peerId && (
             <TileMuteControls
               name={name}

@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -67,6 +68,7 @@ export const ChatPanel = ({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const pinnedToBottom = useRef(true);
+  const pickerId = useId();
 
   const mentionQuery = mentionQueryAt(text, caret);
   const commandQuery = mentionQuery ? null : commandQueryAt(text, caret);
@@ -265,6 +267,7 @@ export const ChatPanel = ({
         <div className="relative min-w-0 flex-1">
           {pickerOpen && pickerKind === "mention" && (
             <MentionPicker
+              id={pickerId}
               items={mentionItems}
               people={people}
               active={Math.min(active, mentionItems.length - 1)}
@@ -276,6 +279,7 @@ export const ChatPanel = ({
           )}
           {pickerOpen && pickerKind === "command" && (
             <CommandPicker
+              id={pickerId}
               items={commandItems}
               active={Math.min(active, commandItems.length - 1)}
               label={t("chat.commandPicker")}
@@ -300,8 +304,15 @@ export const ChatPanel = ({
             onKeyDown={onKeyDown}
             placeholder={t("chat.placeholder")}
             aria-label={t("chat.placeholder")}
+            role="combobox"
             aria-autocomplete="list"
             aria-expanded={pickerOpen}
+            aria-controls={pickerOpen ? pickerId : undefined}
+            aria-activedescendant={
+              pickerOpen
+                ? `${pickerId}-${Math.min(active, pickerCount - 1)}`
+                : undefined
+            }
             className="block min-h-10 max-h-40 w-full resize-none rounded-xl bg-zinc-900 border border-line px-3 py-2 text-sm leading-5 outline-none focus:border-accent"
           />
         </div>

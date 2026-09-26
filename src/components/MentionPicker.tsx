@@ -7,6 +7,7 @@ type Item =
   | { kind: "peer"; person: MentionPerson };
 
 type Props = {
+  id: string;
   items: Item[];
   people: MentionPerson[];
   active: number;
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export const MentionPicker = ({
+  id,
   items,
   people,
   active,
@@ -29,6 +31,7 @@ export const MentionPicker = ({
 
   return (
     <ul
+      id={id}
       role="listbox"
       aria-label={label}
       className="absolute inset-x-0 bottom-full z-20 mb-2 max-h-48 overflow-y-auto rounded-2xl border border-line bg-zinc-900 py-1"
@@ -43,6 +46,7 @@ export const MentionPicker = ({
         return (
           <li key={item.kind === "all" ? "all" : item.person.peerId}>
             <button
+              id={`${id}-${index}`}
               type="button"
               role="option"
               aria-selected={selected}

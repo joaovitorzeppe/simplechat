@@ -449,7 +449,8 @@ export class PeerSession {
     if (me < peerId) this.openMedia(peerId);
   }
 
-  async createRoom() {
+  /** Sem câmera nem microfone ainda dá para entrar, só ouvindo e no chat. */
+  private async ensureLocalStreamOrSilent() {
     try {
       await this.ensureLocalStream();
     } catch {
@@ -459,6 +460,10 @@ export class PeerSession {
         muted: true,
       });
     }
+  }
+
+  async createRoom() {
+    await this.ensureLocalStreamOrSilent();
     const me = this.selfInfo();
     this.setRoomMembers(me ? [me] : []);
     this.joinSecret = null;
@@ -477,15 +482,7 @@ export class PeerSession {
     this.dialedPeerId = id;
     this.beginCall(false, id);
     this.patch({ callStatus: "connecting", roomSecret: this.joinSecret });
-    try {
-      await this.ensureLocalStream();
-    } catch {
-      this.patch({
-        localStream: this.state.localStream ?? mediaStreamOf([]),
-        cameraOff: true,
-        muted: true,
-      });
-    }
+    await this.ensureLocalStreamOrSilent();
     this.openData(id, {
       type: "hello",
       ...this.helloPayload(),
@@ -497,15 +494,7 @@ export class PeerSession {
   async acceptIncoming() {
     const incoming = this.state.incoming;
     if (!incoming) return;
-    try {
-      await this.ensureLocalStream();
-    } catch {
-      this.patch({
-        localStream: this.state.localStream ?? mediaStreamOf([]),
-        cameraOff: true,
-        muted: true,
-      });
-    }
+    await this.ensureLocalStreamOrSilent();
     this.dialedPeerId = incoming.peerId;
     this.beginCall(false, incoming.peerId);
     const queued = this.media.get(incoming.peerId);
