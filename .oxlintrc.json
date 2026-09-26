@@ -1,17 +1,104 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc", "unicorn"],
+  "ignorePatterns": ["dist", "coverage", "node_modules"],
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "react"],
+  "options": {
+    "typeAware": true,
+    "typeCheck": true
+  },
   "categories": {
     "correctness": "error",
     "suspicious": "warn",
     "perf": "warn"
   },
-  "rules": {
-    "react/react-in-jsx-scope": "off",
-    "react/rules-of-hooks": "error",
-    "react/exhaustive-deps": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }],
-    "eslint/no-console": ["warn", { "allow": ["error", "warn"] }]
+  "env": {
+    "browser": true,
+    "es2023": true
   },
-  "ignorePatterns": ["dist", "public/sw.js"]
+  "rules": {
+    "no-var": "error",
+    "prefer-const": "error",
+    "eqeqeq": ["error", "smart"],
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "args": "all",
+        "caughtErrors": "all"
+      }
+    ],
+
+    "typescript/no-unsafe-type-assertion": "warn",
+    "typescript/no-unnecessary-type-assertion": "warn",
+    "typescript/no-unsafe-argument": "warn",
+    "typescript/no-explicit-any": "error",
+    "no-underscore-dangle": "off",
+
+    "typescript/no-this-alias": "error",
+    "unicorn/no-new-array": "error",
+    "unicorn/consistent-function-scoping": "error",
+    "unicorn/prefer-add-event-listener": "error",
+    "unicorn/no-instanceof-builtins": "error",
+    "no-shadow": "error",
+    "no-prototype-builtins": "error",
+    "no-empty": "error",
+    "no-loop-func": "error",
+
+    "no-throw-literal": "error",
+    "radix": "error",
+    "array-callback-return": "error",
+    "typescript/no-non-null-asserted-optional-chain": "error",
+    "prefer-object-has-own": "error",
+    "unicorn/prefer-includes": "error",
+    "typescript/prefer-includes": "error",
+    "unicorn/prefer-array-some": "error",
+    "unicorn/prefer-array-find": "error",
+    "unicorn/prefer-string-slice": "error",
+
+    "typescript/prefer-optional-chain": "error",
+    "no-useless-return": "error",
+    "no-useless-catch": "error",
+    "no-useless-concat": "error",
+    "no-else-return": "error",
+    "unicorn/prefer-dom-node-remove": "error",
+    "unicorn/prefer-modern-dom-apis": "error",
+    "curly": "error",
+
+    "import/no-cycle": "error",
+    "import/no-duplicates": "error",
+    "import/no-unassigned-import": [
+      "warn",
+      { "allow": ["**/*.css", "@libs/theme"] }
+    ],
+
+    "func-style": ["error", "expression"],
+    "prefer-arrow-callback": "error",
+
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/exhaustive-effect-dependencies": "off",
+    "react/refs": "off",
+    "react/react-in-jsx-scope": "off"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.tsx", "src/lib/use-*.ts"],
+      "rules": {
+        "typescript/consistent-return": "off"
+      }
+    },
+    {
+      "files": ["**/*.test.{ts,tsx}", "tests/**/*.{ts,tsx}"],
+      "env": { "jest": true },
+      "rules": {
+        "typescript/no-explicit-any": "off",
+        "typescript/unbound-method": "off"
+      }
+    },
+    {
+      "files": ["public/**/*.js"],
+      "env": { "serviceworker": true }
+    }
+  ]
 }
