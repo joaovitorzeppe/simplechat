@@ -68,10 +68,7 @@ export class SessionRoom {
     this.session.upsertRemote(peerId, { displayName: info.displayName });
     this.addRoomMember(info);
     // A chamada de mídia dele já chegou e ficou parada esperando esta decisão.
-    const queued = this.session.calls.get(peerId);
-    if (queued) {
-      queued.answer(this.session.media.outboundStream());
-    }
+    this.session.answerQueuedMedia(peerId);
     const conn = this.session.data.get(peerId);
     if (conn) {
       this.offerExistingHost(conn);
@@ -537,6 +534,8 @@ export class SessionRoom {
       this.session.upsertRemote(peer.peerId, {
         displayName: peer.displayName,
       });
+      // Mídia lateral pode ter chegado antes desta lista — atende o hold.
+      this.session.answerQueuedMedia(peer.peerId);
       this.session.maybeConnect(peer.peerId);
       this.session.maybeCall(peer.peerId);
     }

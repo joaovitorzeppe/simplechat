@@ -66,6 +66,8 @@ export type SessionState = {
 const MAX_ICE_RETRIES = 2;
 const ICE_RECOVERY_MS = 4000;
 const RECONNECT_MAX_MS = 30_000;
+/** Guest segura mídia lateral até `room-peers`; depois disso é intruso. */
+export const HOLD_UNADMITTED_MS = 8_000;
 
 /**
  * Sem TURN, NAT simétrico e redes corporativas simplesmente não conectam. As
@@ -137,6 +139,8 @@ export class PeerSession {
   tearingDown = false;
   /** Evita toast/aviso duplicados quando `close()` reentra em `onPeerLeft`. */
   private departing = new Set<string>();
+  /** Calls de guest ainda sem `room-peers` — timeout derruba se nunca admitir. */
+  private unadmittedHoldTimers = new Map<string, number>();
   readonly room = new SessionRoom(this);
   readonly chat = new SessionChat(this);
   readonly files = new SessionFiles(this);
@@ -721,14 +725,13 @@ export class PeerSession {
         return;
       }
       if (this.room.notAdmitted(call.peer)) {
-        // Só o host tem uma decisão pendente: ele segura a chamada sem atender
-        // até aprovar (`admitPeer` responde depois). Para os demais, quem não
-        // está na lista da sala simplesmente não é atendido.
-        if (!this.state.isHost) {
-          call.close();
-          return;
-        }
+        // Host: sala de espera até admit/deny. Guest: `room-peers` pode atrasar
+        // em relação à mídia do mesh — segura sem atender; fechar aqui faria o
+        // dialer cair em onPeerLeft/forget e os convidados nunca se veriam.
         this.attachMedia(call);
+        if (!this.state.isHost) {
+          this.scheduleUnadmittedHold(call.peer);
+        }
         return;
       }
       this.attachMedia(call);
@@ -937,6 +940,42 @@ export class PeerSession {
     }
   }
 
+  /** Atende mídia que chegou antes da admissão / `room-peers`. */
+  answerQueuedMedia(peerId: string) {
+    this.clearUnadmittedHold(peerId);
+    const queued = this.calls.get(peerId);
+    if (!queued || queued.open) {
+      return;
+    }
+    queued.answer(this.media.outboundStream());
+    if (this.state.sharingScreen) {
+      this.media.openScreen(peerId);
+    }
+  }
+
+  private scheduleUnadmittedHold(peerId: string) {
+    this.clearUnadmittedHold(peerId);
+    const timer = window.setTimeout(() => {
+      this.unadmittedHoldTimers.delete(peerId);
+      if (!this.room.notAdmitted(peerId)) {
+        return;
+      }
+      const call = this.calls.get(peerId);
+      if (call && !call.open) {
+        call.close();
+      }
+    }, HOLD_UNADMITTED_MS);
+    this.unadmittedHoldTimers.set(peerId, timer);
+  }
+
+  private clearUnadmittedHold(peerId: string) {
+    const timer = this.unadmittedHoldTimers.get(peerId);
+    if (timer) {
+      window.clearTimeout(timer);
+      this.unadmittedHoldTimers.delete(peerId);
+    }
+  }
+
   upsertRemote(peerId: string, patch: Partial<RemotePeer>) {
     const current = this.state.remotes.find((r) => r.peerId === peerId);
     const next: RemotePeer = {
@@ -988,6 +1027,7 @@ export class PeerSession {
 
   private finishPeerLeft(peerId: string, opts?: { silent?: boolean }) {
     const wasInCall = this.state.remotes.some((r) => r.peerId === peerId);
+    this.clearUnadmittedHold(peerId);
     this.iceRetries.delete(peerId);
     this.iceEverConnected.delete(peerId);
     const name =

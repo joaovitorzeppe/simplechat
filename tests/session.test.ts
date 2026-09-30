@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { electHost, PeerSession, type SessionState } from "@libs/session";
+import {
+  electHost,
+  HOLD_UNADMITTED_MS,
+  PeerSession,
+  type SessionState,
+} from "@libs/session";
 import { getToast } from "@libs/toast";
 import type { PeerInfo, RemotePeer, WireMessage } from "@libs/types";
 
@@ -12,17 +17,27 @@ type FakeConn = {
   removeAllListeners: () => void;
 };
 
+type FakeCall = {
+  peer: string;
+  metadata?: { displayName?: string; kind?: string };
+  open: boolean;
+  answer: ReturnType<typeof vi.fn>;
+  close: ReturnType<typeof vi.fn>;
+  on: (event: string, handler: (...args: unknown[]) => void) => void;
+};
+
 type Internals = {
   state: SessionState;
   patch: (partial: Partial<SessionState>) => void;
   onWire: (conn: unknown, raw: unknown) => void;
+  onIncomingCall: (call: FakeCall) => Promise<void>;
   onPeerLeft: (peerId: string) => void;
   handleIceGaveUp: (peerId: string) => void;
   failPath: (peerId?: string) => void;
   iceEverConnected: Set<string>;
   names: Map<string, string>;
   data: Map<string, FakeConn>;
-  calls: Map<string, { peerConnection?: unknown }>;
+  calls: Map<string, { peerConnection?: unknown; open?: boolean; answer?: unknown }>;
   attachMedia: (call: unknown) => void;
   redialPeer: (peerId: string) => void;
   room: {
@@ -664,6 +679,64 @@ describe("porta lateral pelos convidados", () => {
     });
     core.onWire(conn(ZECA), hello(ZECA, "Zeca"));
     expect(core.state.remotes.map((r) => r.peerId)).toContain(ZECA);
+  });
+});
+
+/**
+ * Race do mesh: o dialer (peerId menor) liga assim que recebe room-peers; o
+ * answerer ainda não. Fechar a call cedo fazia o dialer forget e os guests
+ * nunca se viam — o host continuava vendo os dois.
+ */
+describe("mídia guest↔guest antes de room-peers", () => {
+  const fakeCall = (peer: string): FakeCall => {
+    const handlers = new Map<string, (...args: unknown[]) => void>();
+    const call: FakeCall = {
+      peer,
+      metadata: { displayName: "Zeca", kind: "camera" },
+      open: false,
+      answer: vi.fn(() => {
+        call.open = true;
+      }),
+      close: vi.fn(() => {
+        handlers.get("close")?.();
+      }),
+      on: (event, handler) => {
+        handlers.set(event, handler);
+      },
+    };
+    return call;
+  };
+
+  it("segura a call e atende quando room-peers chega", async () => {
+    asGuest();
+    const call = fakeCall(ZECA);
+    await core.onIncomingCall(call);
+    expect(call.close).not.toHaveBeenCalled();
+    expect(call.answer).not.toHaveBeenCalled();
+    expect(core.calls.has(ZECA)).toBe(true);
+
+    core.onWire(conn(HOST), {
+      type: "room-peers",
+      peers: [
+        { peerId: HOST, displayName: "Host" },
+        { peerId: ME, displayName: "Eu" },
+        { peerId: ZECA, displayName: "Zeca" },
+      ],
+    });
+    expect(call.answer).toHaveBeenCalledOnce();
+    expect(core.state.remotes.map((r) => r.peerId)).toContain(ZECA);
+  });
+
+  it("derruba hold de intruso após o timeout", async () => {
+    vi.useFakeTimers();
+    asGuest();
+    const call = fakeCall(INTRUDER);
+    await core.onIncomingCall(call);
+    expect(core.calls.has(INTRUDER)).toBe(true);
+    vi.advanceTimersByTime(HOLD_UNADMITTED_MS);
+    expect(call.close).toHaveBeenCalled();
+    expect(core.calls.has(INTRUDER)).toBe(false);
+    vi.useRealTimers();
   });
 });
 
