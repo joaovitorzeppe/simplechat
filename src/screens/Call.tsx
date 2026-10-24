@@ -182,6 +182,18 @@ const CallStage = memo(({
         ? "grid-cols-1 md:grid-cols-2"
         : "grid-cols-1 sm:grid-cols-2";
 
+  const controlsFor = (peerId: string) => {
+    const isHostTile = peerId === hostPeerId;
+    return {
+      localMute: muteOf(localMutes, peerId),
+      roomMute: muteOf(roomMutes, peerId),
+      isHostViewer: isHost,
+      onToggleLocal: isHostTile ? undefined : session.toggleLocalMute,
+      onSetRoom: isHost && !isHostTile ? session.setRoomMute : undefined,
+      onRemove: isHost ? onAskRemove : undefined,
+    };
+  };
+
   const cameraTiles = (compact: boolean) => (
     <>
       <VideoTile
@@ -197,23 +209,25 @@ const CallStage = memo(({
         className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
       />
       {remotes.map((remote) => {
-        const isHostTile = remote.peerId === hostPeerId;
-        const localMute = muteOf(localMutes, remote.peerId);
-        const roomMute = muteOf(roomMutes, remote.peerId);
+        const controls = controlsFor(remote.peerId);
         return (
           <VideoTile
             key={remote.peerId}
             peerId={remote.peerId}
             stream={remote.stream}
             name={displayLabel(remote.displayName, remote.peerId, roster)}
-            mutedAudio={localMute.audio || roomMute.audio}
-            cameraOff={remote.cameraOff || localMute.video || roomMute.video}
-            onRemove={isHost ? onAskRemove : undefined}
-            isHostViewer={isHost}
-            localMute={localMute}
-            roomMute={roomMute}
-            onToggleLocal={isHostTile ? undefined : session.toggleLocalMute}
-            onSetRoom={isHost && !isHostTile ? session.setRoomMute : undefined}
+            mutedAudio={controls.localMute.audio || controls.roomMute.audio}
+            cameraOff={
+              remote.cameraOff ||
+              controls.localMute.video ||
+              controls.roomMute.video
+            }
+            onRemove={controls.onRemove}
+            isHostViewer={controls.isHostViewer}
+            localMute={controls.localMute}
+            roomMute={controls.roomMute}
+            onToggleLocal={controls.onToggleLocal}
+            onSetRoom={controls.onSetRoom}
             className={compact ? "h-28 w-40 shrink-0 min-h-24" : undefined}
           />
         );
@@ -233,19 +247,27 @@ const CallStage = memo(({
     </div>
   );
 
-  const screenTile = (item: ScreenItem, className: string) => (
-    <VideoTile
-      key={item.id}
-      peerId={item.id}
-      stream={item.stream}
-      name={item.name}
-      local={item.local}
-      sharingScreen
-      onPin={pinHandler}
-      onRemove={isHost && !item.local ? onAskRemove : undefined}
-      className={className}
-    />
-  );
+  const screenTile = (item: ScreenItem, className: string) => {
+    const controls = item.local ? null : controlsFor(item.id);
+    return (
+      <VideoTile
+        key={item.id}
+        peerId={item.id}
+        stream={item.stream}
+        name={item.name}
+        local={item.local}
+        sharingScreen
+        onPin={pinHandler}
+        onRemove={controls?.onRemove}
+        isHostViewer={controls?.isHostViewer}
+        localMute={controls?.localMute}
+        roomMute={controls?.roomMute}
+        onToggleLocal={controls?.onToggleLocal}
+        onSetRoom={controls?.onSetRoom}
+        className={className}
+      />
+    );
+  };
 
   if (kind === "cameras") {
     return (
@@ -321,6 +343,33 @@ export const Call = () => {
     peerId: string;
     name: string;
   } | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!shareOpen) {
+      return;
+    }
+    const onPointer = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        shareMenuRef.current?.contains(event.target)
+      ) {
+        return;
+      }
+      setShareOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShareOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [shareOpen]);
   const me = useSessionSelector((s) => s.identity);
   const remotes = useSessionSelector((s) => s.remotes);
   const members = useSessionSelector((s) => s.members);
@@ -523,18 +572,56 @@ export const Call = () => {
             </Button>
           )}
           {canDisplay && (
-            <Button
-              variant="icon"
-              className={sharingScreen ? iconOff : undefined}
-              onClick={() => void session.shareScreen()}
-              title={
-                sharingScreen
-                  ? t("call.stopScreen")
-                  : t("call.shareScreen")
-              }
-            >
-              <ScreenIcon />
-            </Button>
+            <div ref={shareMenuRef} className="relative">
+              <Button
+                variant="icon"
+                className={sharingScreen ? iconOff : undefined}
+                aria-expanded={shareOpen}
+                aria-haspopup="menu"
+                onClick={() => {
+                  if (sharingScreen) {
+                    setShareOpen(false);
+                    void session.shareScreen();
+                    return;
+                  }
+                  if (window.matchMedia("(pointer: coarse)").matches) {
+                    void session.shareScreen("sharp");
+                    return;
+                  }
+                  setShareOpen((open) => !open);
+                }}
+                title={
+                  sharingScreen
+                    ? t("call.stopScreen")
+                    : t("call.shareScreen")
+                }
+              >
+                <ScreenIcon />
+              </Button>
+              {shareOpen && (
+                <div
+                  role="menu"
+                  className="absolute bottom-full left-1/2 z-30 mb-2 w-44 -translate-x-1/2 overflow-hidden rounded-xl border border-line bg-zinc-900 py-1 shadow-xl"
+                >
+                  <ShareChoice
+                    label={t("call.shareSharp")}
+                    hint={t("call.shareSharpHint")}
+                    onPick={() => {
+                      setShareOpen(false);
+                      void session.shareScreen("sharp");
+                    }}
+                  />
+                  <ShareChoice
+                    label={t("call.shareSmooth")}
+                    hint={t("call.shareSmoothHint")}
+                    onPick={() => {
+                      setShareOpen(false);
+                      void session.shareScreen("smooth");
+                    }}
+                  />
+                </div>
+              )}
+            </div>
           )}
           <Button
             variant="icon"
@@ -605,5 +692,27 @@ export const Call = () => {
         onClose={closeChat}
       />
     </main>
+  );
+};
+
+const ShareChoice = ({
+  label,
+  hint,
+  onPick,
+}: {
+  label: string;
+  hint: string;
+  onPick: () => void;
+}) => {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      className="block w-full px-3 py-2 text-left hover:bg-zinc-800"
+      onClick={onPick}
+    >
+      <span className="block text-xs text-zinc-100">{label}</span>
+      <span className="block text-[11px] text-zinc-400">{hint}</span>
+    </button>
   );
 };

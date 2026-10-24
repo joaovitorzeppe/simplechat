@@ -1,7 +1,13 @@
-import { memo, useEffect, useRef } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useI18n } from "@i18n/use-i18n";
 import { cn } from "@libs/cn";
 import type { MuteFlags, MuteKind } from "@libs/mutes";
+import {
+  getPlaybackVolume,
+  playbackKey,
+  setPlaybackVolume,
+  subscribePlaybackVolume,
+} from "@libs/playback-volume";
 import { firstGrapheme } from "@libs/text";
 import { useSpeakLevel } from "@libs/use-speak-level";
 import { ExpandIcon, UserRemoveIcon } from "./Icons";
@@ -45,7 +51,15 @@ export const VideoTile = memo(({
 }: Props) => {
   const ref = useRef<HTMLVideoElement>(null);
   const tileRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null);
   const { t } = useI18n();
+  const volumeId = peerId ? playbackKey(peerId, !!sharingScreen) : "";
+  const volume = useSyncExternalStore(
+    subscribePlaybackVolume,
+    () => (volumeId ? getPlaybackVolume(volumeId) : 1),
+    () => 1,
+  );
   useSpeakLevel(stream, !sharingScreen, tileRef);
 
   useEffect(() => {
@@ -62,12 +76,67 @@ export const VideoTile = memo(({
     };
   }, [stream]);
 
-  const blank = !stream || cameraOff;
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || local) {
+      return;
+    }
+    el.volume = volume;
+  }, [volume, local, stream]);
+
+  useEffect(() => {
+    if (!menuAt) {
+      return;
+    }
+    const onPointer = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        menuRef.current?.contains(event.target)
+      ) {
+        return;
+      }
+      setMenuAt(null);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuAt(null);
+      }
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuAt]);
+
+  useLayoutEffect(() => {
+    const el = menuRef.current;
+    if (!el || !menuAt) {
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    const x = Math.max(8, Math.min(menuAt.x, window.innerWidth - rect.width - 8));
+    const y = Math.max(8, Math.min(menuAt.y, window.innerHeight - rect.height - 8));
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+  }, [menuAt]);
+
+  const blank = !stream || (cameraOff && !sharingScreen);
   const id = peerId ?? "";
+  const audioLocked = !!roomMute?.audio && !isHostViewer;
+  const videoLocked = !!roomMute?.video && !isHostViewer;
 
   return (
     <div
       ref={tileRef}
+      onContextMenu={(event) => {
+        if (local || !peerId) {
+          return;
+        }
+        event.preventDefault();
+        setMenuAt({ x: event.clientX, y: event.clientY });
+      }}
       className={cn(
         "relative overflow-hidden rounded-2xl bg-zinc-900 border border-line min-h-40 speak-ring",
         className,
@@ -147,6 +216,111 @@ export const VideoTile = memo(({
           )}
         </div>
       </div>
+      {menuAt && peerId && (
+        <div
+          ref={menuRef}
+          role="menu"
+          style={{ left: menuAt.x, top: menuAt.y }}
+          className="fixed z-50 w-52 overflow-hidden rounded-xl border border-line bg-zinc-900 py-1 text-xs text-zinc-100 shadow-xl"
+          onContextMenu={(event) => event.preventDefault()}
+        >
+          {onToggleLocal && (
+            <MenuAction
+              label={
+                audioLocked
+                  ? t("call.hostMutedAudio")
+                  : t(localMute?.audio ? "call.unmuteForMe" : "call.muteForMe")
+              }
+              disabled={audioLocked}
+              onPick={() => {
+                onToggleLocal(id, "audio");
+                setMenuAt(null);
+              }}
+            />
+          )}
+          {onSetRoom && (
+            <MenuAction
+              label={t(
+                roomMute?.audio ? "call.unmuteForRoom" : "call.muteForRoom",
+              )}
+              onPick={() => {
+                onSetRoom(id, "audio", !roomMute?.audio);
+                setMenuAt(null);
+              }}
+            />
+          )}
+          {onToggleLocal && (
+            <MenuAction
+              label={
+                videoLocked
+                  ? t("call.hostMutedVideo")
+                  : t(
+                      localMute?.video
+                        ? "call.unmuteVideoForMe"
+                        : "call.muteVideoForMe",
+                    )
+              }
+              disabled={videoLocked}
+              onPick={() => {
+                onToggleLocal(id, "video");
+                setMenuAt(null);
+              }}
+            />
+          )}
+          {onSetRoom && (
+            <MenuAction
+              label={t(
+                roomMute?.video
+                  ? "call.unmuteVideoForRoom"
+                  : "call.muteVideoForRoom",
+              )}
+              onPick={() => {
+                onSetRoom(id, "video", !roomMute?.video);
+                setMenuAt(null);
+              }}
+            />
+          )}
+          <label className="block px-3 py-2">
+            <span className="mb-1 block text-zinc-300">
+              {t(sharingScreen ? "call.volumeScreen" : "call.volume")}
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={volume}
+              aria-label={`${t(sharingScreen ? "call.volumeScreen" : "call.volume")}: ${name}`}
+              onChange={(event) => {
+                setPlaybackVolume(volumeId, Number(event.target.value));
+              }}
+              className="w-full accent-teal-300"
+            />
+          </label>
+        </div>
+      )}
     </div>
   );
 });
+
+const MenuAction = ({
+  label,
+  disabled,
+  onPick,
+}: {
+  label: string;
+  disabled?: boolean;
+  onPick: () => void;
+}) => {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      disabled={disabled}
+      className="block w-full px-3 py-2 text-left hover:bg-zinc-800 disabled:cursor-not-allowed disabled:text-zinc-500 disabled:hover:bg-transparent"
+      onClick={onPick}
+    >
+      {label}
+    </button>
+  );
+};

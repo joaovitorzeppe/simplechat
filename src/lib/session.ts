@@ -8,6 +8,7 @@ import { showToast } from "./toast";
 import type { TimerAction } from "./timer";
 import { CONNECT_GIVE_UP_MS, CONNECT_HINT_MS, iceGaveUpKind } from "./ice-path";
 import { dropMute, type MuteKind, type MuteMap } from "./mutes";
+import type { ScreenPreset } from "./quality";
 import { clampDisplayName, parseWire } from "./wire-guard";
 import { SessionChat } from "./session-chat";
 import { SessionFiles } from "./session-files";
@@ -157,7 +158,7 @@ export class PeerSession {
   toggleMute = () => this.media.toggleMute();
   toggleCamera = () => this.media.toggleCamera();
   switchCamera = () => this.media.switchCamera();
-  shareScreen = () => this.media.shareScreen();
+  shareScreen = (preset?: ScreenPreset) => this.media.shareScreen(preset);
   toggleLocalMute = (peerId: string, kind: MuteKind) => {
     this.room.toggleLocalMute(peerId, kind);
   };

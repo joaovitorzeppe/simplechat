@@ -63,5 +63,27 @@ describe("limites", () => {
     await applySenderLimits(sender, "screen");
     expect(params.degradationPreference).toBe("maintain-resolution");
     expect(params.encodings[0].maxBitrate).toBe(8_000_000);
+    expect(params.encodings[0].maxFramerate).toBe(30);
+  });
+
+  it("fluido baixa a resolução e pede 60 fps", async () => {
+    expect(getDisplayConstraints("smooth").video).toMatchObject({
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+      frameRate: { ideal: 60, max: 60 },
+    });
+    const params = { encodings: [{}] } as RTCRtpSendParameters;
+    const sender = {
+      track: {
+        kind: "video",
+        getSettings: () => ({ width: 3840 }),
+      },
+      getParameters: () => params,
+      setParameters: vi.fn(async () => undefined),
+    } as unknown as RTCRtpSender;
+    await applySenderLimits(sender, "screen", "smooth");
+    expect(params.degradationPreference).toBe("maintain-framerate");
+    expect(params.encodings[0].maxFramerate).toBe(60);
+    expect(params.encodings[0].scaleResolutionDownBy).toBe(2);
   });
 });

@@ -12,6 +12,7 @@ import {
   applyTrackConstraints,
   getCameraConstraints,
   getDisplayConstraints,
+  type ScreenPreset,
 } from "./quality";
 import type { PeerSession } from "./session";
 import type { WireMessage } from "./types";
@@ -41,6 +42,7 @@ export class SessionMedia {
   private screenOut = new Map<string, MediaConnection>();
   private screenIn = new Map<string, MediaConnection>();
   private screenTrack: MediaStreamTrack | null = null;
+  private screenPreset: ScreenPreset = "sharp";
   /** Faixa preta no offer/answer enquanto a câmera real está off. */
   private placeholderVideo: MediaStreamTrack | null = null;
   /** Última câmera escolhida: religar não volta para a padrão. */
@@ -227,11 +229,12 @@ export class SessionMedia {
     }
   }
 
-  async shareScreen() {
+  async shareScreen(preset: ScreenPreset = "sharp") {
     if (this.state.sharingScreen) {
       await this.stopScreenShare();
       return;
     }
+    this.screenPreset = preset;
     const display = await this.captureDisplay();
     if (!display) {
       return;
@@ -246,7 +249,7 @@ export class SessionMedia {
     }
     this.screenTrack = track;
     const screenStream = mediaStreamOf([track, ...audio]);
-    await applyTrackConstraints(screenStream, "screen");
+    await applyTrackConstraints(screenStream, "screen", preset);
     track.addEventListener("ended", () => {
       void this.stopScreenShare();
     });
@@ -264,7 +267,7 @@ export class SessionMedia {
    * Cancelar o picker (`AbortError` / `NotAllowedError`) não tenta de novo.
    */
   private async captureDisplay() {
-    const withAudio = getDisplayConstraints();
+    const withAudio = getDisplayConstraints(this.screenPreset);
     try {
       return await navigator.mediaDevices.getDisplayMedia(withAudio);
     } catch (err) {
@@ -628,7 +631,7 @@ export class SessionMedia {
         continue;
       }
       for (const sender of pc.getSenders()) {
-        void applySenderLimits(sender, "screen");
+        void applySenderLimits(sender, "screen", this.screenPreset);
       }
     }
   }

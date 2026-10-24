@@ -1063,6 +1063,27 @@ describe("compartilhamento de tela", () => {
     expect(video.stop).toHaveBeenCalled();
     expect(audio.stop).toHaveBeenCalled();
   });
+
+  it("preset fluido pede 1080p a 60 fps", async () => {
+    const display = gumStream("video");
+    const video = display.getVideoTracks()[0];
+    video.addEventListener = () => undefined;
+    const getDisplayMedia = vi.fn(async () => display);
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: { getDisplayMedia },
+    });
+    core.patch({ identity: { peerId: ME, displayName: "Eu" } });
+    await session.shareScreen("smooth");
+    expect(getDisplayMedia).toHaveBeenCalledWith(
+      expect.objectContaining({
+        video: expect.objectContaining({
+          width: { ideal: 1920 },
+          frameRate: { ideal: 60, max: 60 },
+        }),
+      }),
+    );
+  });
 });
 
 describe("falha de caminho ICE", () => {
