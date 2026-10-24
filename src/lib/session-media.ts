@@ -616,13 +616,14 @@ export class SessionMedia {
   }
 
   applyLimitsToAll() {
+    const peers = Math.max(1, this.state.remotes.length);
     for (const call of this.session.calls.values()) {
       const pc = call.peerConnection;
       if (!pc) {
         continue;
       }
       for (const sender of pc.getSenders()) {
-        void applySenderLimits(sender, "camera");
+        void applySenderLimits(sender, "camera", "sharp", peers);
       }
     }
     for (const call of this.screenOut.values()) {
@@ -631,7 +632,7 @@ export class SessionMedia {
         continue;
       }
       for (const sender of pc.getSenders()) {
-        void applySenderLimits(sender, "screen", this.screenPreset);
+        void applySenderLimits(sender, "screen", this.screenPreset, peers);
       }
     }
   }

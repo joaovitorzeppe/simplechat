@@ -27,6 +27,26 @@ export const MAX_FILE_BYTES = 100 * 1024 * 1024;
 export const maxParticipants = () => MAX_PARTICIPANTS;
 export const maxFileBytes = () => MAX_FILE_BYTES;
 
+/** Um único remoto (a dupla). Três ou mais dividem a base de hoje. */
+const PAIR_BITRATE: Record<MediaKind, number> = {
+  camera: 4_000_000,
+  screen: 12_000_000,
+};
+
+const FLOOR_BITRATE: Record<MediaKind, number> = {
+  camera: 400_000,
+  screen: 1_000_000,
+};
+
+export const videoBitrate = (kind: MediaKind, peers = 1) => {
+  const links = Math.max(1, peers);
+  if (links <= 1) {
+    return PAIR_BITRATE[kind];
+  }
+  const base = kind === "screen" ? LIMITS.screen.maxBitrate : LIMITS.camera.maxBitrate;
+  return Math.max(FLOOR_BITRATE[kind], Math.round(base / links));
+};
+
 const sizeConstraints = (t: MediaLimits): MediaTrackConstraints => {
   const video: MediaTrackConstraints = {
     frameRate: { ideal: t.frameRate, max: t.frameRate },
@@ -83,6 +103,7 @@ export const applySenderLimits = async (
   sender: RTCRtpSender,
   kind: MediaKind,
   preset: ScreenPreset = "sharp",
+  peers = 1,
 ) => {
   if (sender.track?.kind !== "video") {
     return;
@@ -94,7 +115,7 @@ export const applySenderLimits = async (
       params.encodings = [{}];
     }
     const encoding = params.encodings[0];
-    encoding.maxBitrate = limits.maxBitrate;
+    encoding.maxBitrate = videoBitrate(kind, peers);
     if (kind === "screen") {
       encoding.maxFramerate = limits.frameRate;
       const width = sender.track.getSettings?.().width;

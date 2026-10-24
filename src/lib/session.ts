@@ -1009,6 +1009,9 @@ export class PeerSession {
       ? this.state.remotes.map((r) => (r.peerId === peerId ? next : r))
       : [...this.state.remotes.filter((r) => r.peerId !== peerId), next];
     this.patch({ remotes });
+    if (!current) {
+      this.media.applyLimitsToAll();
+    }
   }
 
   onPeerLeft(peerId: string, opts?: { silent?: boolean }) {
@@ -1055,6 +1058,7 @@ export class PeerSession {
       localMutes: dropMute(this.state.localMutes, peerId),
       roomMutes: dropMute(this.state.roomMutes, peerId),
     });
+    this.media.applyLimitsToAll();
     if (this.state.isHost) {
       this.room.broadcastRoom();
     } else if (hostGone) {

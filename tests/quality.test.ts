@@ -4,6 +4,7 @@ import {
   applyTrackConstraints,
   getDisplayConstraints,
   LIMITS,
+  videoBitrate,
   MAX_FILE_BYTES,
   MAX_PARTICIPANTS,
   maxFileBytes,
@@ -62,7 +63,7 @@ describe("limites", () => {
     } as unknown as RTCRtpSender;
     await applySenderLimits(sender, "screen");
     expect(params.degradationPreference).toBe("maintain-resolution");
-    expect(params.encodings[0].maxBitrate).toBe(8_000_000);
+    expect(params.encodings[0].maxBitrate).toBe(12_000_000);
     expect(params.encodings[0].maxFramerate).toBe(30);
   });
 
@@ -85,5 +86,15 @@ describe("limites", () => {
     expect(params.degradationPreference).toBe("maintain-framerate");
     expect(params.encodings[0].maxFramerate).toBe(60);
     expect(params.encodings[0].scaleResolutionDownBy).toBe(2);
+    expect(params.encodings[0].maxBitrate).toBe(12_000_000);
+  });
+
+  it("sobe o teto na dupla e divide a partir de três", () => {
+    expect(videoBitrate("camera", 1)).toBe(4_000_000);
+    expect(videoBitrate("screen", 1)).toBe(12_000_000);
+    expect(videoBitrate("camera", 2)).toBe(1_250_000);
+    expect(videoBitrate("screen", 2)).toBe(4_000_000);
+    expect(videoBitrate("camera", 11)).toBe(400_000);
+    expect(videoBitrate("screen", 11)).toBe(1_000_000);
   });
 });
