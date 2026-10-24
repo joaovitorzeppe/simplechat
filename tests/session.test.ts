@@ -1042,6 +1042,29 @@ describe("câmera ligada depois do offer", () => {
   });
 });
 
+describe("compartilhamento de tela", () => {
+  it("envia o áudio da captura junto com o vídeo", async () => {
+    const video = gumTrack("video");
+    video.addEventListener = () => undefined;
+    const audio = gumTrack("audio");
+    const display = gumStream();
+    display.getTracks = () => [video, audio];
+    display.getVideoTracks = () => [video];
+    display.getAudioTracks = () => [audio];
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: { getDisplayMedia: vi.fn(async () => display) },
+    });
+    core.patch({ identity: { peerId: ME, displayName: "Eu" } });
+    await session.shareScreen();
+    expect(core.state.localScreenStream?.getAudioTracks()).toEqual([audio]);
+    expect(core.state.localScreenStream?.getVideoTracks()).toEqual([video]);
+    await session.shareScreen();
+    expect(video.stop).toHaveBeenCalled();
+    expect(audio.stop).toHaveBeenCalled();
+  });
+});
+
 describe("falha de caminho ICE", () => {
   it("volta à home com aviso de rede se o ICE nunca conectou ao ligar", () => {
     core.patch({

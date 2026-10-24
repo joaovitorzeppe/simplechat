@@ -38,9 +38,15 @@ export const getCameraConstraints = (): MediaStreamConstraints => ({
   video: sizeConstraints(LIMITS.camera),
 });
 
-export const getDisplayConstraints = (): DisplayMediaStreamOptions => ({
-  audio: false,
+/** `systemAudio` é do Chrome: checkbox de áudio do sistema na janela/tela. */
+type DisplayCaptureOptions = DisplayMediaStreamOptions & {
+  systemAudio?: "include" | "exclude";
+};
+
+export const getDisplayConstraints = (): DisplayCaptureOptions => ({
+  audio: true,
   video: sizeConstraints(LIMITS.screen),
+  systemAudio: "include",
 });
 
 export const applyTrackConstraints = async (

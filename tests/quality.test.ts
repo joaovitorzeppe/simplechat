@@ -27,9 +27,13 @@ describe("limites", () => {
     });
   });
 
-  it("pede tela nativa, sem downscale", () => {
-    expect(getDisplayConstraints().video).toEqual({
-      frameRate: { ideal: 30, max: 30 },
+  it("pede tela nativa, sem downscale, com áudio da aba ou do sistema", () => {
+    expect(getDisplayConstraints()).toMatchObject({
+      audio: true,
+      systemAudio: "include",
+      video: {
+        frameRate: { ideal: 30, max: 30 },
+      },
     });
   });
 

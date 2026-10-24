@@ -16,6 +16,16 @@ import {
 import type { PeerSession } from "./session";
 import type { WireMessage } from "./types";
 
+/** Constraint de áudio recusado. Cancelar o picker não entra aqui. */
+const displayAudioRejected = (err: unknown) => {
+  const name = err instanceof Error ? err.name : "";
+  return (
+    name === "NotSupportedError" ||
+    name === "OverconstrainedError" ||
+    name === "TypeError"
+  );
+};
+
 /** Câmera, microfone e tela: o que sai daqui e as telas que chegam. */
 export class SessionMedia {
   private readonly session: PeerSession;
@@ -222,20 +232,20 @@ export class SessionMedia {
       await this.stopScreenShare();
       return;
     }
-    let display: MediaStream;
-    try {
-      display = await navigator.mediaDevices.getDisplayMedia(
-        getDisplayConstraints(),
-      );
-    } catch {
+    const display = await this.captureDisplay();
+    if (!display) {
       return;
     }
     const track = display.getVideoTracks()[0];
+    const audio = display.getAudioTracks();
     if (!track) {
+      for (const item of display.getTracks()) {
+        item.stop();
+      }
       return;
     }
     this.screenTrack = track;
-    const screenStream = new MediaStream([track]);
+    const screenStream = mediaStreamOf([track, ...audio]);
     await applyTrackConstraints(screenStream, "screen");
     track.addEventListener("ended", () => {
       void this.stopScreenShare();
@@ -249,11 +259,38 @@ export class SessionMedia {
     this.openScreenToAll();
   }
 
+  /**
+   * Áudio da aba/sistema. Se o browser recusar o constraint, tenta só vídeo.
+   * Cancelar o picker (`AbortError` / `NotAllowedError`) não tenta de novo.
+   */
+  private async captureDisplay() {
+    const withAudio = getDisplayConstraints();
+    try {
+      return await navigator.mediaDevices.getDisplayMedia(withAudio);
+    } catch (err) {
+      if (!displayAudioRejected(err)) {
+        return null;
+      }
+    }
+    try {
+      return await navigator.mediaDevices.getDisplayMedia({
+        audio: false,
+        video: withAudio.video,
+      });
+    } catch {
+      return null;
+    }
+  }
+
   async stopScreenShare() {
     for (const call of this.screenOut.values()) {
       call.close();
     }
     this.screenOut.clear();
+    const tracks = this.state.localScreenStream?.getTracks() ?? [];
+    for (const track of tracks) {
+      track.stop();
+    }
     this.screenTrack?.stop();
     this.screenTrack = null;
     this.session.patch({
