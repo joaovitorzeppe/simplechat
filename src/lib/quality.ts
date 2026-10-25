@@ -27,9 +27,13 @@ export const MAX_FILE_BYTES = 100 * 1024 * 1024;
 export const maxParticipants = () => MAX_PARTICIPANTS;
 export const maxFileBytes = () => MAX_FILE_BYTES;
 
-/** Um único remoto (a dupla). Três ou mais dividem a base de hoje. */
+/**
+ * Um único remoto (a dupla). Três ou mais dividem a base de hoje. A câmera
+ * fica na base: 720p não ganha nitidez acima disso e o excesso disputa o
+ * upload com o áudio, que vai na mesma conexão.
+ */
 const PAIR_BITRATE: Record<MediaKind, number> = {
-  camera: 4_000_000,
+  camera: LIMITS.camera.maxBitrate,
   screen: 12_000_000,
 };
 
@@ -105,7 +109,12 @@ export const applySenderLimits = async (
   preset: ScreenPreset = "sharp",
   peers = 1,
 ) => {
-  if (sender.track?.kind !== "video") {
+  const track = sender.track;
+  if (track?.kind === "audio" && kind === "camera") {
+    await prioritizeVoice(sender);
+    return;
+  }
+  if (track?.kind !== "video") {
     return;
   }
   const limits = kind === "screen" ? SCREEN_PRESETS[preset] : LIMITS.camera;
@@ -118,7 +127,7 @@ export const applySenderLimits = async (
     encoding.maxBitrate = videoBitrate(kind, peers);
     if (kind === "screen") {
       encoding.maxFramerate = limits.frameRate;
-      const width = sender.track.getSettings?.().width;
+      const width = track.getSettings?.().width;
       const cap = limits.width;
       if (width && cap && width > cap) {
         encoding.scaleResolutionDownBy = width / cap;
@@ -126,6 +135,21 @@ export const applySenderLimits = async (
       params.degradationPreference =
         preset === "smooth" ? "maintain-framerate" : "maintain-resolution";
     }
+    await sender.setParameters(params);
+  } catch {
+    // alguns browsers só aceitam setParameters depois da negociação
+  }
+};
+
+/** Com banda apertada, a voz passa antes do vídeo na mesma conexão. */
+const prioritizeVoice = async (sender: RTCRtpSender) => {
+  try {
+    const params = sender.getParameters();
+    if (!params.encodings || params.encodings.length === 0) {
+      params.encodings = [{}];
+    }
+    params.encodings[0].priority = "high";
+    params.encodings[0].networkPriority = "high";
     await sender.setParameters(params);
   } catch {
     // alguns browsers só aceitam setParameters depois da negociação

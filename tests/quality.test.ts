@@ -89,12 +89,36 @@ describe("limites", () => {
     expect(params.encodings[0].maxBitrate).toBe(12_000_000);
   });
 
-  it("sobe o teto na dupla e divide a partir de três", () => {
-    expect(videoBitrate("camera", 1)).toBe(4_000_000);
+  it("sobe só a tela na dupla e divide a partir de três", () => {
+    expect(videoBitrate("camera", 1)).toBe(2_500_000);
     expect(videoBitrate("screen", 1)).toBe(12_000_000);
     expect(videoBitrate("camera", 2)).toBe(1_250_000);
     expect(videoBitrate("screen", 2)).toBe(4_000_000);
     expect(videoBitrate("camera", 11)).toBe(400_000);
     expect(videoBitrate("screen", 11)).toBe(1_000_000);
+  });
+
+  it("dá prioridade alta ao microfone e deixa o áudio da tela como está", async () => {
+    const sender = () => {
+      const params = { encodings: [{}] } as RTCRtpSendParameters;
+      return {
+        params,
+        sender: {
+          track: { kind: "audio" },
+          getParameters: () => params,
+          setParameters: vi.fn(async () => undefined),
+        } as unknown as RTCRtpSender,
+      };
+    };
+    const mic = sender();
+    await applySenderLimits(mic.sender, "camera", "sharp", 1);
+    expect(mic.params.encodings[0]).toMatchObject({
+      priority: "high",
+      networkPriority: "high",
+    });
+    expect(mic.params.encodings[0].maxBitrate).toBeUndefined();
+    const screenAudio = sender();
+    await applySenderLimits(screenAudio.sender, "screen", "sharp", 1);
+    expect(screenAudio.sender.setParameters).not.toHaveBeenCalled();
   });
 });
